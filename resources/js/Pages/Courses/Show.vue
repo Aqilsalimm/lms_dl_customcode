@@ -1,0 +1,502 @@
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { 
+  ShoppingCart, User, Globe, ChevronDown, GraduationCap, 
+  Home, Newspaper, Calendar, Clock, MapPin, Code,
+  Share2, CheckCircle2, Map, CreditCard, Play,
+  BarChart3, RotateCw, Award
+} from 'lucide-vue-next';
+import axios from 'axios';
+import GuestLayout from '@/Layouts/GuestLayout.vue';
+
+// Leaflet.js setup
+import 'leaflet/dist/leaflet.css';
+import { LMap, LTileLayer, LMarker, LPopup } from '@vue-leaflet/vue-leaflet';
+
+const zoom = ref(15);
+const center = ref([-7.4008, 112.7592]);
+
+const props = defineProps({
+  course: Object,
+  isEnrolled: Boolean
+});
+
+const isProcessing = ref(false);
+const showSuccessOverlay = ref(false);
+
+// Accordion Collapsible State for Syllabus Modules
+const expandedModules = ref({});
+
+// Automatically expand first module by default
+if (props.course.modules && props.course.modules.length > 0) {
+  expandedModules.value[props.course.modules[0].id] = true;
+}
+
+const toggleModule = (id) => {
+  expandedModules.value[id] = !expandedModules.value[id];
+};
+
+const getModuleDuration = (mod) => {
+  if (!mod.lessons) return 0;
+  return mod.lessons.reduce((acc, l) => acc + parseInt(l.duration_minutes || 0), 0);
+};
+
+// Computed Meta Values for Right Sidebar matching revised mockup
+const levelLabel = computed(() => {
+  const map = {
+    'SD': 'Beginner',
+    'SMP': 'Intermediate',
+    'SMA': 'Advanced',
+    'Umum': 'Intermediate'
+  };
+  return map[props.course.level] || 'Intermediate';
+});
+
+const enrolledCountLabel = computed(() => {
+  return `${props.course.enrollments_count || 0} Total Enrolled`;
+});
+
+const ageLabel = computed(() => {
+  const map = {
+    'SD': 'Umur 7 - 12 Tahun',
+    'SMP': 'Umur 12 - 15 Tahun',
+    'SMA': 'Umur 15 - 18 Tahun',
+    'Umum': 'Semua Umur'
+  };
+  return map[props.course.level] || 'Semua Umur';
+});
+
+const durationLabel = computed(() => {
+  let totalMinutes = 0;
+  if (props.course.modules) {
+    props.course.modules.forEach(mod => {
+      if (mod.lessons) {
+        mod.lessons.forEach(les => {
+          totalMinutes += parseInt(les.duration_minutes || 0);
+        });
+      }
+    });
+  }
+  if (totalMinutes === 0) {
+    return '5 hours 30 minutes Duration';
+  }
+  const hrs = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  let parts = [];
+  if (hrs > 0) parts.push(`${hrs} hours`);
+  if (mins > 0) parts.push(`${mins} minutes`);
+  return parts.join(' ') + ' Duration';
+});
+
+const lastUpdatedLabel = computed(() => {
+  const date = new Date(props.course.updated_at || props.course.created_at);
+  const formatted = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  return `${formatted} Last Updated`;
+});
+
+// Format Price
+const formatPrice = (val) => {
+  return parseFloat(val).toLocaleString('id-ID');
+};
+
+// Initialize Midtrans Snap script
+onMounted(() => {
+  const script = document.createElement('script');
+  script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+  script.setAttribute('data-client-key', 'SB-Mid-client-placeholder');
+  document.head.appendChild(script);
+});
+
+// Checkout action (Add to cart and go to Cart page)
+const handleRegister = () => {
+  isProcessing.value = true;
+  
+  router.post('/cart/add', {
+    course_id: props.course.id
+  }, {
+    onSuccess: () => {
+      isProcessing.value = false;
+      router.get('/cart');
+    },
+    onError: () => {
+      isProcessing.value = false;
+      alert('Gagal menambahkan kelas ke keranjang belanja.');
+    }
+  });
+};
+
+const handleShare = () => {
+  navigator.clipboard.writeText(window.location.href);
+  alert('Link rincian kelas berhasil disalin ke clipboard!');
+};
+
+// Logo Helper
+const Logo = () => (
+  `<div class="flex items-center gap-2">
+    <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M50 20 L20 35 L50 50 L80 35 Z" fill="#264790"/>
+      <path d="M30 40 L30 65 C30 75 70 75 70 65 L70 40" stroke="#44A6D9" stroke-width="6" fill="none"/>
+      <path d="M15 45 C15 75 40 90 50 90 C60 90 85 75 85 45" stroke="#264790" stroke-width="4" stroke-dasharray="4 4" fill="none"/>
+      <circle cx="75" cy="25" r="3" fill="#44A6D9"/>
+      <circle cx="85" cy="15" r="2" fill="#F9CC6B"/>
+    </svg>
+    <div class="flex flex-col justify-center">
+      <span class="font-bold text-[10px] tracking-widest text-[#264790] uppercase leading-tight">Drastha</span>
+      <span class="font-bold text-[10px] tracking-widest text-[#44A6D9] uppercase leading-tight">Learning</span>
+    </div>
+  </div>`
+);
+</script>
+
+<script>
+// For usePage import access inside setup
+import { usePage } from '@inertiajs/vue3';
+</script>
+
+<template>
+  <Head :title="course.title + ' | Drastha Learning'" />
+
+  <GuestLayout>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      
+      <!-- Back to Courses Link -->
+      <div class="mb-8">
+        <Link 
+          href="/courses" 
+          class="inline-flex items-center gap-2 text-slate-400 hover:text-[#44A6D9] font-semibold text-sm transition-colors"
+        >
+          &lsaquo; Kembali ke Daftar Kelas
+        </Link>
+      </div>
+
+      <div class="flex flex-col lg:flex-row gap-10 items-start">
+        
+        <!-- LEFT COLUMN: Main Course Info -->
+        <div class="flex-1 lg:max-w-[65%] w-full">
+          
+          <!-- Badges -->
+          <div class="flex items-center gap-3 mb-4">
+            <span class="bg-[#F9CC6B]/15 text-[#264790] border border-[#264790]/20 rounded-md px-3 py-1.5 text-xs font-bold uppercase tracking-wider">
+              {{ course.category?.name || 'Coding IT Class' }}
+            </span>
+            <span class="bg-[#1A2B49] text-white rounded-md px-3 py-1.5 text-xs font-bold uppercase tracking-wider">
+              Open Registration
+            </span>
+          </div>
+
+          <!-- Course Title -->
+          <h1 class="text-3xl sm:text-4xl font-extrabold text-[#1A2B49] leading-tight mb-5">
+            {{ course.title }}
+          </h1>
+
+          <!-- Top Meta -->
+          <div class="flex flex-wrap items-center gap-6 text-sm text-slate-500 font-semibold mb-8">
+            <div class="flex items-center gap-2">
+              <Calendar :size="16" class="text-slate-400" />
+              <span>{{ course.sessions || 'Two Session per Week' }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <Clock :size="16" class="text-slate-400" />
+              <span>{{ course.duration || '1 Hour for 1 Session' }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <MapPin :size="16" class="text-slate-400" />
+              <span>{{ course.type || 'Offline Class' }}</span>
+            </div>
+          </div>
+
+          <!-- Banner Visual Panel -->
+          <div 
+            class="w-full h-80 sm:h-96 rounded-3xl overflow-hidden relative flex items-center justify-center shadow-sm mb-10 transition-transform duration-300 hover:shadow-md"
+            :style="{ backgroundColor: course.bg_color || '#44A6D9' }"
+          >
+            <div class="text-black scale-125 sm:scale-150 transform">
+              <!-- Render code icon default as per screenshot -->
+              <Code :size="80" :stroke-width="2.5" />
+            </div>
+            
+            <!-- Glassmorphism corner design from screenshot -->
+            <div class="absolute -bottom-6 -right-6 text-black opacity-10 transform -rotate-45">
+               <div class="w-32 h-4 bg-black rounded-full mb-3"></div>
+               <div class="w-20 h-4 bg-black rounded-full"></div>
+            </div>
+          </div>
+
+          <!-- Section: Tentang Kelas -->
+          <div class="mb-10">
+            <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">Tentang Kelas</h3>
+            
+            <div class="flex flex-col gap-6 text-[#1A2B49] leading-relaxed">
+              <div>
+                <h4 class="font-extrabold text-base mb-1.5">Deskripsi :</h4>
+                <p class="text-slate-500 font-medium text-sm sm:text-base">
+                  {{ course.description || 'Materi kelas yang mengajarkan tentang pemrograman dasar secara asyik, interaktif, dan menyenangkan.' }}
+                </p>
+              </div>
+
+              <div>
+                <h4 class="font-extrabold text-base mb-1.5">Usia :</h4>
+                <p class="text-slate-500 font-medium text-sm sm:text-base">
+                  {{ ageLabel }}
+                </p>
+              </div>
+
+              <div>
+                <h4 class="font-extrabold text-base mb-1.5">Benefit :</h4>
+                <p class="text-slate-500 font-medium text-sm sm:text-base">
+                  {{ course.about || 'Modul Lengkap, E-Certificate, Dokumentasi Belajar, Report Study Berkala' }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section: Lokasi -->
+          <div class="mb-10">
+            <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">Lokasi</h3>
+            
+            <!-- Map Card Wrapper (Leaflet.js) -->
+            <div class="rounded-3xl overflow-hidden border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.02)] mb-5 h-[320px] relative z-0">
+              <l-map ref="map" v-model:zoom="zoom" :center="center" :use-global-leaflet="false" style="height: 100%; width: 100%;">
+                <l-tile-layer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  layer-type="base"
+                  name="OpenStreetMap"
+                ></l-tile-layer>
+                
+                <l-marker :lat-lng="center">
+                  <l-popup>
+                    <div class="text-center font-montserrat">
+                      <h4 class="font-extrabold text-[#1A2B49] text-sm">Drastha Learning</h4>
+                      <p class="text-xs text-slate-500 mt-1 font-semibold">Pusat Kelas Offline</p>
+                    </div>
+                  </l-popup>
+                </l-marker>
+              </l-map>
+            </div>
+
+            <div class="flex items-start gap-3">
+              <MapPin :size="20" class="text-[#FF4D4F] shrink-0 mt-0.5" />
+              <p class="text-slate-500 font-semibold text-xs sm:text-sm leading-relaxed">
+                Drastha Learning, Jl. Budi Luhur Wagir Indah No.B-2, Wagir, Kwangsan, Kec. Sedati, Kabupaten Sidoarjo, Jawa Timur 61253
+              </p>
+            </div>
+          </div>
+
+          <!-- Section: Kurikulum Kelas Accordion collapsible -->
+          <div class="mb-10">
+            <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">Kurikulum Kelas :</h3>
+            
+            <div class="flex flex-col gap-4">
+              <div 
+                v-for="(mod, modIdx) in course.modules" 
+                :key="mod.id"
+                class="bg-white rounded-[1.25rem] border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.015)] overflow-hidden"
+              >
+                <!-- Accordion Header -->
+                <button 
+                  @click="toggleModule(mod.id)"
+                  class="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50/50 transition-colors outline-none"
+                >
+                  <div>
+                    <h4 class="font-extrabold text-base text-[#1A2B49] mb-1">{{ mod.title }}</h4>
+                    <span class="text-xs text-slate-400 font-bold">
+                      {{ mod.lessons?.length || 0 }} Video ({{ getModuleDuration(mod) }} Menit)
+                    </span>
+                  </div>
+                  <ChevronDown 
+                    :size="18" 
+                    :class="{'rotate-180': expandedModules[mod.id]}"
+                    class="text-slate-400 transition-transform duration-200" 
+                  />
+                </button>
+
+                <!-- Accordion Content -->
+                <div 
+                  v-show="expandedModules[mod.id]"
+                  class="p-5 border-t border-slate-50 bg-slate-50/20 flex flex-col gap-3"
+                >
+                  <div 
+                    v-for="(les, lesIdx) in mod.lessons" 
+                    :key="les.id"
+                    :class="lesIdx === 0 ? 'bg-[#264790] text-white shadow-sm' : 'bg-[#F4F7F9] text-[#1A2B49]'"
+                    class="flex items-center justify-between p-4 rounded-xl transition-all"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div 
+                        :class="lesIdx === 0 ? 'bg-white/10 text-white' : 'bg-white text-[#264790] border border-slate-100'"
+                        class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 shadow-sm"
+                      >
+                        <Play :size="12" :stroke-width="3" />
+                      </div>
+                      <span class="font-bold text-xs sm:text-sm">{{ les.title }}</span>
+                    </div>
+                    <span 
+                      :class="lesIdx === 0 ? 'text-white/80' : 'text-slate-400'"
+                      class="text-xs font-bold shrink-0"
+                    >
+                      {{ les.duration_minutes }} Menit
+                    </span>
+                  </div>
+
+                  <div v-if="!mod.lessons || mod.lessons.length === 0" class="text-center py-4 text-xs font-bold text-slate-400">
+                    Belum ada materi pelajaran dalam bab ini.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: Sticky Purchase Sidebar -->
+        <div class="w-full lg:max-w-[35%] lg:sticky lg:top-28">
+          
+          <!-- Sticky Box Card -->
+          <div class="bg-white rounded-3xl p-8 border border-slate-50 shadow-[0_12px_40px_rgba(0,0,0,0.03)] flex flex-col gap-6">
+            
+            <div>
+              <span class="text-slate-400 text-xs font-bold uppercase tracking-wider block mb-1">BIAYA PENDAFTARAN</span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-3xl font-extrabold text-[#1A2B49]">Rp{{ formatPrice(course.price) }}</span>
+                <span class="text-slate-400 font-bold text-xs">/ Bulan</span>
+              </div>
+            </div>
+
+            <!-- CTA Buttons -->
+            <div class="flex flex-col gap-3">
+              <!-- If Enrolled, show Start Learning button -->
+              <Link 
+                v-if="isEnrolled"
+                href="/dashboard"
+                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-bold text-sm shadow-md transition-colors text-center flex items-center justify-center gap-1.5"
+              >
+                <Play :size="16" /> Mulai Belajar
+              </Link>
+              
+              <!-- Otherwise, show dynamic Register button -->
+              <button 
+                v-else
+                @click="handleRegister"
+                :disabled="isProcessing"
+                class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-4 rounded-2xl font-bold text-sm shadow-md transition-colors flex items-center justify-center gap-1.5"
+              >
+                <CreditCard :size="16" /> Daftar Sekarang
+              </button>
+
+              <button 
+                @click="handleShare"
+                class="w-full bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-100 py-4 rounded-2xl font-bold text-sm transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Share2 :size="16" /> Bagikan
+              </button>
+            </div>
+
+            <div class="h-px bg-slate-100"></div>
+
+            <!-- Revised Meta attributes matching revised screenshot -->
+            <div class="flex flex-col gap-3.5 text-slate-500 font-semibold text-xs sm:text-sm">
+              <div class="flex items-center gap-3">
+                <BarChart3 :size="18" class="text-slate-400 shrink-0" />
+                <span>{{ levelLabel }}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <GraduationCap :size="18" class="text-slate-400 shrink-0" />
+                <span>{{ enrolledCountLabel }}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <User :size="18" class="text-slate-400 shrink-0" />
+                <span>Kapasitas: {{ course.capacity || 20 }} Siswa / Kelas</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <Clock :size="18" class="text-slate-400 shrink-0" />
+                <span>{{ durationLabel }}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <RotateCw :size="18" class="text-slate-400 shrink-0" />
+                <span>{{ lastUpdatedLabel }}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <Award :size="18" class="text-slate-400 shrink-0" />
+                <span>Certificate of completion</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- CLEAN FOOTER -->
+    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 mt-16 border-t border-slate-100">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <!-- Inline SVG DL Logo -->
+          <div class="flex items-center gap-2 mb-4" v-html="Logo()"></div>
+          <p class="text-slate-500 font-medium text-xs max-w-sm">
+            Platform Learning Management System (LMS) yang dirancang untuk mendukung pembelajaran modern, interaktif, dan berkelanjutan.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap gap-x-12 gap-y-6">
+          <div>
+            <h4 class="font-bold text-xs text-[#1A2B49] uppercase tracking-wider mb-3">Tautan Cepat</h4>
+            <div class="flex flex-col gap-2 text-xs font-semibold text-slate-400">
+              <Link href="/" class="hover:text-[#44A6D9] transition-colors">Home</Link>
+              <Link href="/courses" class="hover:text-[#44A6D9] transition-colors">Kelas Kami</Link>
+              <Link href="/#hubungi-kami" class="hover:text-[#44A6D9] transition-colors">Hubungi Kami</Link>
+            </div>
+          </div>
+          <div>
+            <h4 class="font-bold text-xs text-[#1A2B49] uppercase tracking-wider mb-3">Kontak</h4>
+            <p class="text-xs font-semibold text-slate-400 mb-1">PT. DRASTHA BERKAH SENTOSA</p>
+            <p class="text-xs font-semibold text-slate-400">Jl. Budi Luhur B/2, Wagir, Kwangsan, Sedati</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="h-px bg-slate-100 my-8"></div>
+
+      <div class="flex flex-col sm:flex-row justify-between items-center text-[10px] font-bold text-slate-400 gap-4">
+        <span>&copy; 2026 Drastha Learning. All Rights Reserved</span>
+        <div class="flex gap-6">
+          <a href="#" class="hover:text-[#44A6D9] transition-colors">Privacy Policy</a>
+          <a href="#" class="hover:text-[#44A6D9] transition-colors">Terms of Service</a>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Payment Success Overlay Modal -->
+    <div 
+      v-if="showSuccessOverlay" 
+      class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+    >
+      <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-100 relative text-center flex flex-col items-center">
+        
+        <div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-5">
+          <CheckCircle2 :size="36" />
+        </div>
+
+        <h3 class="text-xl font-extrabold text-[#1A2B49] mb-2">Pendaftaran Berhasil!</h3>
+        <p class="text-slate-400 text-sm font-semibold mb-6">
+          Selamat! Anda telah resmi terdaftar di kelas <b class="text-[#1A2B49]">{{ course.title }}</b>. Silakan masuk ke Dashboard Siswa Anda untuk memulai pelajaran.
+        </p>
+
+        <Link 
+          href="/dashboard"
+          class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3 rounded-2xl font-bold text-sm shadow-md transition-colors"
+        >
+          Masuk ke Dashboard
+        </Link>
+      </div>
+    </div>
+  </GuestLayout>
+</template>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+.font-montserrat { font-family: 'Montserrat', sans-serif; }
+</style>
