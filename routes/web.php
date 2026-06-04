@@ -32,6 +32,23 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
+Route::get('/dashboard/enrolled-courses', [DashboardController::class, 'enrolledCourses'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard.enrolled-courses');
+
+// Placeholder routes for unimplemented dashboard features
+Route::get('/dashboard/reviews', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.reviews');
+Route::get('/dashboard/quiz-attempts', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.quiz-attempts');
+Route::get('/dashboard/wishlist', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.wishlist');
+Route::get('/dashboard/order-history', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.order-history');
+Route::get('/dashboard/qa', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.qa');
+
+// Instructor placeholder routes
+Route::get('/dashboard/announcements', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.announcements');
+Route::get('/dashboard/withdrawals', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.withdrawals');
+Route::get('/dashboard/google-meet', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.google-meet');
+Route::get('/dashboard/zoom', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.zoom');
+
 // Auth routes group
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -40,6 +57,10 @@ Route::middleware('auth')->group(function () {
 
     // Role Management (Admin only)
     Route::post('/dashboard/change-role/{user}', [DashboardController::class, 'changeRole']);
+    
+    // LMS Settings
+    Route::get('/dashboard/settings', [DashboardController::class, 'settings'])->name('dashboard.settings');
+    Route::post('/dashboard/settings', [DashboardController::class, 'updateSettings'])->name('dashboard.settings.update');
 
     // Course Builder Routes
     Route::prefix('course-builder')->name('course-builder.')->group(function () {

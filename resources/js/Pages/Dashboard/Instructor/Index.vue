@@ -1,9 +1,10 @@
 <script setup>
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import GuestLayout from '@/Layouts/GuestLayout.vue';
+import DashboardWrapper from '@/Components/DashboardWrapper.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import { 
-  Users, BookOpen, TrendingUp, Shield, ArrowRight,
-  Plus, Calendar, Award
+  Users, BookOpen, TrendingUp, Trophy, ArrowRight,
+  CheckCircle2, AlertCircle, Star
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -16,143 +17,116 @@ const props = defineProps({
 <template>
   <Head title="Instructor Dashboard" />
 
-  <AuthenticatedLayout>
-    <template #header>
-      <div class="flex items-center justify-between">
-        <h2 class="text-2xl font-extrabold text-[#1A2B49] leading-tight">
-          Dashboard Pengajar
-        </h2>
-        <Link 
-          :href="route('course-builder.index')"
-          class="bg-[#264790] hover:bg-[#44A6D9] text-white px-5 py-2.5 rounded-full font-bold text-sm shadow-md transition-colors flex items-center gap-2"
-        >
-          <Plus :size="16" /> Kelola & Buat Kelas
-        </Link>
-      </div>
-    </template>
-
-    <div class="py-12 bg-slate-50 min-h-screen">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <GuestLayout>
+    <DashboardWrapper>
+      
+      <!-- "Complete Your Profile" Card -->
+      <div class="bg-white rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-slate-100 mb-8 flex flex-col lg:flex-row gap-8 lg:items-center">
         
-        <!-- Metrics Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+        <div class="flex-1">
+          <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-6">Complete Your Profile</h3>
           
-          <!-- Metric 1: Active Courses -->
-          <div class="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex items-center gap-5 transition-transform duration-300 hover:-translate-y-1">
-            <div class="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-              <BookOpen :size="28" />
+          <!-- Progress Bar -->
+          <div class="flex gap-2 mb-4">
+            <div class="h-2 flex-1 rounded-full bg-slate-200"></div>
+            <div class="h-2 flex-1 rounded-full bg-slate-200"></div>
+            <div class="h-2 flex-1 rounded-full bg-slate-200"></div>
+          </div>
+          
+          <p class="text-slate-500 font-medium text-sm">Please complete profile: <b class="text-[#1A2B49]">0/3</b></p>
+        </div>
+        
+        <!-- Trophy Icon & Checklist -->
+        <div class="flex items-center gap-8 lg:w-1/2">
+          <div class="w-16 h-16 rounded-full bg-indigo-50 text-indigo-600 flex flex-col items-center justify-center shrink-0 shadow-inner">
+            <Trophy :size="32" stroke-width="2.5" />
+          </div>
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center gap-2 text-slate-500 text-sm font-medium hover:text-[#44A6D9] cursor-pointer transition-colors">
+              <AlertCircle :size="16" class="text-amber-500" /> Set Your Profile Photo
             </div>
-            <div>
-              <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-0.5">Kelas Aktif</p>
-              <h3 class="text-xl font-extrabold text-[#1A2B49]">{{ metrics.total_courses }} Kelas</h3>
+            <div class="flex items-center gap-2 text-slate-500 text-sm font-medium hover:text-[#44A6D9] cursor-pointer transition-colors">
+              <AlertCircle :size="16" class="text-amber-500" /> Set Your Bio
+            </div>
+            <div class="flex items-center gap-2 text-slate-500 text-sm font-medium hover:text-[#44A6D9] cursor-pointer transition-colors">
+              <AlertCircle :size="16" class="text-amber-500" /> Set Withdraw Method
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- Metric 2: Total Students -->
-          <div class="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex items-center gap-5 transition-transform duration-300 hover:-translate-y-1">
-            <div class="w-14 h-14 rounded-2xl bg-sky-50 flex items-center justify-center text-sky-600">
-              <Users :size="28" />
-            </div>
-            <div>
-              <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-0.5">Total Siswa Anda</p>
-              <h3 class="text-xl font-extrabold text-[#1A2B49]">{{ metrics.total_students }} Siswa</h3>
-            </div>
+      <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-6">Dashboard</h3>
+
+      <!-- Metrics Grid (3 cards as per screenshot) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        
+        <!-- Metric 1 -->
+        <div class="bg-white rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col items-center justify-center text-center transition-transform duration-300 hover:-translate-y-1">
+          <div class="w-16 h-16 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
+            <Users :size="28" stroke-width="2.5" />
           </div>
-
-          <!-- Metric 3: Gross Revenue -->
-          <div class="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex items-center gap-5 transition-transform duration-300 hover:-translate-y-1">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-              <TrendingUp :size="28" />
-            </div>
-            <div>
-              <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-0.5">Total Omset</p>
-              <h3 class="text-xl font-extrabold text-[#1A2B49]">{{ metrics.gross_revenue }}</h3>
-            </div>
-          </div>
-
-          <!-- Metric 4: Instructor Earnings -->
-          <div class="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex items-center gap-5 transition-transform duration-300 hover:-translate-y-1">
-            <div class="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
-              <Award :size="28" />
-            </div>
-            <div>
-              <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-0.5">Bagi Hasil Anda (70%)</p>
-              <h3 class="text-xl font-extrabold text-[#1A2B49]">{{ metrics.instructor_earnings }}</h3>
-            </div>
-          </div>
-
+          <h3 class="text-4xl font-extrabold text-[#1A2B49] mb-2">{{ metrics.total_students || 0 }}</h3>
+          <p class="text-slate-500 text-sm font-medium">Total Students</p>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          <!-- Course List -->
-          <div class="lg:col-span-2 bg-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100">
-            <h3 class="text-lg font-extrabold text-[#1A2B49] mb-6 flex items-center gap-2">
-              <BookOpen :size="20" class="text-indigo-600" /> Daftar Kelas Anda
-            </h3>
-            
-            <div class="flex flex-col gap-5">
-              <div v-for="course in courses" :key="course.id" class="p-5 rounded-3xl bg-slate-50/50 border border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:border-slate-200 hover:bg-white transition-all duration-300">
-                <div class="flex items-center gap-4">
-                  <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white" :style="{ backgroundColor: course.bg_color || '#44A6D9' }">
-                    <BookOpen :size="24" />
-                  </div>
-                  <div>
-                    <h4 class="font-extrabold text-[#1A2B49] text-base leading-tight mb-1">{{ course.title }}</h4>
-                    <div class="flex items-center gap-3 text-xs font-medium text-slate-400">
-                      <span>{{ course.level }}</span>
-                      <span>•</span>
-                      <span>{{ course.modules_count }} Bab</span>
-                      <span>•</span>
-                      <span>{{ course.lessons_count }} Sesi</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="flex items-center justify-between sm:justify-end gap-6">
-                  <div class="text-right">
-                    <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Siswa Enrolled</div>
-                    <div class="text-lg font-extrabold text-[#1A2B49]">{{ course.enrollments_count }} Siswa</div>
-                  </div>
-                  <Link 
-                    :href="route('course-builder.build', course.id)"
-                    class="bg-white hover:bg-[#264790] hover:text-white border border-slate-200 hover:border-[#264790] p-2.5 rounded-2xl text-[#264790] transition-colors"
-                  >
-                    <ArrowRight :size="18" />
-                  </Link>
-                </div>
-              </div>
-
-              <div v-if="courses.length === 0" class="text-center py-10 text-slate-400 font-medium">
-                Belum ada kelas yang dibuat. Silakan klik "Kelola & Buat Kelas" untuk memulai!
-              </div>
-            </div>
+        <!-- Metric 2 -->
+        <div class="bg-white rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col items-center justify-center text-center transition-transform duration-300 hover:-translate-y-1">
+          <div class="w-16 h-16 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
+            <BookOpen :size="28" stroke-width="2.5" />
           </div>
+          <h3 class="text-4xl font-extrabold text-[#1A2B49] mb-2">{{ metrics.total_courses || 0 }}</h3>
+          <p class="text-slate-500 text-sm font-medium">Total Courses</p>
+        </div>
 
-          <!-- Recent Enrollments -->
-          <div class="bg-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100">
-            <h3 class="text-lg font-extrabold text-[#1A2B49] mb-6 flex items-center gap-2">
-              <Users :size="20" class="text-sky-600" /> Pendaftaran Terbaru
-            </h3>
-            
-            <div class="flex flex-col gap-4">
-              <div v-for="en in recentEnrollments" :key="en.id" class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
-                <div class="font-bold text-sm text-[#1A2B49]">{{ en.user?.name }}</div>
-                <div class="text-slate-400 text-xs mb-1.5">{{ en.user?.email }}</div>
-                <div class="text-slate-500 font-medium text-[11px] leading-tight flex items-center gap-1.5 mt-1">
-                  <Calendar :size="12" class="text-indigo-600" />
-                  <span>Enrolled in: <b class="text-[#1A2B49]">{{ en.course?.title }}</b></span>
-                </div>
-              </div>
-
-              <div v-if="recentEnrollments.length === 0" class="text-center py-6 text-slate-400 font-medium">
-                Belum ada pendaftaran siswa.
-              </div>
-            </div>
+        <!-- Metric 3 -->
+        <div class="bg-white rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col items-center justify-center text-center transition-transform duration-300 hover:-translate-y-1">
+          <div class="w-16 h-16 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
+            <TrendingUp :size="28" stroke-width="2.5" />
           </div>
-
+          <h3 class="text-4xl font-extrabold text-[#1A2B49] mb-2">{{ metrics.instructor_earnings || 'Rp0' }}</h3>
+          <p class="text-slate-500 text-sm font-medium">Total Earnings</p>
         </div>
 
       </div>
-    </div>
-  </AuthenticatedLayout>
+
+      <!-- My Courses Table -->
+      <div class="mb-6 flex items-center justify-between">
+        <h3 class="text-2xl font-extrabold text-[#1A2B49]">My Courses</h3>
+        <Link href="/course-builder" class="text-slate-500 hover:text-[#44A6D9] text-sm font-bold transition-colors">View All</Link>
+      </div>
+
+      <div class="bg-white rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-slate-100 mb-10">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-slate-200 text-slate-500 text-[10px] font-extrabold uppercase tracking-widest bg-slate-50">
+              <th class="py-4 px-6">COURSE NAME</th>
+              <th class="py-4 px-6 text-center">ENROLLED</th>
+              <th class="py-4 px-6 text-center">RATING</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <tr v-for="course in courses" :key="course.id" class="hover:bg-slate-50/50 transition-colors group">
+              <td class="py-4 px-6 font-bold text-[#1A2B49] text-sm group-hover:text-[#264790] transition-colors">
+                {{ course.title }}
+              </td>
+              <td class="py-4 px-6 text-center font-bold text-slate-500">
+                {{ course.enrollments_count || 0 }}
+              </td>
+              <td class="py-4 px-6 text-center">
+                <div class="flex items-center justify-center gap-1 text-slate-300">
+                  <Star v-for="i in 5" :key="i" :size="14" />
+                </div>
+              </td>
+            </tr>
+            <tr v-if="courses.length === 0">
+              <td colspan="3" class="py-10 text-center text-slate-400 font-medium">
+                No courses found. Create one to get started!
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </DashboardWrapper>
+  </GuestLayout>
 </template>

@@ -101,6 +101,7 @@ class CourseBuilderController extends Controller
             'course' => $course,
             'categories' => Category::all(),
             'tags' => Tag::all(),
+            'courses' => Course::where('id', '!=', $course->id)->get(['id', 'title', 'thumbnail'])
         ]);
     }
 
@@ -326,9 +327,8 @@ class CourseBuilderController extends Controller
     {
         $request->validate([
             'question_text' => 'required|string',
-            'options' => 'required|array|min:2',
-            'options.*' => 'required|string',
-            'correct_option_index' => 'required|integer|min:0',
+            'options' => 'required|array',
+            'correct_option_index' => 'required|integer',
         ]);
 
         $sortOrder = $quiz->questions()->count();
@@ -351,9 +351,8 @@ class CourseBuilderController extends Controller
     {
         $request->validate([
             'question_text' => 'required|string',
-            'options' => 'required|array|min:2',
-            'options.*' => 'required|string',
-            'correct_option_index' => 'required|integer|min:0',
+            'options' => 'required|array',
+            'correct_option_index' => 'required|integer',
         ]);
 
         $question->update($request->only(['question_text', 'options', 'correct_option_index']));

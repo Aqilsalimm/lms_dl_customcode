@@ -53,7 +53,7 @@ class DashboardController extends Controller
                 DB::raw("DATE_FORMAT(created_at, '%M') as month")
             )
             ->groupBy('month')
-            ->orderBy('created_at')
+            ->orderBy(DB::raw('MIN(created_at)'))
             ->get();
 
         // 4. Recent Instructors and Students
@@ -192,5 +192,90 @@ class DashboardController extends Controller
         $user->update(['role' => $request->role]);
 
         return back()->with('success', 'User role updated successfully');
+    }
+
+    /**
+     * Display Enrolled Courses page
+     */
+    public function enrolledCourses()
+    {
+        $user = auth()->user();
+
+        // Enrolled courses with modules and lessons count
+        $enrollments = Enrollment::where('user_id', $user->id)
+            ->with(['course' => function($query) {
+                $query->withCount(['modules', 'lessons'])->with('instructor');
+            }])
+            ->whereNotNull('course_id')
+            ->get();
+
+        $coursesList = $enrollments->map(function($enrollment) {
+            $course = $enrollment->course;
+            if (!$course) return null;
+            return [
+                'id' => $course->id,
+                'title' => $course->title,
+                'slug' => $course->slug,
+                'level' => $course->level,
+                'thumbnail' => $course->thumbnail,
+                'bg_color' => $course->bg_color,
+                'icon_type' => $course->icon_type,
+                'instructor_name' => $course->instructor->name ?? 'Admin',
+                'lessons_count' => $course->lessons_count,
+                'modules_count' => $course->modules_count,
+                'status' => 'enrolled', // We'll add completed logic later if needed
+            ];
+        })->filter()->values();
+
+        return Inertia::render('Dashboard/Student/EnrolledCourses', [
+            'enrolledCourses' => $coursesList
+        ]);
+    }
+
+    /**
+     * Display LMS Settings page (Admin only)
+     */
+    public function settings()
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin()) {
+            return redirect()->route('dashboard')->with('error', 'Unauthorized access.');
+        }
+
+        $settings = \App\Models\Setting::pluck('value', 'key')->toArray();
+
+        return Inertia::render('Dashboard/Admin/Settings', [
+            'settings' => $settings
+        ]);
+    }
+
+    /**
+     * Update LMS Settings
+     */
+    public function updateSettings(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $settingsData = $request->input('settings', []);
+        
+        foreach ($settingsData as $key => $value) {
+            \App\Models\Setting::updateOrCreate(
+                ['key' => $key],
+                ['value' => is_array($value) ? json_encode($value) : $value]
+            );
+        }
+
+        return redirect()->back()->with('success', 'Settings updated successfully.');
+    }
+
+    /**
+     * Placeholder method for unimplemented routes
+     */
+    public function placeholder()
+    {
+        return redirect()->route('dashboard')->with('info', 'This feature is currently under development.');
     }
 }

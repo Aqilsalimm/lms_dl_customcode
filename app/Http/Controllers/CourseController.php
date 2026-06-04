@@ -57,7 +57,7 @@ class CourseController extends Controller
     {
         $course = Course::where('slug', $slug)
             ->where('status', 'published')
-            ->with(['category', 'tags', 'instructor', 'modules.lessons', 'modules.quizzes'])
+            ->with(['category', 'tags', 'instructor', 'modules.lessons', 'modules.quizzes.questions'])
             ->firstOrFail();
 
         // Check if current user is enrolled
@@ -85,7 +85,7 @@ class CourseController extends Controller
         // 2. Fetch course with published modules & lessons
         $course = Course::where('slug', $slug)
             ->where('status', 'published')
-            ->with(['category', 'tags', 'instructor', 'modules.lessons', 'modules.quizzes'])
+            ->with(['category', 'tags', 'instructor', 'modules.lessons', 'modules.quizzes.questions'])
             ->firstOrFail();
 
         // 3. Authorization check (is Enrolled or is Instructor of course or is Admin)

@@ -4,7 +4,8 @@ import { Head, Link } from '@inertiajs/vue3';
 import { 
   ShoppingCart, User, Globe, ChevronDown, GraduationCap, 
   Home, Newspaper, Calendar, Clock, MapPin, Code,
-  Play, CheckCircle2, ArrowLeft, Download, Info, Menu, X
+  Play, CheckCircle2, ArrowLeft, Download, Info, Menu, X,
+  BookOpen, HelpCircle, Check, Presentation, FileText, ChevronLeft, ChevronRight, AlertCircle
 } from 'lucide-vue-next';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 
@@ -19,10 +20,12 @@ const isSidebarOpen = ref(true);
 
 // State for active lesson (default: very first lesson of first module)
 const activeLesson = ref(null);
+const activeQuiz = ref(null);
 const activeModule = ref(null);
 
 // Completed lessons state (synced with LocalStorage)
 const completedLessons = ref([]);
+const completedQuizzes = ref([]);
 
 // Set initial active lesson
 if (props.course.modules && props.course.modules.length > 0) {
@@ -31,6 +34,9 @@ if (props.course.modules && props.course.modules.length > 0) {
   
   if (props.course.modules[0].lessons && props.course.modules[0].lessons.length > 0) {
     activeLesson.value = props.course.modules[0].lessons[0];
+    activeModule.value = props.course.modules[0];
+  } else if (props.course.modules[0].quizzes && props.course.modules[0].quizzes.length > 0) {
+    activeQuiz.value = props.course.modules[0].quizzes[0];
     activeModule.value = props.course.modules[0];
   }
 }
@@ -42,8 +48,18 @@ const toggleModule = (id) => {
 
 // Select a lesson
 const selectLesson = (lesson, moduleObj) => {
+  activeQuiz.value = null;
   activeLesson.value = lesson;
   activeModule.value = moduleObj;
+  currentSlideIndex.value = 0;
+};
+
+// Select a quiz
+const selectQuiz = (quiz, moduleObj) => {
+  activeLesson.value = null;
+  activeQuiz.value = quiz;
+  activeModule.value = moduleObj;
+  startQuiz(quiz);
 };
 
 // Calculate total module duration
@@ -54,7 +70,26 @@ const getModuleDuration = (mod) => {
 
 // Parse YouTube / Vimeo url into iframe embed url
 const getEmbedUrl = computed(() => {
-  const url = activeLesson.value?.video_url;
+  if (!activeLesson.value) return '';
+  
+  let url = activeLesson.value.video_url;
+  
+  // Canva / Slides type
+  if (activeLesson.value.content && activeLesson.value.content.startsWith('{') && activeLesson.value.content.endsWith('}')) {
+    try {
+      const obj = JSON.parse(activeLesson.value.content);
+      if (obj.type === 'slides') {
+        url = obj.slides_url || '';
+        // extract iframe src if needed
+        if (url.includes('src="')) {
+          const match = url.match(/src="([^"]+)"/);
+          if (match) url = match[1];
+        }
+        return url;
+      }
+    } catch (e) {}
+  }
+
   if (!url) return '';
 
   // YouTube match
@@ -85,11 +120,26 @@ onMounted(() => {
       completedLessons.value = [];
     }
   }
+
+  const savedQuizCompletions = localStorage.getItem('drastha_quiz_completions');
+  if (savedQuizCompletions) {
+    try {
+      const completionsMap = JSON.parse(savedQuizCompletions);
+      completedQuizzes.value = completionsMap[props.course.id] || [];
+    } catch (e) {
+      completedQuizzes.value = [];
+    }
+  }
 });
 
 // Check if lesson is completed
 const isCompleted = (lessonId) => {
   return completedLessons.value.includes(lessonId);
+};
+
+// Check if quiz is passed
+const isQuizPassed = (quizId) => {
+  return completedQuizzes.value.includes(quizId);
 };
 
 // Toggle completion state
@@ -132,7 +182,6 @@ const toolsList = computed(() => {
     ];
   }
   
-  // Default stack matching mockup
   return [
     { name: 'Visual Studio Code', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vscode/vscode-original.svg' },
     { name: 'HTML', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg' },
@@ -142,6 +191,128 @@ const toolsList = computed(() => {
     { name: 'NodeJs', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg' }
   ];
 });
+
+// Slide index for PPT manual
+const currentSlideIndex = ref(0);
+
+const activeLessonType = computed(() => {
+  if (!activeLesson.value) return 'video';
+  const content = activeLesson.value.content;
+  if (content && content.startsWith('{') && content.endsWith('}')) {
+    try {
+      const obj = JSON.parse(content);
+      return obj.type || 'video';
+    } catch (e) {}
+  }
+  return activeLesson.value.video_url ? 'video' : 'ppt';
+});
+
+const pptSlides = computed(() => {
+  if (!activeLesson.value) return [];
+  const content = activeLesson.value.content;
+  if (content && content.startsWith('{') && content.endsWith('}')) {
+    try {
+      const obj = JSON.parse(content);
+      if (obj.type === 'ppt') return obj.slides || [];
+    } catch (e) {}
+  }
+  return [{ title: activeLesson.value.title, content: activeLesson.value.content || 'Materi tertulis...' }];
+});
+
+// Interactive Quiz States
+const quizAnswers = ref({});
+const quizSubmitted = ref(false);
+const quizScore = ref(0);
+const quizTotalQuestions = ref(0);
+const quizResults = ref([]);
+
+const startQuiz = (quiz) => {
+  quizAnswers.value = {};
+  quizSubmitted.value = false;
+  quizScore.value = 0;
+  quizTotalQuestions.value = quiz.questions?.length || 0;
+  quizResults.value = [];
+  
+  if (quiz.questions) {
+    quiz.questions.forEach(q => {
+      quizAnswers.value[q.id] = '';
+    });
+  }
+};
+
+const submitQuiz = () => {
+  if (!activeQuiz.value || !activeQuiz.value.questions) return;
+  
+  let correctCount = 0;
+  const questions = activeQuiz.value.questions;
+  const results = [];
+
+  questions.forEach(q => {
+    const studentAnswer = quizAnswers.value[q.id];
+    let isCorrect = false;
+    let type = 'multiple_choice';
+    let correctText = '';
+    
+    const opts = q.options || [];
+    if (opts[0] === '[TRUE_FALSE]') {
+      type = 'true_false';
+      const correctIdx = q.correct_option_index;
+      correctText = opts[correctIdx + 1] || (correctIdx === 0 ? 'Benar' : 'Salah');
+      isCorrect = parseInt(studentAnswer) === correctIdx;
+    } else if (opts[0] === '[ESSAY]') {
+      type = 'essay';
+      const expectedKeyword = (opts[1] || '').trim().toLowerCase();
+      correctText = opts[1] || '';
+      const textAns = (studentAnswer || '').trim().toLowerCase();
+      isCorrect = textAns.includes(expectedKeyword) && expectedKeyword.length > 0;
+    } else if (opts[0] === '[MATH_FORMULA]') {
+      type = 'math_formula';
+      const expectedFormula = (opts[1] || '').trim().toLowerCase();
+      const expectedValue = (opts[2] || '').trim().toLowerCase();
+      correctText = `Kunci: ${opts[2] || opts[1]}`;
+      const textAns = (studentAnswer || '').trim().toLowerCase();
+      isCorrect = textAns === expectedValue || textAns === expectedFormula;
+    } else {
+      type = 'multiple_choice';
+      const correctIdx = q.correct_option_index;
+      correctText = opts[correctIdx] || '';
+      isCorrect = parseInt(studentAnswer) === correctIdx;
+    }
+
+    if (isCorrect) {
+      correctCount++;
+    }
+    
+    results.push({
+      question_text: q.question_text,
+      is_correct: isCorrect,
+      student_answer: studentAnswer,
+      correct_text: correctText,
+      type: type
+    });
+  });
+
+  quizScore.value = Math.round((correctCount / questions.length) * 100);
+  quizResults.value = results;
+  quizSubmitted.value = true;
+
+  if (quizScore.value >= 70) {
+    const qId = activeQuiz.value.id;
+    if (!completedQuizzes.value.includes(qId)) {
+      completedQuizzes.value.push(qId);
+      
+      const savedCompletions = localStorage.getItem('drastha_quiz_completions');
+      let completionsMap = {};
+      if (savedCompletions) {
+        try {
+          completionsMap = JSON.parse(savedCompletions);
+        } catch (e) {}
+      }
+      completionsMap[props.course.id] = completedQuizzes.value;
+      localStorage.setItem('drastha_quiz_completions', JSON.stringify(completionsMap));
+    }
+  }
+};
 
 // Logo Helper
 const Logo = () => (
@@ -218,7 +389,7 @@ const Logo = () => (
                 <div>
                   <h4 class="font-extrabold text-sm sm:text-base text-[#1A2B49] mb-1.5 leading-snug">{{ mod.title }}</h4>
                   <span class="text-[11px] text-slate-400 font-bold block">
-                    {{ mod.lessons?.length || 0 }} Video ({{ getModuleDuration(mod) }} Menit)
+                    {{ mod.lessons?.length || 0 }} Sesi • {{ mod.quizzes?.length || 0 }} Kuis
                   </span>
                 </div>
                 <ChevronDown 
@@ -231,14 +402,15 @@ const Logo = () => (
               <!-- Accordion Module Lessons List -->
               <div 
                 v-show="expandedModules[mod.id]"
-                class="p-4 sm:p-5 border-t border-slate-50 bg-slate-50/20 flex flex-col gap-3.5"
+                class="p-4 sm:p-5 border-t border-slate-50 bg-slate-50/20 flex flex-col gap-3"
               >
+                <!-- Sesi Materi -->
                 <button 
                   v-for="(les, lesIdx) in mod.lessons" 
                   :key="les.id"
                   @click="selectLesson(les, mod)"
                   :class="activeLesson?.id === les.id ? 'bg-[#264790] text-white shadow-md' : 'bg-[#F4F7F9] text-[#1A2B49] hover:bg-slate-100'"
-                  class="w-full flex items-center justify-between p-4 rounded-xl text-left transition-all duration-200 outline-none"
+                  class="w-full flex items-center justify-between p-4 rounded-xl text-left transition-all duration-200 outline-none animate-fade-in"
                 >
                   <div class="flex items-center gap-3">
                     <!-- Icon badge inside circle -->
@@ -247,6 +419,8 @@ const Logo = () => (
                       class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm"
                     >
                       <CheckCircle2 v-if="isCompleted(les.id)" :size="14" />
+                      <Presentation v-else-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'ppt'" :size="12" />
+                      <FileText v-else-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'slides'" :size="12" />
                       <Play v-else :size="11" :stroke-width="3" />
                     </div>
                     <div>
@@ -261,10 +435,37 @@ const Logo = () => (
                   </div>
                 </button>
 
-                <div v-if="!mod.lessons || mod.lessons.length === 0" class="text-center py-4 text-xs font-bold text-slate-400">
-                  Belum ada materi pelajaran.
-                </div>
+                <!-- Evaluasi Kuis -->
+                <button 
+                  v-for="(qz, qzIdx) in mod.quizzes" 
+                  :key="qz.id"
+                  @click="selectQuiz(qz, mod)"
+                  :class="activeQuiz?.id === qz.id ? 'bg-[#264790] text-white shadow-md' : 'bg-[#FFFBEB] text-[#78350F] hover:bg-amber-100/50 border border-amber-100'"
+                  class="w-full flex items-center justify-between p-4 rounded-xl text-left transition-all duration-200 outline-none animate-fade-in"
+                >
+                  <div class="flex items-center gap-3">
+                    <div 
+                      :class="activeQuiz?.id === qz.id ? 'bg-white/10 text-white' : (isQuizPassed(qz.id) ? 'bg-emerald-100 text-emerald-600' : 'bg-white text-amber-500 border border-amber-100')"
+                      class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm"
+                    >
+                      <CheckCircle2 v-if="isQuizPassed(qz.id)" :size="14" />
+                      <HelpCircle v-else :size="13" />
+                    </div>
+                    <div>
+                      <span class="font-bold text-xs leading-snug block">{{ qz.title }}</span>
+                      <span 
+                        :class="activeQuiz?.id === qz.id ? 'text-white/60' : 'text-amber-600'"
+                        class="text-[10px] font-bold mt-0.5 block"
+                      >
+                        {{ qz.time_limit_minutes }} Menit • Kuis
+                      </span>
+                    </div>
+                  </div>
+                </button>
 
+                <div v-if="(!mod.lessons || mod.lessons.length === 0) && (!mod.quizzes || mod.quizzes.length === 0)" class="text-center py-4 text-xs font-bold text-slate-400">
+                  Belum ada materi pembelajaran.
+                </div>
               </div>
 
             </div>
@@ -273,11 +474,11 @@ const Logo = () => (
 
         </div>
 
-        <!-- RIGHT WORKSPACE: Video Player & Material Details -->
+        <!-- RIGHT WORKSPACE: Content Player & Material Details -->
         <div class="flex-grow w-full lg:max-w-[65%] flex flex-col gap-6">
           
           <!-- Toggle Sidebar Button (when sidebar is hidden) -->
-          <div v-if="!isSidebarOpen" class="mb-2 self-start">
+          <div v-if="!isSidebarOpen" class="mb-2 self-start animate-fade-in">
             <button 
               @click="isSidebarOpen = true"
               class="inline-flex items-center gap-2 bg-white border border-slate-100 shadow-sm px-4 py-2.5 rounded-xl font-extrabold text-xs text-[#264790] hover:text-[#44A6D9] transition-colors"
@@ -286,88 +487,293 @@ const Logo = () => (
             </button>
           </div>
 
-          <!-- Video Player Iframe Frame -->
-          <div class="rounded-3xl overflow-hidden bg-slate-900 border border-slate-950 shadow-lg aspect-video w-full relative">
-            <iframe 
-              v-if="getEmbedUrl"
-              :src="getEmbedUrl"
-              class="w-full h-full absolute inset-0"
-              frameborder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen
-            ></iframe>
-            <div v-else class="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-3">
-              <Play :size="48" class="text-slate-500 animate-pulse" />
-              <span class="text-sm font-semibold">Memuat video materi belajar...</span>
+          <!-- A. LESSON COMPONENT PLAYER -->
+          <div v-if="activeLesson" class="flex flex-col gap-6">
+            <!-- Video / Canva Slides Player Frame -->
+            <div v-if="activeLessonType === 'video' || activeLessonType === 'slides'" class="rounded-3xl overflow-hidden bg-slate-900 border border-slate-950 shadow-lg aspect-video w-full relative">
+              <iframe 
+                v-if="getEmbedUrl"
+                :src="getEmbedUrl"
+                class="w-full h-full absolute inset-0"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+              ></iframe>
+              <div v-else class="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-3">
+                <Play :size="48" class="text-slate-500 animate-pulse" />
+                <span class="text-sm font-semibold">Memuat materi belajar...</span>
+              </div>
+            </div>
+
+            <!-- PPT Manual Slides Player Frame -->
+            <div v-else-if="activeLessonType === 'ppt'" class="rounded-3xl overflow-hidden bg-slate-800 border border-slate-900 shadow-lg aspect-video w-full relative flex flex-col justify-between p-8 text-white select-none">
+              <!-- Slide content top -->
+              <div class="flex justify-between items-center border-b border-white/10 pb-4">
+                <span class="text-[10px] font-bold tracking-widest text-[#44A6D9] uppercase">Slaid Presentasi Pembelajaran</span>
+                <span class="text-xs font-bold text-slate-300 bg-white/10 px-2.5 py-1 rounded-full">{{ currentSlideIndex + 1 }} / {{ pptSlides.length }}</span>
+              </div>
+              
+              <!-- Slide Body -->
+              <div class="flex-grow flex flex-col justify-center gap-4 py-4 overflow-y-auto">
+                <h2 class="text-xl sm:text-2xl font-extrabold text-white text-center leading-snug">
+                  {{ pptSlides[currentSlideIndex]?.title || 'Slaid ' + (currentSlideIndex + 1) }}
+                </h2>
+                <p class="text-slate-200 font-medium text-sm sm:text-base text-center max-w-xl mx-auto leading-relaxed whitespace-pre-line">
+                  {{ pptSlides[currentSlideIndex]?.content || 'Tidak ada isi penjelasan untuk slide ini.' }}
+                </p>
+              </div>
+              
+              <!-- Navigation buttons -->
+              <div class="flex justify-between items-center border-t border-white/10 pt-4">
+                <button 
+                  type="button"
+                  @click="currentSlideIndex = Math.max(0, currentSlideIndex - 1)"
+                  :disabled="currentSlideIndex === 0"
+                  class="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-30 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft :size="14" /> Sebelumnya
+                </button>
+                <button 
+                  type="button"
+                  @click="currentSlideIndex = Math.min(pptSlides.length - 1, currentSlideIndex + 1)"
+                  :disabled="currentSlideIndex === pptSlides.length - 1"
+                  class="px-4 py-2 bg-[#44A6D9] hover:bg-[#44A6D9]/90 disabled:opacity-30 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  Berikutnya <ChevronRight :size="14" />
+                </button>
+              </div>
+            </div>
+
+            <!-- Lesson Title, Subtitle, & Complete Action Row -->
+            <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h1 class="text-xl sm:text-2xl font-extrabold text-[#1A2B49] leading-snug mb-1">
+                  {{ activeLesson?.title || 'Materi Belajar' }}
+                </h1>
+                <p class="text-slate-400 text-xs sm:text-sm font-semibold">
+                  Materi bagian : {{ activeModule?.title || 'Pendahuluan' }}
+                </p>
+              </div>
+
+              <!-- "Selesai" Mark Complete Button -->
+              <button 
+                @click="toggleComplete"
+                :class="isCompleted(activeLesson?.id) ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/10' : 'bg-[#264790] hover:bg-[#44A6D9] text-white shadow-[#264790]/10'"
+                class="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl font-extrabold text-xs sm:text-sm shadow-md transition-all shrink-0 select-none outline-none cursor-pointer"
+              >
+                <CheckCircle2 :size="16" /> 
+                <span>{{ isCompleted(activeLesson?.id) ? 'Sudah Selesai' : 'Selesai' }}</span>
+              </button>
+            </div>
+
+            <!-- Tabs Section -->
+            <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] flex flex-col gap-6">
+              
+              <!-- Tabs Navigation -->
+              <div class="flex gap-4 border-b border-slate-100 pb-3">
+                <button 
+                  @click="activeTab = 'resources'"
+                  :class="activeTab === 'resources' ? 'text-[#264790] border-b-2 border-[#264790]' : 'text-slate-400 hover:text-slate-600'"
+                  class="pb-2 font-extrabold text-sm transition-colors outline-none cursor-pointer"
+                >
+                  Resources
+                </button>
+                <button 
+                  @click="activeTab = 'about'"
+                  :class="activeTab === 'about' ? 'text-[#264790] border-b-2 border-[#264790]' : 'text-slate-400 hover:text-slate-600'"
+                  class="pb-2 font-extrabold text-sm transition-colors outline-none cursor-pointer"
+                >
+                  About
+                </button>
+              </div>
+
+              <!-- Tab Content: Resources -->
+              <div v-if="activeTab === 'resources'">
+                <a 
+                  href="#" 
+                  @click.prevent="alert('Mengunduh paket sumber belajar / assets kelas...')"
+                  class="inline-flex items-center gap-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/50 p-4 rounded-2xl font-bold text-xs sm:text-sm text-slate-700 transition-colors shadow-sm"
+                >
+                  <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-[#264790] shadow-sm shrink-0">
+                    <Download :size="16" />
+                  </div>
+                  <div>
+                    <span class="block text-slate-800">Download Asset / Tools Belajar</span>
+                    <span class="block text-[10px] text-slate-400 font-bold mt-0.5">Format: ZIP / PDF (Drastha Learning)</span>
+                  </div>
+                </a>
+              </div>
+
+              <!-- Tab Content: About -->
+              <div v-else class="text-slate-500 font-medium text-xs sm:text-sm leading-relaxed whitespace-pre-line">
+                {{ activeLessonType === 'ppt' ? (activeLesson?.content && activeLesson?.content.startsWith('{') ? JSON.parse(activeLesson.content).summary : activeLesson?.content) : activeLesson?.content || 'Materi video panduan untuk mempersiapkan tools pemrograman yang mendukung pembelajaran secara terstruktur.' }}
+              </div>
+
             </div>
           </div>
 
-          <!-- Lesson Title, Subtitle, & Complete Action Row -->
-          <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 class="text-xl sm:text-2xl font-extrabold text-[#1A2B49] leading-snug mb-1">
-                {{ activeLesson?.title || 'Materi Belajar' }}
-              </h1>
-              <p class="text-slate-400 text-xs sm:text-sm font-semibold">
-                Materi bagian : {{ activeModule?.title || 'Introduction' }}
-              </p>
-            </div>
-
-            <!-- "Selesai" Mark Complete Button -->
-            <button 
-              @click="toggleComplete"
-              :class="isCompleted(activeLesson?.id) ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/10' : 'bg-[#264790] hover:bg-[#44A6D9] text-white shadow-[#264790]/10'"
-              class="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl font-extrabold text-xs sm:text-sm shadow-md transition-all shrink-0 select-none outline-none"
-            >
-              <CheckCircle2 :size="16" /> 
-              <span>{{ isCompleted(activeLesson?.id) ? 'Sudah Selesai' : 'Selesai' }}</span>
-            </button>
-          </div>
-
-          <!-- Tabs Section -->
-          <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] flex flex-col gap-6">
-            
-            <!-- Tabs Navigation -->
-            <div class="flex gap-4 border-b border-slate-100 pb-3">
-              <button 
-                @click="activeTab = 'resources'"
-                :class="activeTab === 'resources' ? 'text-[#264790] border-b-2 border-[#264790]' : 'text-slate-400 hover:text-slate-600'"
-                class="pb-2 font-extrabold text-sm transition-colors outline-none"
-              >
-                Resources
-              </button>
-              <button 
-                @click="activeTab = 'about'"
-                :class="activeTab === 'about' ? 'text-[#264790] border-b-2 border-[#264790]' : 'text-slate-400 hover:text-slate-600'"
-                class="pb-2 font-extrabold text-sm transition-colors outline-none"
-              >
-                About
-              </button>
-            </div>
-
-            <!-- Tab Content: Resources -->
-            <div v-if="activeTab === 'resources'">
-              <!-- File downloader card -->
-              <a 
-                href="#" 
-                @click.prevent="alert('Mengunduh paket sumber belajar / assets kelas...')"
-                class="inline-flex items-center gap-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/50 p-4 rounded-2xl font-bold text-xs sm:text-sm text-slate-700 transition-colors shadow-sm"
-              >
-                <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-[#264790] shadow-sm shrink-0">
-                  <Download :size="16" />
-                </div>
+          <!-- B. INTERACTIVE QUIZ PLAYER -->
+          <div v-else-if="activeQuiz" class="flex flex-col gap-6 animate-fade-in">
+            <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] flex flex-col gap-6">
+              
+              <!-- Quiz Header -->
+              <div class="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div>
-                  <span class="block text-slate-800">Download Asset / Tools Belajar</span>
-                  <span class="block text-[10px] text-slate-400 font-bold mt-0.5">Format: ZIP / PDF (Drastha Learning)</span>
+                  <h1 class="text-xl sm:text-2xl font-extrabold text-[#1A2B49] leading-snug mb-1">{{ activeQuiz.title }}</h1>
+                  <p class="text-slate-400 text-xs sm:text-sm font-semibold">Evaluasi Kuis bab: {{ activeModule?.title }}</p>
                 </div>
-              </a>
-            </div>
+                <span class="px-3.5 py-1.5 bg-amber-50 text-amber-600 border border-amber-100 text-xs font-bold rounded-xl flex items-center gap-1.5 select-none shrink-0">
+                  <Clock :size="14" /> {{ activeQuiz.time_limit_minutes }} Menit
+                </span>
+              </div>
 
-            <!-- Tab Content: About -->
-            <div v-else class="text-slate-500 font-medium text-xs sm:text-sm leading-relaxed">
-              {{ activeLesson?.content || 'Materi video panduan untuk mempersiapkan tools pemrograman yang mendukung pembelajaran secara terstruktur.' }}
-            </div>
+              <!-- Instructions / Description -->
+              <div class="bg-slate-50 p-4 rounded-2xl border border-slate-150 flex gap-3 text-slate-500 text-xs font-medium leading-relaxed">
+                <Info :size="18" class="text-[#264790] shrink-0" />
+                <p>{{ activeQuiz.description || 'Selesaikan kuis evaluasi ini untuk menguji pemahaman Anda. Dapatkan skor minimal 70 untuk lulus.' }}</p>
+              </div>
 
+              <!-- Quiz Questions list or Result details -->
+              <div v-if="!quizSubmitted" class="flex flex-col gap-6 mt-4">
+                <div 
+                  v-for="(q, qIdx) in activeQuiz.questions" 
+                  :key="q.id" 
+                  class="bg-white p-5 rounded-2xl border border-slate-150 flex flex-col gap-4 shadow-sm"
+                >
+                  <div class="font-bold text-xs sm:text-sm text-[#1A2B49] flex gap-2">
+                    <span class="text-[#264790]">{{ qIdx + 1 }}.</span>
+                    <span class="flex-1">{{ q.question_text }}</span>
+                  </div>
+
+                  <!-- Options selector -->
+                  <div class="flex flex-col gap-2.5">
+                    <!-- 1. Multiple Choice -->
+                    <div v-if="!q.options || q.options[0] !== '[TRUE_FALSE]' && q.options[0] !== '[ESSAY]' && q.options[0] !== '[MATH_FORMULA]'" class="flex flex-col gap-2">
+                      <label 
+                        v-for="(opt, oIdx) in q.options" 
+                        :key="oIdx"
+                        :class="quizAnswers[q.id] === oIdx ? 'bg-[#264790]/5 border-[#264790] text-[#264790]' : 'bg-slate-50 hover:bg-slate-100/50 border-slate-200 text-slate-700'"
+                        class="flex items-center gap-3 p-3.5 rounded-xl border text-xs font-bold cursor-pointer transition-all select-none"
+                      >
+                        <input type="radio" :value="oIdx" v-model="quizAnswers[q.id]" class="w-4 h-4 text-[#264790] cursor-pointer" />
+                        <span>{{ opt }}</span>
+                      </label>
+                    </div>
+
+                    <!-- 2. True or False -->
+                    <div v-else-if="q.options[0] === '[TRUE_FALSE]'" class="grid grid-cols-2 gap-3">
+                      <label 
+                        :class="quizAnswers[q.id] === 0 ? 'bg-[#264790]/10 border-[#264790] text-[#264790]' : 'bg-slate-50 hover:bg-slate-100/50 border-slate-200 text-slate-700'"
+                        class="flex items-center justify-between p-4 rounded-xl border text-xs font-bold cursor-pointer transition-all select-none"
+                      >
+                        <span>Benar (True)</span>
+                        <input type="radio" :value="0" v-model="quizAnswers[q.id]" class="w-4 h-4 text-[#264790] cursor-pointer" />
+                      </label>
+                      <label 
+                        :class="quizAnswers[q.id] === 1 ? 'bg-[#264790]/10 border-[#264790] text-[#264790]' : 'bg-slate-50 hover:bg-slate-100/50 border-slate-200 text-slate-700'"
+                        class="flex items-center justify-between p-4 rounded-xl border text-xs font-bold cursor-pointer transition-all select-none"
+                      >
+                        <span>Salah (False)</span>
+                        <input type="radio" :value="1" v-model="quizAnswers[q.id]" class="w-4 h-4 text-[#264790] cursor-pointer" />
+                      </label>
+                    </div>
+
+                    <!-- 3. Essay -->
+                    <div v-else-if="q.options[0] === '[ESSAY]'">
+                      <textarea 
+                        v-model="quizAnswers[q.id]" 
+                        rows="3" 
+                        placeholder="Tuliskan jawaban penjelasan esai Anda di sini secara terperinci..." 
+                        class="w-full bg-slate-50 hover:bg-slate-100/50 border border-slate-200 rounded-xl px-4 py-3 outline-none text-xs text-[#1A2B49] font-medium focus:bg-white focus:border-[#264790] transition-all"
+                      ></textarea>
+                    </div>
+
+                    <!-- 4. Math Formula -->
+                    <div v-else-if="q.options[0] === '[MATH_FORMULA]'" class="flex flex-col gap-3">
+                      <div v-if="q.options[1]" class="bg-amber-50/50 border border-amber-100 rounded-xl p-3.5 flex flex-col gap-1 items-center justify-center">
+                        <span class="text-[9px] font-bold text-amber-500 uppercase tracking-widest">Rumus Soal</span>
+                        <span class="font-serif italic text-base text-[#1A2B49] font-bold select-all">$$ {{ q.options[1] }} $$</span>
+                      </div>
+                      <input 
+                        v-model="quizAnswers[q.id]" 
+                        type="text" 
+                        placeholder="Ketikkan jawaban rumus atau nilai angka hasil perhitungan Anda..." 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none text-xs text-[#1A2B49] font-bold focus:bg-white focus:border-[#264790] transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button 
+                  @click="submitQuiz"
+                  class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-4 rounded-2xl font-bold text-sm shadow-md transition-colors cursor-pointer"
+                >
+                  Kirim & Periksa Jawaban Kuis
+                </button>
+              </div>
+
+              <!-- Score Result Card -->
+              <div v-else class="flex flex-col gap-6">
+                <div class="bg-slate-50 rounded-3xl p-8 border border-slate-150 flex flex-col items-center justify-center text-center gap-4">
+                  <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Hasil Evaluasi Kuis</span>
+                  
+                  <!-- Circular Progress Score -->
+                  <div class="relative flex items-center justify-center">
+                    <div 
+                      :class="quizScore >= 70 ? 'text-emerald-500 bg-emerald-50 border-emerald-200' : 'text-rose-500 bg-rose-50 border-rose-200'"
+                      class="w-32 h-32 rounded-full border-4 flex flex-col items-center justify-center shadow-sm"
+                    >
+                      <span class="text-3xl font-black">{{ quizScore }}</span>
+                      <span class="text-[10px] font-bold text-slate-400">SKOR ANDA</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h2 v-if="quizScore >= 70" class="text-lg font-black text-emerald-600">Selamat, Anda Lulus Evaluasi!</h2>
+                    <h2 v-else class="text-lg font-black text-rose-500">Nilai Belum Mencukupi Kelulusan</h2>
+                    <p class="text-slate-400 text-xs font-semibold max-w-sm mt-1">
+                      {{ quizScore >= 70 ? 'Hasil ini telah tercatat dalam progress belajar Anda. Silakan lanjutkan ke modul berikutnya!' : 'Batas nilai kelulusan minimal kuis adalah 70. Silakan tinjau kembali jawaban di bawah dan coba lagi.' }}
+                    </p>
+                  </div>
+
+                  <button 
+                    @click="startQuiz(activeQuiz)"
+                    class="px-6 py-2.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-[#1A2B49] shadow-sm transition-colors cursor-pointer"
+                  >
+                    Coba Lagi Kuis
+                  </button>
+                </div>
+
+                <!-- Detailed Answers Summary -->
+                <div class="flex flex-col gap-4">
+                  <h3 class="text-xs font-bold text-[#1A2B49] uppercase tracking-wider">Tinjauan Koreksi Soal</h3>
+                  
+                  <div 
+                    v-for="(res, idx) in quizResults" 
+                    :key="idx"
+                    :class="res.is_correct ? 'border-emerald-250 border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/10'"
+                    class="p-4.5 rounded-2xl border flex flex-col gap-2.5"
+                  >
+                    <div class="flex justify-between items-start gap-4">
+                      <span class="text-xs font-bold text-[#1A2B49] leading-snug">{{ idx + 1 }}. {{ res.question_text }}</span>
+                      <span 
+                        :class="res.is_correct ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-600'"
+                        class="px-2.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider shrink-0"
+                      >
+                        {{ res.is_correct ? 'Benar' : 'Salah' }}
+                      </span>
+                    </div>
+                    
+                    <div class="text-[11px] font-semibold flex flex-col gap-1 text-slate-500 border-t border-slate-100/50 pt-2.5">
+                      <div>Jawaban Anda: <span :class="res.is_correct ? 'text-emerald-600' : 'text-rose-600'" class="font-bold">{{ res.student_answer !== '' ? res.student_answer : '(Kosong)' }}</span></div>
+                      <div v-if="!res.is_correct">Kunci Jawaban: <span class="text-[#264790] font-bold">{{ res.correct_text }}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </div>
 
           <!-- Tools Kelas Section -->
