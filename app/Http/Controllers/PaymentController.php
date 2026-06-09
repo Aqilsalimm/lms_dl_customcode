@@ -55,14 +55,56 @@ class PaymentController extends Controller
             return back()->with('error', 'Anda sudah terdaftar di kelas/bundle ini.');
         }
 
+        $autoCompleteOrders = filter_var(
+            \App\Models\Setting::where('key', 'auto_complete_ecommerce_orders')->value('value'),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
         // Create Order
         $order = Order::create([
             'user_id' => $user->id,
             'buyable_type' => $buyableClass,
             'buyable_id' => $item->id,
             'amount' => $item->price,
-            'status' => 'pending',
+            'status' => $autoCompleteOrders ? 'completed' : 'pending',
+            'payment_type' => $autoCompleteOrders ? 'auto_complete' : null,
         ]);
+
+        if ($autoCompleteOrders) {
+            // Enroll User
+            if ($order->buyable_type === Course::class) {
+                Enrollment::firstOrCreate([
+                    'user_id' => $order->user_id,
+                    'course_id' => $order->buyable_id,
+                ], [
+                    'enrolled_at' => now(),
+                ]);
+            } elseif ($order->buyable_type === Bundle::class) {
+                $bundle = Bundle::find($order->buyable_id);
+                if ($bundle) {
+                    Enrollment::firstOrCreate([
+                        'user_id' => $order->user_id,
+                        'bundle_id' => $bundle->id,
+                    ], [
+                        'enrolled_at' => now(),
+                    ]);
+
+                    foreach ($bundle->courses as $course) {
+                        Enrollment::firstOrCreate([
+                            'user_id' => $order->user_id,
+                            'course_id' => $course->id,
+                        ], [
+                            'enrolled_at' => now(),
+                        ]);
+                    }
+                }
+            }
+
+            return response()->json([
+                'completed' => true,
+                'order_id' => $order->id
+            ]);
+        }
 
         // Get Snap Token
         $snapToken = $this->midtransService->createSnapToken($order);

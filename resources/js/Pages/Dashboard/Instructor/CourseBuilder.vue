@@ -411,15 +411,23 @@ const handleUpdate = () => {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
   .then(res => {
+    if (res.data.course) {
+      form.value.status = res.data.course.status;
+      isVisibilityPublic.value = res.data.course.status === 'published';
+    }
     if (currentStep.value < 3) {
       currentStep.value++;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      alert('Informasi kelas berhasil disimpan secara keseluruhan!');
+      if (res.data.course && res.data.course.status === 'pending') {
+        alert('Course information saved! Status set to "Pending" awaiting Admin approval.');
+      } else {
+        alert('Course information saved successfully!');
+      }
     }
   })
   .catch(err => {
-    alert('Gagal memperbarui kelas. Silakan periksa kembali data Anda.');
+    alert('Failed to update course. Please check your inputs.');
   });
 };
 
@@ -1285,10 +1293,10 @@ const deleteQuestion = (quiz, questionId) => {
                   <button 
                     @click="form.status = 'published'"
                     class="flex items-center gap-2 font-bold text-xs"
-                    :class="form.status === 'published' ? 'text-[#264790]' : 'text-slate-400'"
+                    :class="(form.status === 'published' || form.status === 'pending') ? 'text-[#264790]' : 'text-slate-400'"
                   >
-                    <span :class="form.status === 'published' ? 'bg-[#264790] ring-4 ring-[#264790]/15' : 'bg-slate-100'" class="w-4 h-4 rounded-full flex items-center justify-center border transition-all">
-                      <span v-if="form.status === 'published'" class="w-1.5 h-1.5 bg-white rounded-full"></span>
+                    <span :class="(form.status === 'published' || form.status === 'pending') ? 'bg-[#264790] ring-4 ring-[#264790]/15' : 'bg-slate-100'" class="w-4 h-4 rounded-full flex items-center justify-center border transition-all">
+                      <span v-if="form.status === 'published' || form.status === 'pending'" class="w-1.5 h-1.5 bg-white rounded-full"></span>
                     </span>
                     Public
                   </button>
@@ -1305,8 +1313,17 @@ const deleteQuestion = (quiz, questionId) => {
                 </div>
               </div>
               <p class="text-xs text-slate-400 mt-1">
-                {{ form.status === 'published' ? 'Course will be visible to students in the public catalogue.' : 'Course is hidden and saved as a private draft.' }}
+                {{ (form.status === 'published' || form.status === 'pending') ? 'Course will be visible to students in the public catalogue (once approved).' : 'Course is hidden and saved as a private draft.' }}
               </p>
+              
+              <!-- Warning Banner for Pending Approval -->
+              <div v-if="form.status === 'pending'" class="mt-3 bg-amber-50 border border-amber-250 p-3.5 rounded-2xl flex items-start gap-2.5 text-amber-800">
+                <span class="text-lg">⏳</span>
+                <div>
+                  <span class="block text-xs font-extrabold">Awaiting Admin Approval</span>
+                  <span class="text-[10px] text-amber-600/90 font-semibold leading-normal mt-0.5 block">Your course is currently being reviewed by the Admin team. The status will change to Public once approved.</span>
+                </div>
+              </div>
             </div>
 
             <!-- Featured Image Upload Card -->

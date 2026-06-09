@@ -48,8 +48,9 @@ const formatPrice = (price) => {
 
 // Course Fallback Data
 const rawCourses = computed(() => {
-  if (props.courses && props.courses.length > 0) {
-    return props.courses;
+  const data = props.courses?.data || props.courses;
+  if (data && data.length > 0) {
+    return data;
   }
   return [
     {
@@ -92,6 +93,14 @@ const filteredCourses = computed(() => {
   }
 
   return result;
+});
+
+const gridColsClass = computed(() => {
+  const cols = parseInt(usePage().props.settings?.course_columns || 3);
+  if (cols === 1) return 'grid-cols-1';
+  if (cols === 2) return 'grid-cols-1 sm:grid-cols-2';
+  if (cols === 4) return 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4';
+  return 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3';
 });
 </script>
 
@@ -145,7 +154,7 @@ const filteredCourses = computed(() => {
       <div class="flex flex-col lg:flex-row gap-8 items-start">
         
         <!-- Courses Cards Grid -->
-        <div class="w-full lg:w-[60%] xl:w-[65%] grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div :class="['w-full lg:w-[60%] xl:w-[65%] grid gap-6', gridColsClass]">
           
           <div v-if="filteredCourses.length === 0" class="col-span-1 sm:col-span-2 text-center py-20 bg-white rounded-3xl border border-slate-100/50 text-slate-500 font-bold text-sm">
             Tidak ada kelas yang ditemukan untuk filter ini.
@@ -220,6 +229,24 @@ const filteredCourses = computed(() => {
               </div>
             </div>
           </Link>
+
+          <!-- Pagination Buttons -->
+          <div v-if="props.courses?.links && props.courses.last_page > 1" class="col-span-full flex justify-center gap-2 mt-8 w-full">
+            <Link
+              v-for="(link, lIdx) in props.courses.links"
+              :key="lIdx"
+              :href="link.url || '#'"
+              v-html="link.label"
+              :class="[
+                'px-4 py-2 text-xs font-bold rounded-xl border transition-all',
+                link.active 
+                  ? 'bg-[#264790] text-white border-[#264790]' 
+                  : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200',
+                !link.url ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+              ]"
+              :disabled="!link.url"
+            />
+          </div>
 
         </div>
 

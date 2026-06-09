@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Calendar, User as UserIcon, ArrowLeft, Clock, BookOpen } from 'lucide-vue-next';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 
@@ -8,8 +8,15 @@ const props = defineProps({
 });
 
 // Logo SVG Helper
-const Logo = () => (
-  `<div class="flex items-center gap-2">
+const Logo = () => {
+  const settings = usePage().props.settings;
+  const customLogo = settings?.course_logo;
+  if (customLogo && customLogo !== '/images/logo-placeholder.png') {
+    return `<div class="flex items-center gap-2">
+      <img src="${customLogo}" alt="Drastha Learning Logo" class="h-10 w-auto object-contain" />
+    </div>`;
+  }
+  return `<div class="flex items-center gap-2">
     <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M50 20 L20 35 L50 50 L80 35 Z" fill="#264790"/>
       <path d="M30 40 L30 65 C30 75 70 75 70 65 L70 40" stroke="#44A6D9" stroke-width="6" fill="none"/>
@@ -21,8 +28,8 @@ const Logo = () => (
       <span class="font-bold text-[10px] tracking-widest text-[#264790] uppercase leading-tight">Drastha</span>
       <span class="font-bold text-[10px] tracking-widest text-[#44A6D9] uppercase leading-tight">Learning</span>
     </div>
-  </div>`
-);
+  </div>`;
+};
 </script>
 
 <template>

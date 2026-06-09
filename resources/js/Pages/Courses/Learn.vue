@@ -1,16 +1,33 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { 
   ShoppingCart, User, Globe, ChevronDown, GraduationCap, 
   Home, Newspaper, Calendar, Clock, MapPin, Code,
   Play, CheckCircle2, ArrowLeft, Download, Info, Menu, X,
-  BookOpen, HelpCircle, Check, Presentation, FileText, ChevronLeft, ChevronRight, AlertCircle
+  BookOpen, HelpCircle, Check, Presentation, FileText, ChevronLeft, ChevronRight, AlertCircle, Award
 } from 'lucide-vue-next';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
+import axios from 'axios';
 
 const props = defineProps({
   course: Object,
+  spotlightMode: {
+    type: Boolean,
+    default: false
+  },
+  dbCompletedLessons: {
+    type: Array,
+    default: () => []
+  },
+  dbCompletedQuizzes: {
+    type: Array,
+    default: () => []
+  },
+  dbCompletedAt: {
+    type: String,
+    default: null
+  }
 });
 
 // State Management
@@ -23,9 +40,10 @@ const activeLesson = ref(null);
 const activeQuiz = ref(null);
 const activeModule = ref(null);
 
-// Completed lessons state (synced with LocalStorage)
-const completedLessons = ref([]);
-const completedQuizzes = ref([]);
+// Completed lessons state (synced with DB & LocalStorage)
+const completedLessons = ref([...props.dbCompletedLessons]);
+const completedQuizzes = ref([...props.dbCompletedQuizzes]);
+const showCompletedOverlay = ref(false);
 
 // Set initial active lesson
 if (props.course.modules && props.course.modules.length > 0) {
@@ -109,26 +127,30 @@ const getEmbedUrl = computed(() => {
   return url;
 });
 
-// Load completed state from LocalStorage on mount
+// Load completed state from LocalStorage on mount if DB records are empty
 onMounted(() => {
-  const savedCompletions = localStorage.getItem('drastha_course_completions');
-  if (savedCompletions) {
-    try {
-      const completionsMap = JSON.parse(savedCompletions);
-      completedLessons.value = completionsMap[props.course.id] || [];
-    } catch (e) {
-      completedLessons.value = [];
+  if (completedLessons.value.length === 0) {
+    const savedCompletions = localStorage.getItem('drastha_course_completions');
+    if (savedCompletions) {
+      try {
+        const completionsMap = JSON.parse(savedCompletions);
+        completedLessons.value = completionsMap[props.course.id] || [];
+      } catch (e) {}
     }
   }
 
-  const savedQuizCompletions = localStorage.getItem('drastha_quiz_completions');
-  if (savedQuizCompletions) {
-    try {
-      const completionsMap = JSON.parse(savedQuizCompletions);
-      completedQuizzes.value = completionsMap[props.course.id] || [];
-    } catch (e) {
-      completedQuizzes.value = [];
+  if (completedQuizzes.value.length === 0) {
+    const savedQuizCompletions = localStorage.getItem('drastha_quiz_completions');
+    if (savedQuizCompletions) {
+      try {
+        const completionsMap = JSON.parse(savedQuizCompletions);
+        completedQuizzes.value = completionsMap[props.course.id] || [];
+      } catch (e) {}
     }
+  }
+
+  if (props.dbCompletedAt) {
+    showCompletedOverlay.value = true;
   }
 });
 
@@ -150,26 +172,46 @@ const toggleComplete = () => {
   let list = [...completedLessons.value];
 
   if (list.includes(lId)) {
-    // Mark as incomplete
     list = list.filter(id => id !== lId);
   } else {
-    // Mark as complete
     list.push(lId);
   }
 
   completedLessons.value = list;
 
   // Save to unified completions map in LocalStorage
-  const savedCompletions = localStorage.getItem('drastha_course_completions');
-  let completionsMap = {};
-  if (savedCompletions) {
-    try {
-      completionsMap = JSON.parse(savedCompletions);
-    } catch (e) {}
-  }
-  completionsMap[props.course.id] = list;
-  localStorage.setItem('drastha_course_completions', JSON.stringify(completionsMap));
+  const savedCompletions = localStorage.getItem('drastha_course_completions') || '{}';
+  try {
+    let completionsMap = JSON.parse(savedCompletions);
+    completionsMap[props.course.id] = list;
+    localStorage.setItem('drastha_course_completions', JSON.stringify(completionsMap));
+  } catch (e) {}
+
+  // Sync to database
+  axios.post(`/courses/${props.course.slug}/lessons/${lId}/toggle-complete`)
+    .then(response => {
+      if (response.data.completedLessons) {
+        completedLessons.value = response.data.completedLessons;
+      }
+      if (response.data.completedAt) {
+        showCompletedOverlay.value = true;
+      } else {
+        showCompletedOverlay.value = false;
+      }
+    })
+    .catch(error => {
+      console.error('Failed to sync lesson completion:', error);
+    });
 };
+
+const totalLessons = computed(() => {
+  if (!props.course.modules) return 0;
+  return props.course.modules.reduce((acc, m) => acc + (m.lessons?.length || 0), 0);
+});
+
+const isCourseCompleted = computed(() => {
+  return completedLessons.value.length >= totalLessons.value && totalLessons.value > 0;
+});
 
 // Tool tag mapper based on course name
 const toolsList = computed(() => {
@@ -315,8 +357,15 @@ const submitQuiz = () => {
 };
 
 // Logo Helper
-const Logo = () => (
-  `<div class="flex items-center gap-2">
+const Logo = () => {
+  const settings = usePage().props.settings;
+  const customLogo = settings?.course_logo;
+  if (customLogo && customLogo !== '/images/logo-placeholder.png') {
+    return `<div class="flex items-center gap-2">
+      <img src="${customLogo}" alt="Drastha Learning Logo" class="h-10 w-auto object-contain" />
+    </div>`;
+  }
+  return `<div class="flex items-center gap-2">
     <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M50 20 L20 35 L50 50 L80 35 Z" fill="#264790"/>
       <path d="M30 40 L30 65 C30 75 70 75 70 65 L70 40" stroke="#44A6D9" stroke-width="6" fill="none"/>
@@ -328,18 +377,18 @@ const Logo = () => (
       <span class="font-bold text-[10px] tracking-widest text-[#264790] uppercase leading-tight">Drastha</span>
       <span class="font-bold text-[10px] tracking-widest text-[#44A6D9] uppercase leading-tight">Learning</span>
     </div>
-  </div>`
-);
+  </div>`;
+};
 </script>
 
 <template>
   <Head :title="`${course.title} | Kelas Belajar | Drastha Learning`" />
 
-  <GuestLayout>
+  <GuestLayout :spotlightMode="spotlightMode">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
       <!-- Back to Courses Breadcrumbs -->
-      <div class="mb-6 flex justify-between items-center">
+      <div v-if="!spotlightMode" class="mb-6 flex justify-between items-center">
         <Link 
           href="/dashboard" 
           class="inline-flex items-center gap-2 text-slate-400 hover:text-[#44A6D9] font-semibold text-xs sm:text-sm transition-colors"
@@ -376,6 +425,24 @@ const Logo = () => (
           <!-- Modules Accordion List -->
           <div class="flex flex-col gap-4 max-h-[80vh] overflow-y-auto pr-1">
             
+            <!-- Certificate Panel in Sidebar -->
+            <div 
+              v-if="isCourseCompleted"
+              class="bg-gradient-to-r from-amber-500 to-amber-600 rounded-2xl p-5 text-white shadow-md flex flex-col gap-3"
+            >
+              <div class="flex items-center gap-2">
+                <Award :size="20" class="text-amber-100 animate-pulse" />
+                <span class="font-extrabold text-xs tracking-wider uppercase">Kelas Telah Selesai!</span>
+              </div>
+              <p class="text-[11px] leading-relaxed text-amber-50">Selamat! Anda telah menyelesaikan seluruh materi belajar. Silakan cetak sertifikat kelulusan resmi Anda.</p>
+              <Link 
+                :href="route('courses.certificate', course.slug)"
+                class="w-full bg-white text-amber-700 hover:bg-amber-50 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-colors text-center block"
+              >
+                Unduh Sertifikat Kelulusan
+              </Link>
+            </div>
+
             <div 
               v-for="(mod, modIdx) in course.modules" 
               :key="mod.id"
@@ -801,7 +868,7 @@ const Logo = () => (
     </div>
 
     <!-- CLEAN FOOTER -->
-    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 mt-16 border-t border-slate-100">
+    <footer v-if="!spotlightMode" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 mt-16 border-t border-slate-100">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <!-- Inline SVG DL Logo -->
@@ -838,6 +905,46 @@ const Logo = () => (
         </div>
       </div>
     </footer>
+    <!-- Course Completed Success Overlay Modal -->
+    <div 
+      v-if="showCompletedOverlay" 
+      class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+    >
+      <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-100 relative text-center flex flex-col items-center">
+        
+        <div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-5">
+          <Award :size="36" />
+        </div>
+
+        <h3 class="text-xl font-extrabold text-[#1A2B49] mb-2">Selamat! Kelas Selesai!</h3>
+        <p class="text-slate-400 text-sm font-semibold mb-6">
+          Selamat! Anda telah menyelesaikan seluruh materi belajar di kelas <b class="text-[#1A2B49]">{{ course.title }}</b>. Anda berhak mendapatkan sertifikat kelulusan.
+        </p>
+
+        <div class="flex flex-col gap-3 w-full">
+          <Link 
+            :href="route('courses.certificate', course.slug)"
+            class="w-full bg-[#FFFBEB] hover:bg-amber-100/50 text-[#B45309] py-3.5 rounded-2xl font-bold text-sm transition-colors text-center flex items-center justify-center gap-2 border border-amber-200"
+          >
+            <Award :size="16" class="text-amber-500" /> Lihat / Unduh Sertifikat
+          </Link>
+
+          <button 
+            @click="showCompletedOverlay = false"
+            class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition-colors"
+          >
+            Kembali ke Halaman Belajar
+          </button>
+          
+          <Link 
+            href="/dashboard"
+            class="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 py-3.5 rounded-2xl font-bold text-sm transition-colors text-center border border-slate-200/50"
+          >
+            Kembali ke Dashboard
+          </Link>
+        </div>
+      </div>
+    </div>
   </GuestLayout>
 </template>
 

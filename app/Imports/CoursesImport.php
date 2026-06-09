@@ -43,6 +43,15 @@ class CoursesImport implements ToModel, WithHeadingRow
             $status = 'draft';
         }
 
+        // Intercept published status for instructors if course moderation is enabled
+        if (auth()->check() && !auth()->user()->isAdmin()) {
+            $moderationEnabled = \App\Models\Setting::where('key', 'instructor_course_moderation')->value('value');
+            $isModerated = ($moderationEnabled === 'true' || $moderationEnabled === '1' || $moderationEnabled === true || $moderationEnabled === 1);
+            if ($isModerated && $status === 'published') {
+                $status = 'pending';
+            }
+        }
+
         // Map level
         $level = $row['level'] ?? $row['tingkatan'] ?? 'Umum';
         $validLevels = ['SD', 'SMP', 'SMA', 'Umum'];

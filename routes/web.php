@@ -5,8 +5,10 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CourseBuilderController;
+use App\Http\Controllers\BundleBuilderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\BlogController;
+use App\Http\Controllers\NotificationController;
 use App\Models\Course;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -93,14 +95,30 @@ Route::middleware('auth')->group(function () {
         Route::delete('/questions/{question}', [CourseBuilderController::class, 'deleteQuestion'])->name('questions.destroy');
     });
 
+    // Bundle Builder Routes
+    Route::prefix('bundle-builder')->name('bundle-builder.')->group(function () {
+        Route::get('/', [BundleBuilderController::class, 'index'])->name('index');
+        Route::post('/bundles', [BundleBuilderController::class, 'store'])->name('store');
+        Route::get('/bundles/{bundle}', [BundleBuilderController::class, 'edit'])->name('edit');
+        Route::put('/bundles/{bundle}', [BundleBuilderController::class, 'update'])->name('update');
+        Route::delete('/bundles/{bundle}', [BundleBuilderController::class, 'destroy'])->name('destroy');
+    });
+
     // Checkout Routes
     Route::post('/payment/checkout', [PaymentController::class, 'checkout'])->name('payment.checkout');
     Route::post('/payment/mock-complete/{order}', [PaymentController::class, 'completeMockPayment'])->name('payment.mock-complete');
     Route::post('/cart/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
     Route::get('/checkout', [CartController::class, 'checkoutPage'])->name('cart.checkout-page');
     Route::get('/courses/{course:slug}/learn', [CourseController::class, 'learn'])->name('courses.learn');
+    Route::post('/courses/{course:slug}/lessons/{lesson}/toggle-complete', [CourseController::class, 'toggleLessonComplete'])->name('courses.lessons.complete');
     Route::post('/dashboard/blogs', [BlogController::class, 'store'])->name('blogs.store');
     Route::delete('/dashboard/blogs/{blog}', [BlogController::class, 'destroy'])->name('blogs.destroy');
+
+    // Notifications
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::post('/notifications/test-trigger', [NotificationController::class, 'testTrigger'])->name('notifications.test-trigger');
+    Route::get('/courses/{course:slug}/certificate', [CourseController::class, 'certificate'])->name('courses.certificate');
 });
 
 // Shopping Cart Public Routes

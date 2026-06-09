@@ -1,10 +1,17 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { 
   ShoppingCart, User, Globe, ChevronDown, 
   GraduationCap, Home, Newspaper, X, Eye, EyeOff
 } from 'lucide-vue-next';
+
+const props = defineProps({
+  spotlightMode: {
+    type: Boolean,
+    default: false
+  }
+});
 
 // --- STATE UNTUK LAYOUT & MODAL ---
 const isLayananOpen = ref(false);
@@ -37,6 +44,50 @@ onUnmounted(() => {
     window.removeEventListener('scroll', handleScroll);
   }
 });
+
+// --- JUMP / ANCHOR LINK NAVIGATION FOR TENTANG KAMI MEGA MENU ---
+const navigateAndScroll = (id) => {
+  isTentangKamiOpen.value = false;
+  
+  if (typeof window !== 'undefined') {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      router.visit('/', {
+        data: { scrollTo: id },
+        onSuccess: () => {
+          setTimeout(() => {
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }, 300);
+        }
+      });
+    }
+  }
+};
+
+watch(
+  () => usePage().url,
+  (newUrl) => {
+    if (typeof window !== 'undefined') {
+      const urlObj = new URL(newUrl, window.location.origin);
+      const scrollToId = urlObj.searchParams.get('scrollTo');
+      if (scrollToId) {
+        setTimeout(() => {
+          const el = document.getElementById(scrollToId);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth' });
+            // Clean up the query parameter from URL
+            const cleanUrl = urlObj.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+          }
+        }, 400); // 400ms delay to let the DOM settle
+      }
+    }
+  },
+  { immediate: true }
+);
 
 // Google Sign-In Simulation States
 const isGooglePromptOpen = ref(false);
@@ -125,12 +176,16 @@ const handleUserIconClick = () => {
   }
 };
 
-// Logo Helper referencing DL logo file
-const Logo = () => (
-  `<div class="flex items-center gap-2">
-    <img src="/images/logo/logo_dl.png" alt="Drastha Learning Logo" class="h-10 w-auto object-contain" />
-  </div>`
-);
+// Logo Helper referencing DL logo file or uploaded custom course builder logo
+const Logo = () => {
+  const customLogo = pageProps.settings?.course_logo;
+  const logoUrl = (customLogo && customLogo !== '/images/logo-placeholder.png') 
+    ? customLogo 
+    : '/images/logo/logo_dl.png';
+  return `<div class="flex items-center gap-2">
+    <img src="${logoUrl}" alt="Drastha Learning Logo" class="h-10 w-auto object-contain" />
+  </div>`;
+};
 </script>
 
 <template>
@@ -138,6 +193,7 @@ const Logo = () => (
     
     <!-- 1. FLOATING HEADER DENGAN MEGA MENU -->
     <div 
+      v-if="!spotlightMode"
       class="sticky z-40 w-full mx-auto transition-all duration-500 ease-in-out"
       :class="[
         isScrolled 
@@ -207,7 +263,7 @@ const Logo = () => (
             @mouseenter="isTentangKamiOpen = true" 
             @mouseleave="isTentangKamiOpen = false"
           >
-            <button class="flex items-center gap-1 hover:text-[#44A6D9] transition-colors">
+            <button class="flex items-center gap-1 hover:text-[#44A6D9] text-[#264790] font-semibold transition-colors">
               <span>Tentang Kami</span>
               <ChevronDown :size="16" :class="{'rotate-180': isTentangKamiOpen}" class="transition-transform duration-300" />
             </button>
@@ -223,11 +279,58 @@ const Logo = () => (
             >
               <div 
                 v-show="isTentangKamiOpen" 
-                class="absolute top-full left-1/2 -translate-x-1/4 mt-2 w-[300px] bg-white rounded-3xl shadow-[0_15px_40px_rgb(0,0,0,0.08)] border border-slate-100 p-6 z-50 cursor-default flex flex-col gap-4 text-left"
+                class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[720px] bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-slate-100 p-8 z-50 cursor-default grid grid-cols-2 gap-x-12 gap-y-6 text-left"
               >
-                <Link href="#" class="font-bold text-slate-700 text-sm hover:text-[#44A6D9] transition-colors">Profil Perusahaan</Link>
-                <Link href="#" class="font-bold text-slate-700 text-sm hover:text-[#44A6D9] transition-colors">Instruktur Kami</Link>
-                <Link href="#" class="font-bold text-slate-700 text-sm hover:text-[#44A6D9] transition-colors">Galeri Kegiatan</Link>
+                <!-- Column 1 -->
+                <div class="flex flex-col gap-6">
+                  <a 
+                    href="#" 
+                    @click.prevent="navigateAndScroll('tentang-kami')" 
+                    class="group block flex flex-col gap-1 transition-all"
+                  >
+                    <span class="font-extrabold text-[#1A2B49] text-base group-hover:text-[#44A6D9] transition-colors">Tentang</span>
+                    <span class="text-xs text-slate-400 font-semibold leading-relaxed">Pelajari lebih lanjut tentang Drastha Learning</span>
+                  </a>
+                  
+                  <a 
+                    href="#" 
+                    @click.prevent="navigateAndScroll('tim-kami')" 
+                    class="group block flex flex-col gap-1 transition-all"
+                  >
+                    <span class="font-extrabold text-[#1A2B49] text-base group-hover:text-[#44A6D9] transition-colors">Tim</span>
+                    <span class="text-xs text-slate-400 font-semibold leading-relaxed">Seluruh Tim yang ada di dalam struktural Drastha Learning</span>
+                  </a>
+                  
+                  <a 
+                    href="#" 
+                    @click.prevent="navigateAndScroll('hubungi-kami')" 
+                    class="group block flex flex-col gap-1 transition-all"
+                  >
+                    <span class="font-extrabold text-[#1A2B49] text-base group-hover:text-[#44A6D9] transition-colors">Kontak</span>
+                    <span class="text-xs text-slate-400 font-semibold leading-relaxed">Customer Service yang menyediakan layanan di Drastha Learning</span>
+                  </a>
+                </div>
+
+                <!-- Column 2 -->
+                <div class="flex flex-col gap-6">
+                  <a 
+                    href="#" 
+                    @click.prevent="navigateAndScroll('blog-aktivitas')" 
+                    class="group block flex flex-col gap-1 transition-all"
+                  >
+                    <span class="font-extrabold text-[#1A2B49] text-base group-hover:text-[#44A6D9] transition-colors">Blog</span>
+                    <span class="text-xs text-slate-400 font-semibold leading-relaxed">Artikel Berita, Wawasan, dan Rekomendasi terbaru dari kami</span>
+                  </a>
+                  
+                  <a 
+                    href="#" 
+                    @click.prevent="navigateAndScroll('pilihan-kelas')" 
+                    class="group block flex flex-col gap-1 transition-all"
+                  >
+                    <span class="font-extrabold text-[#1A2B49] text-base group-hover:text-[#44A6D9] transition-colors">Kelas</span>
+                    <span class="text-xs text-slate-400 font-semibold leading-relaxed">Seluruh Layanan Course khusus untuk Online/Offline Course</span>
+                  </a>
+                </div>
               </div>
             </transition>
           </div>
@@ -436,7 +539,7 @@ const Logo = () => (
     </div>
 
     <!-- BOTTOM NAVIGATION PWA -->
-    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-[#FFFFFF]/90 backdrop-blur-lg shadow-[0_-5px_15px_rgba(0,0,0,0.05)] rounded-t-3xl z-50 border-t border-gray-100">
+    <div v-if="!spotlightMode" class="md:hidden fixed bottom-0 left-0 right-0 bg-[#FFFFFF]/90 backdrop-blur-lg shadow-[0_-5px_15px_rgba(0,0,0,0.05)] rounded-t-3xl z-50 border-t border-gray-100">
       <div class="flex justify-around items-center h-20 px-4 relative">
         <Link href="/courses" class="flex flex-col items-center justify-center w-16 text-[#1A2B49] hover:text-[#44A6D9] transition-colors">
           <GraduationCap :size="26" stroke-width="2.5" />

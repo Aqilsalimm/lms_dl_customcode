@@ -74,10 +74,8 @@ class CourseBuilderController extends Controller
             $course->tags()->sync($request->tags);
         }
 
-        return response()->json([
-            'message' => 'Course created successfully',
-            'course' => $course
-        ], 21);
+        return redirect()->route('course-builder.build', $course->id)
+            ->with('success', 'Course created successfully');
     }
 
     /**
@@ -114,13 +112,22 @@ class CourseBuilderController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
+        // Intercept published status for instructors if course moderation is enabled
+        if (!auth()->user()->isAdmin()) {
+            $moderationEnabled = \App\Models\Setting::where('key', 'instructor_course_moderation')->value('value');
+            $isModerated = ($moderationEnabled === 'true' || $moderationEnabled === '1' || $moderationEnabled === true || $moderationEnabled === 1);
+            if ($isModerated && $request->status === 'published') {
+                $request->merge(['status' => 'pending']);
+            }
+        }
+
         $request->validate([
             'title' => 'required|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
             'price' => 'required|numeric|min:0',
             'level' => 'required|string|in:SD,SMP,SMA,Umum',
             'capacity' => 'nullable|integer|min:1',
-            'status' => 'required|string|in:draft,published',
+            'status' => 'required|string|in:draft,published,pending',
             'description' => 'nullable|string',
             'about' => 'nullable|string',
             'thumbnail' => 'nullable',
@@ -158,12 +165,12 @@ class CourseBuilderController extends Controller
     public function destroy(Course $course)
     {
         if (!auth()->user()->isAdmin() && $course->instructor_id !== auth()->id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            abort(403);
         }
 
         $course->delete();
 
-        return response()->json(['message' => 'Course deleted successfully']);
+        return redirect()->back()->with('success', 'Course deleted successfully');
     }
 
     /**

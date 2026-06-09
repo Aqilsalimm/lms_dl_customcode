@@ -167,6 +167,7 @@ const deleteCourse = (courseId) => {
                       :class="{
                         'bg-emerald-50 text-emerald-700 border-emerald-100': course.status === 'published',
                         'bg-slate-50 text-slate-600 border-slate-100': course.status === 'draft',
+                        'bg-amber-50 text-amber-700 border-amber-105 border-amber-200': course.status === 'pending',
                       }"
                       class="px-2.5 py-1 text-xs font-bold rounded-full border uppercase tracking-wider"
                     >

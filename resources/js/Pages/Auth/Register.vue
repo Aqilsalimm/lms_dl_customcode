@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { Code, Key, ChevronDown, CheckCircle2 } from 'lucide-vue-next';
 
 // State to track current registration step
@@ -108,11 +108,18 @@ const handleKeluar = () => {
 };
 
 // Logo Helper referencing DL logo file
-const Logo = () => (
-  `<div class="flex items-center justify-center gap-2">
+const Logo = () => {
+  const settings = usePage().props.settings;
+  const customLogo = settings?.course_logo;
+  if (customLogo && customLogo !== '/images/logo-placeholder.png') {
+    return `<div class="flex items-center justify-center gap-2">
+      <img src="${customLogo}" alt="Drastha Learning Logo" class="h-10 w-auto object-contain" />
+    </div>`;
+  }
+  return `<div class="flex items-center justify-center gap-2">
     <img src="/images/logo/logo_dl.png" alt="Drastha Learning Logo" class="h-10 w-auto object-contain" />
-  </div>`
-);
+  </div>`;
+};
 </script>
 
 <template>

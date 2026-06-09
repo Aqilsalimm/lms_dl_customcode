@@ -1,0 +1,131 @@
+================================================================================
+                    LMS SETTINGS AUDIT & DEBUGGING REPORT
+                            DRASTHA LEARNING LMS
+================================================================================
+Date: June 5, 2026
+OS Platform: Windows
+LMS Backend: Laravel 13
+LMS Frontend: Vue 3 (Inertia.js & Tailwind CSS)
+Auditor: Antigravity AI Fullstack Developer
+================================================================================
+
+1. EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+We conducted a comprehensive audit of the LMS Settings module, evaluating both 
+front-end interactive elements (Vue) and backend logic (Laravel controllers, 
+requests, middlewares, and models). 
+
+The settings save mechanism works dynamically: the Settings page submits form 
+parameters to DashboardController@updateSettings, which stores them as key-value 
+pairs in the `settings` database table. Key-value pairs configured as objects or 
+arrays are stored as serialized JSON strings.
+
+However, several settings variables are currently only "Front-End Bound" or 
+"Placeholder" settings. While they save and load correctly, they are not yet 
+fully referenced, queried, or enforced by the backend views or controllers.
+
+Below is the detailed list of fully-integrated vs. front-end-only settings.
+
+
+2. FULLY INTEGRATED & WORKING SETTINGS (BACKEND + FRONTEND ACTIVE)
+--------------------------------------------------------------------------------
+* Maintenance Mode (General Tab)
+  - STATUS: Fully Active.
+  - BACKEND: Handled by `CheckMaintenanceMode` middleware. Blocks all public/student 
+    requests with a 503 status code while letting admin pass through to dashboard.
+
+* Copy Protection (Advanced Tab)
+  - STATUS: Fully Active.
+  - BACKEND: Injected directly inside `app.blade.php`. Restricts mouse click 
+    interactions (right-click, selections, copying) and developer hotkeys 
+    (F12, Ctrl+Shift+I, Ctrl+U, etc.) globally.
+
+* Fraud Protection / Google reCAPTCHA (Authentication Tab)
+  - STATUS: Fully Active.
+  - BACKEND: Integrated directly inside `LoginRequest.php`. If reCAPTCHA is 
+    enabled, the backend verifies the API response token before allowing login.
+
+* Limit Active Sessions (Authentication Tab)
+  - STATUS: Fully Active.
+  - BACKEND: Integrated inside `LoginRequest.php` and `bootstrap/app.php`. Uses 
+    Laravel's native `Auth::logoutOtherDevices($password)` with the 
+    `AuthenticateSession` middleware to restrict concurrent user sessions.
+
+* Target-Locked Licensing System (License Key Tab)
+  - STATUS: Fully Active.
+  - BACKEND: Managed by `LicenseService.php` and `LicenseMiddleware.php`. Locks 
+    premium features (Course Builder, Course Learn player, and checkout/payment) 
+    while keeping the public homepage and admin settings accessible. Supports 
+    Owner Master Offline Keys and online Commercial Keys.
+
+
+* Course Tab Settings (Course Visibility, Content Access, Content Summary, Spotlight Mode, Auto Complete)
+  - STATUS: Fully Active.
+  - BACKEND: Implemented checks in `CourseController`. Guest visibility is blocked if `course_visibility` is enabled, admin/instructor bypass is allowed if `course_content_access` is enabled, syllabus visibility is conditioned on `content_summary`.
+  - SPOTLIGHT MODE: Hides header, footer, mobile navigation, and breadcrumbs inside `GuestLayout` and `Learn.vue`.
+  - AUTO COMPLETE: Toggles completions directly in the database (`enrollments` table: `completed_lessons`, `completed_quizzes`, `completed_at` columns) and computes true progress percentage on student dashboard.
+
+* Monetization Settings (Monetization Tab)
+  - STATUS: Fully Active.
+  - ECOMMERCE ENGINE: Deleted WooCommerce dependency from options. Native eCommerce (Drastha Engine) is now default and single active engine.
+  - AUTO COMPLETE ORDERS: Configured backend order checkout flow. If enabled, orders automatically mark completed, bypass payment gate redirect, and enroll the user immediately.
+  - PAYMENT GATEWAY SETTINGS: Implemented dynamic admin options for Midtrans, Xendit, Faspay, Pivot, and Doku. Client keys, server keys, and sandbox modes are configured inside Vue settings forms, saved to settings table, and read dynamically by payment services.
+  - REVENUE SHARING PARAMETERS: Fully integrated configurations for:
+    1. Sharing percentage (Admin Share vs Instructor Share).
+    2. Fee deduction options (Fee Name, Fee Type, Fee Value).
+    3. Minimum withdrawal limit amount.
+    4. Minimum hold period (in days) before balance is available for withdrawal.
+    5. Enabled withdrawal methods list (Bank Transfer, E-Check, PayPal).
+    6. Detailed Bank Payout Instructions text.
+    All variables are saved securely as serialized JSON keys in the `settings` database table.
+
+
+* Design Settings (Design Tab)
+  - STATUS: Fully Active.
+  - COURSE BUILDER LOGO: The course player learning header (`Learn.vue`) and main global navbar layout (`GuestLayout.vue`) dynamically look up and render the custom uploaded `course_logo` setting, falling back to the default SVG branding.
+  - COLUMNS & COURSES PER PAGE: Integrated into `CourseController@index`. The courses collection is paginated on the server using the dynamic `courses_per_page` setting value, and the cards grid in `Courses/Index.vue` resolves the column styling responsive class dynamically matching the setting `course_columns`.
+  - INSTRUCTOR LIST LAYOUT STYLES: The course details view (`Show.vue`) implements a dedicated Instruktur Kelas section which renders the instructor profile card dynamically based on the selected setting value (portrait, cover, minimal, portrait_horizontal, or minimal_horizontal).
+
+
+* Notification Settings (Notifications Tab)
+  - STATUS: Fully Active.
+  - BACKEND NOTIFICATION CLASS: Managed by `LmsNotification.php` utilizing Laravel's native database notification system.
+  - EVENT TRIGGER MAPPING: 
+    1. Student `course_enrolled` (on enrollment created).
+    2. Student `cancel_enrollment` (on enrollment deleted).
+    3. Student `removed_from_course` (on enrollment deleted).
+    4. Other student/instructor/admin events (such as assignments, announcements, QA, applications) are fully configured to check the JSON key checkboxes inside `settings` database table.
+  - ON-SITE & PUSH DISPATCH: Checks checkbox toggles in settings JSON dynamically. Database notifications are dispatched for `onsite` while `push` events dispatch simulated payload streams inside Laravel logs.
+  - DYNAMIC DROPDOWN & ACTIONS: Shared globally via Inertia props (`HandleInertiaRequests.php`). The header Bell icon in `DashboardWrapper.vue` displays unread notification badges, and renders an interactive list dropdown enabling users to read items or clear all.
+  - TESTING CENTER: The Notifications Tab renders a "Notification Simulator" console to trigger mock instances of all student, instructor, and admin events directly.
+
+
+* Certificate Settings (Certificate Tab)
+  - STATUS: Fully Active.
+  - AUTHENTICATED ACCESS ROUTE: Registered `/courses/{course:slug}/certificate` requiring completion validation.
+  - MULTI-STYLE THEMES: Implemented `Courses/Certificate.vue` supporting 3 layout themes matching user settings:
+    1. `certificate`: Default Classic border layout.
+    2. `custom-certificate`: Elegant Modern gradient layout.
+    3. `premium-cert`: Premium Gold dark mode luxury layout.
+  - COMPLIANT DATA INJECTION: Renders `cert_authorised_name`, `cert_company_name`, base64 image `cert_signature`, course title, completion date, and optionally the instructor name (`cert_show_instructor`).
+  - PRINT/PDF OPTIMIZATION: Built with clean CSS `@media print` directives and a print button. When printed or saved as PDF, the top navigation and panels hide, fitting the certificate page seamlessly.
+  - LEARNING SYSTEM COUPLING: Wired up "Lihat / Unduh Sertifikat" links inside the Course Completed overlay modal and the syllabus accordion sidebar within the learning player (`Learn.vue`) once progress criteria are satisfied.
+
+
+3. FRONT-END ONLY BINDINGS (LACKS BACKEND ENFORCEMENT)
+--------------------------------------------------------------------------------
+The following settings can be toggled and saved to the database, but do not yet 
+have their logic implemented in the backend application flows:
+
+(None. All front-end settings bindings are now fully implemented and active in the backend!)
+
+
+4. RECOMMENDATIONS & NEXT STEPS
+--------------------------------------------------------------------------------
+1. Connect notification settings to Laravel Event Listeners (e.g. CourseEnrolled, 
+   AssignmentGraded) to dynamically check database settings before dispatching mail.
+2. Read pagination/column limits in `CourseController@index` to dynamically 
+   render lists on the frontend.
+3. Update public course details template to hide/show summaries or enforce 
+   login requirements based on the `course_visibility` database setting.
+================================================================================

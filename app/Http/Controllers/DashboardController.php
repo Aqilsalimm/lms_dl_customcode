@@ -139,6 +139,11 @@ class DashboardController extends Controller
         $coursesList = $enrollments->map(function($enrollment) {
             $course = $enrollment->course;
             if (!$course) return null;
+            
+            $completedCount = count($enrollment->completed_lessons ?? []);
+            $totalLessonsCount = $course->lessons_count;
+            $progress = $totalLessonsCount > 0 ? (int) round(($completedCount / $totalLessonsCount) * 100) : 0;
+
             return [
                 'id' => $course->id,
                 'title' => $course->title,
@@ -148,9 +153,9 @@ class DashboardController extends Controller
                 'bg_color' => $course->bg_color,
                 'icon_type' => $course->icon_type,
                 'instructor_name' => $course->instructor->name ?? 'Admin',
-                'lessons_count' => $course->lessons_count,
+                'lessons_count' => $totalLessonsCount,
                 'modules_count' => $course->modules_count,
-                'progress' => rand(10, 90), // Simulated dynamic progress for visualization
+                'progress' => $progress,
             ];
         })->filter();
 

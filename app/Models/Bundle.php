@@ -10,7 +10,12 @@ use Illuminate\Support\Str;
 
 class Bundle extends Model
 {
-    protected $fillable = ['title', 'slug', 'description', 'price', 'thumbnail', 'status'];
+    protected $fillable = ['instructor_id', 'title', 'slug', 'description', 'price', 'thumbnail', 'status'];
+
+    public function instructor()
+    {
+        return $this->belongsTo(User::class, 'instructor_id');
+    }
 
     protected $casts = [
         'price' => 'decimal:2',

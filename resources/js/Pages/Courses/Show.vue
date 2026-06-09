@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { 
   ShoppingCart, User, Globe, ChevronDown, GraduationCap, 
   Home, Newspaper, Calendar, Clock, MapPin, Code,
@@ -19,7 +19,11 @@ const center = ref([-7.4008, 112.7592]);
 
 const props = defineProps({
   course: Object,
-  isEnrolled: Boolean
+  isEnrolled: Boolean,
+  showContentSummary: {
+    type: Boolean,
+    default: true
+  }
 });
 
 const isProcessing = ref(false);
@@ -95,6 +99,10 @@ const lastUpdatedLabel = computed(() => {
   return `${formatted} Last Updated`;
 });
 
+const instructorListLayout = computed(() => {
+  return usePage().props.settings?.instructor_list_layout || 'cover';
+});
+
 // Format Price
 const formatPrice = (val) => {
   return parseFloat(val).toLocaleString('id-ID');
@@ -132,8 +140,15 @@ const handleShare = () => {
 };
 
 // Logo Helper
-const Logo = () => (
-  `<div class="flex items-center gap-2">
+const Logo = () => {
+  const settings = usePage().props.settings;
+  const customLogo = settings?.course_logo;
+  if (customLogo && customLogo !== '/images/logo-placeholder.png') {
+    return `<div class="flex items-center gap-2">
+      <img src="${customLogo}" alt="Drastha Learning Logo" class="h-10 w-auto object-contain" />
+    </div>`;
+  }
+  return `<div class="flex items-center gap-2">
     <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M50 20 L20 35 L50 50 L80 35 Z" fill="#264790"/>
       <path d="M30 40 L30 65 C30 75 70 75 70 65 L70 40" stroke="#44A6D9" stroke-width="6" fill="none"/>
@@ -145,8 +160,8 @@ const Logo = () => (
       <span class="font-bold text-[10px] tracking-widest text-[#264790] uppercase leading-tight">Drastha</span>
       <span class="font-bold text-[10px] tracking-widest text-[#44A6D9] uppercase leading-tight">Learning</span>
     </div>
-  </div>`
-);
+  </div>`;
+};
 </script>
 
 <script>
@@ -284,7 +299,7 @@ import { usePage } from '@inertiajs/vue3';
           </div>
 
           <!-- Section: Kurikulum Kelas Accordion collapsible -->
-          <div class="mb-10">
+          <div v-if="showContentSummary" class="mb-10">
             <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">Kurikulum Kelas :</h3>
             
             <div class="flex flex-col gap-4">
@@ -345,6 +360,73 @@ import { usePage } from '@inertiajs/vue3';
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Section: Instruktur Kelas -->
+          <div v-if="course.instructor" class="mb-10">
+            <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">Instruktur Kelas</h3>
+            
+            <!-- 1. Layout PORTRAIT -->
+            <div v-if="instructorListLayout === 'portrait'" class="bg-white rounded-3xl p-6 border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] flex flex-col items-center text-center max-w-sm">
+              <div class="w-24 h-24 rounded-full bg-slate-100 border-4 border-slate-50 overflow-hidden mb-4 shrink-0 shadow-sm">
+                <img :src="course.instructor.avatar || '/images/avatars/default.png'" class="w-full h-full object-cover" :alt="course.instructor.name" />
+              </div>
+              <h4 class="font-extrabold text-lg text-[#1A2B49] mb-1">{{ course.instructor.name }}</h4>
+              <span class="text-xs font-bold text-[#264790] uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full mb-3">Instruktur Utama</span>
+              <p class="text-slate-400 font-medium text-xs leading-relaxed">
+                {{ course.instructor.bio || 'Pengajar profesional di bidangnya dengan pengalaman bertahun-tahun membimbing siswa untuk mencapai impian mereka.' }}
+              </p>
+            </div>
+
+            <!-- 2. Layout COVER -->
+            <div v-else-if="instructorListLayout === 'cover'" class="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] overflow-hidden max-w-sm flex flex-col relative">
+              <div class="h-24 bg-gradient-to-r from-[#264790] to-[#44A6D9] w-full"></div>
+              <div class="px-6 pb-6 flex flex-col items-center text-center -mt-12">
+                <div class="w-24 h-24 rounded-full bg-white border-4 border-white overflow-hidden mb-3 shrink-0 shadow-md">
+                  <img :src="course.instructor.avatar || '/images/avatars/default.png'" class="w-full h-full object-cover" :alt="course.instructor.name" />
+                </div>
+                <h4 class="font-extrabold text-lg text-[#1A2B49] mb-1">{{ course.instructor.name }}</h4>
+                <span class="text-xs font-bold text-[#264790] uppercase tracking-wider mb-2">Instruktur Utama</span>
+                <p class="text-slate-400 font-medium text-xs leading-relaxed">
+                  {{ course.instructor.bio || 'Pengajar profesional di bidangnya dengan pengalaman bertahun-tahun membimbing siswa.' }}
+                </p>
+              </div>
+            </div>
+
+            <!-- 3. Layout MINIMAL -->
+            <div v-else-if="instructorListLayout === 'minimal'" class="flex flex-col items-center text-center p-4 max-w-sm">
+              <div class="w-20 h-20 rounded-full bg-slate-100 overflow-hidden mb-3 shrink-0 border border-slate-200">
+                <img :src="course.instructor.avatar || '/images/avatars/default.png'" class="w-full h-full object-cover" :alt="course.instructor.name" />
+              </div>
+              <h4 class="font-extrabold text-base text-[#1A2B49] mb-0.5">{{ course.instructor.name }}</h4>
+              <span class="text-[11px] font-bold text-slate-400">Instruktur</span>
+            </div>
+
+            <!-- 4. Layout PORTRAIT_HORIZONTAL -->
+            <div v-else-if="instructorListLayout === 'portrait_horizontal'" class="bg-white rounded-3xl p-6 border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] flex gap-5 items-center w-full max-w-xl">
+              <div class="w-24 h-24 rounded-full bg-slate-100 border-4 border-slate-50 overflow-hidden shrink-0 shadow-sm">
+                <img :src="course.instructor.avatar || '/images/avatars/default.png'" class="w-full h-full object-cover" :alt="course.instructor.name" />
+              </div>
+              <div class="flex-1">
+                <span class="text-[10px] font-bold text-[#264790] uppercase tracking-wider mb-1 block">Instruktur Utama</span>
+                <h4 class="font-extrabold text-lg text-[#1A2B49] mb-1.5">{{ course.instructor.name }}</h4>
+                <p class="text-slate-400 font-medium text-xs sm:text-sm leading-relaxed">
+                  {{ course.instructor.bio || 'Pengajar profesional di bidangnya dengan pengalaman bertahun-tahun membimbing siswa untuk mencapai impian mereka.' }}
+                </p>
+              </div>
+            </div>
+
+            <!-- 5. Layout MINIMAL_HORIZONTAL -->
+            <div v-else-if="instructorListLayout === 'minimal_horizontal'" class="flex gap-4 items-center p-3 border border-slate-150 rounded-2xl max-w-md bg-slate-50/50">
+              <div class="w-12 h-12 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
+                <img :src="course.instructor.avatar || '/images/avatars/default.png'" class="w-full h-full object-cover" :alt="course.instructor.name" />
+              </div>
+              <div>
+                <h4 class="font-extrabold text-sm text-[#1A2B49]">{{ course.instructor.name }}</h4>
+                <span class="text-[10px] font-bold text-slate-400">Instruktur</span>
+              </div>
+            </div>
+
           </div>
 
         </div>

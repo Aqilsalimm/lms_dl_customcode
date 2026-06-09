@@ -11,8 +11,22 @@ class MidtransService
 {
     public function __construct()
     {
-        Config::$serverKey = config('midtrans.server_key') ?: 'SB-Mid-server-placeholder';
-        Config::$isProduction = config('midtrans.is_production', false);
+        $serverKey = \App\Models\Setting::where('key', 'midtrans_server_key')->value('value');
+        $sandboxMode = \App\Models\Setting::where('key', 'midtrans_sandbox_mode')->value('value');
+        
+        if (empty($serverKey)) {
+            $serverKey = config('midtrans.server_key') ?: 'SB-Mid-server-placeholder';
+        }
+        
+        $isProduction = false;
+        if ($sandboxMode !== null) {
+            $isProduction = !filter_var($sandboxMode, FILTER_VALIDATE_BOOLEAN);
+        } else {
+            $isProduction = config('midtrans.is_production', false);
+        }
+
+        Config::$serverKey = $serverKey;
+        Config::$isProduction = $isProduction;
         Config::$isSanitized = config('midtrans.is_sanitized', true);
         Config::$is3ds = config('midtrans.is_3ds', true);
     }

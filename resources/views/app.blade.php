@@ -18,6 +18,35 @@
         @routes
         @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
         @inertiaHead
+
+        @php
+            $copyProtection = \App\Models\Setting::where('key', 'copy_protection')->value('value');
+            $isCopyProtectionEnabled = filter_var($copyProtection, FILTER_VALIDATE_BOOLEAN);
+        @endphp
+
+        @if($isCopyProtectionEnabled)
+            <style>
+                body {
+                    -webkit-user-select: none !important;
+                    -moz-user-select: none !important;
+                    -ms-user-select: none !important;
+                    user-select: none !important;
+                }
+            </style>
+            <script>
+                document.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                });
+                document.addEventListener('keydown', function(e) {
+                    if (e.ctrlKey && (e.key === 'c' || e.key === 'C' || e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S' || e.key === 'a' || e.key === 'A')) {
+                        e.preventDefault();
+                    }
+                    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I'))) {
+                        e.preventDefault();
+                    }
+                });
+            </script>
+        @endif
     </head>
     <body class="font-sans antialiased">
         @inertia

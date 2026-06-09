@@ -48,8 +48,14 @@ class CartController extends Controller
             return redirect()->route('courses.index')->with('warning', 'Pilihlah kelas terlebih dahulu sebelum checkout.');
         }
 
+        $clientKey = \App\Models\Setting::where('key', 'midtrans_client_key')->value('value') ?: config('midtrans.client_key', 'SB-Mid-client-placeholder');
+        $sandboxMode = \App\Models\Setting::where('key', 'midtrans_sandbox_mode')->value('value');
+        $isSandbox = $sandboxMode === null ? !config('midtrans.is_production', false) : filter_var($sandboxMode, FILTER_VALIDATE_BOOLEAN);
+
         return Inertia::render('Checkout/Index', [
             'cartItems' => $cartItems,
+            'midtransClientKey' => $clientKey,
+            'midtransSandboxMode' => $isSandbox
         ]);
     }
 
@@ -134,14 +140,49 @@ class CartController extends Controller
         // Attach course IDs
         $bundle->courses()->attach($cartIds);
 
+        $autoCompleteOrders = filter_var(
+            \App\Models\Setting::where('key', 'auto_complete_ecommerce_orders')->value('value'),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
         // Create Order
         $order = Order::create([
             'user_id' => $user->id,
             'buyable_type' => Bundle::class,
             'buyable_id' => $bundle->id,
             'amount' => $totalPrice,
-            'status' => 'pending',
+            'status' => $autoCompleteOrders ? 'completed' : 'pending',
+            'payment_type' => $autoCompleteOrders ? 'auto_complete' : null,
         ]);
+
+        if ($autoCompleteOrders) {
+            // Enroll in bundle
+            Enrollment::firstOrCreate([
+                'user_id' => $user->id,
+                'bundle_id' => $bundle->id,
+            ], [
+                'enrolled_at' => now(),
+            ]);
+
+            // Enroll in all courses of this bundle
+            foreach ($courses as $course) {
+                Enrollment::firstOrCreate([
+                    'user_id' => $user->id,
+                    'course_id' => $course->id,
+                ], [
+                    'enrolled_at' => now(),
+                ]);
+            }
+
+            // Clear the cart
+            session()->forget('cart');
+
+            return response()->json([
+                'completed' => true,
+                'order_id' => $order->id,
+                'snap_token' => 'MOCK-SNAP-TOKEN-AUTOCOMPLETE'
+            ]);
+        }
 
         // Generate Snap Token
         $midtransService = app(MidtransService::class);

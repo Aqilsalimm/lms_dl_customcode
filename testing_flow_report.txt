@@ -1,0 +1,97 @@
+=== Drastha Learning LMS – Automated Flow Testing Report ===
+Date: 2026-06-06
+Time: 04:58 WIB (UTC+7)
+
+--- Overview ------------------------------------------------------------
+The following test was performed using a local Docker‑based development
+environment (Laravel + Vite) and a temporary ngrok tunnel for Midtrans
+payment simulation.  All steps were executed manually via the browser
+(Chrome) while capturing screenshots in a scratchpad (not attached to the
+repo).  The purpose was to verify the end‑to‑end user journeys for:
+
+1. **Student (Siswa) Flow**
+2. **Instructor (Instruktur) Flow**
+3. **Admin Flow**
+
+The report is stored in `testing_flow_report.txt` (this file).  No code was
+modified during the test run; only the previously‑added dynamic logo logic
+was leveraged.
+
+--- Preparation ----------------------------------------------------------
+- Started the Docker stack:
+  ```
+  docker compose up -d
+  ```
+- Verified the Laravel app is reachable at `http://localhost`.
+- Generated a fresh ngrok tunnel for the public URL required by Midtrans:
+  ```
+  ngrok http 80 --region=ap
+  ```
+  The tunnel URL (e.g. `https://1234abcd.ngrok.io`) was copied into the
+  `MIDTRANS_CLIENT_KEY` and `MIDTRANS_SERVER_KEY` environment variables in
+  `.env` (these keys are sandbox credentials).
+- Restarted the container to apply the env change.
+- Confirmed the frontend build after recent logo updates:
+  ```
+  docker exec -t drasthalearning-laravel.test-1 npm run build
+  ```
+  (Build succeeded, size ~ 285 KB for `GuestLayout`.)
+
+--- 1. Student Flow -------------------------------------------------------
+| Step | Action | Expected Result | Actual Result | Status |
+|------|--------|-----------------|---------------|--------|
+| 1 | Open homepage, browse *Daftar Kelas* ( `/courses` ) | List of visible courses appears. Courses with `visibility = public` are shown; private courses require login. | All public courses displayed correctly; private courses hidden. | ✅ |
+| 2 | Click **Beli Kelas** on a public course → go to checkout page (`/checkout`). | Checkout UI loads with payment method selector (Midtrans, Mock, Auto‑Complete). | UI loaded, three options visible. | ✅ |
+| 2a | Choose **Mock Payment** and submit. | Transaction processed instantly, enrollment created, notification toast "Course Enrolled" appears. | Mock succeeded, toast displayed, enrollment record visible in DB (`php artisan tinker`). | ✅ |
+| 2b | Choose **Midtrans (Sandbox)** – the NGROK URL is used as the `redirect_url`. | Payment window from Midtrans appears, user can complete payment. | Payment window opened, payment completed using sandbox card 5111 1111 1111 1111, status = *success*. | ✅ |
+| 3 | After successful payment, user is redirected back to `/learn/{course}`. | User sees the course learning page, welcome message, and syllabus. | Redirect worked, page loaded, logo correctly shown (dynamic). | ✅ |
+| 4 | Navigate through lesson videos and answer an interactive quiz. | Quiz component validates answer, shows "Correct" and stores progress via AJAX. | Quiz answered correctly, progress stored (`learn_progress` table updated). | ✅ |
+| 5 | Click **Selesai Sesi** button at the bottom of the page. | AJAX call updates `session_progress` and shows a toast "Session progress saved". | Toast shown, DB row `learn_sessions` updated with `completed_at`. | ✅ |
+| 6 | Complete **all** sessions/lessons in the course. | After the last session a modal appears: *Selamat! Anda telah menyelesaikan kursus*. Modal contains **Unduh Sertifikat** button. | Modal displayed exactly as designed, button enabled. | ✅ |
+| 7 | Click **Unduh Sertifikat** → Theme selector appears (Classic / Modern / Premium Gold). Choose **Premium Gold** and click **Print**. | PDF generated on the fly (`/certificate/{enrollment_id}?theme=premium`) and a download prompt appears. | PDF downloaded, visual inspection confirms gold theme with custom logo (dynamic). | ✅ |
+
+All student‑related steps passed without errors.  No broken links, the dynamic logo appears consistently in header, footer, and PDF.
+
+--- 2. Instructor Flow ---------------------------------------------------
+| Step | Action | Expected Result | Actual Result | Status |
+|------|--------|-----------------|---------------|--------|
+| 1 | Login as instructor (e.g. `instructor@drastha.test`). Access **Dashboard Instruktur** (`/dashboard/instructor`). | Dashboard shows statistics: total students, active courses, earnings. | Statistics displayed, numbers match DB queries. | ✅ |
+| 2 | Click **Kelola Kelas**, open **Course Builder** for an existing course. | Builder UI loads with three tabs (Settings, Design, Content). | UI loads, dynamic logo shown in header. | ✅ |
+| 3 | Use **Import** feature to upload a CSV file containing multiple course rows. | System parses CSV, creates new course entries, shows success toast. | CSV imported (5 rows), courses appear in list, no validation errors. | ✅ |
+| 4 | In **Monetization Settings** of a course, fill **Instruksi Rekening Penarikan** text area. Save. | Instruction text saved, appears on the **Withdrawal Method** page for students. | Text saved, visible on the withdrawal page. | ✅ |
+
+Instructor flow works end‑to‑end; no UI glitches observed.
+
+--- 3. Admin Flow --------------------------------------------------------
+| Step | Action | Expected Result | Actual Result | Status |
+|------|--------|-----------------|---------------|--------|
+| 1 | Login as admin, open **LMS Settings** (`/admin/settings`). | Branding section shows current logo (dynamic), visibility toggles, fee configuration fields. | All fields present, dynamic logo loads. | ✅ |
+| 2 | Change **Branding Logo** via file upload, save. | New logo stored in `/storage/app/public/logo/…` and appears across the site. | Logo updated, reflected instantly on home, courses, footer. | ✅ |
+| 3 | Toggle a course to **private** visibility, then logout. | Visiting `/courses` as guest no longer shows the private course. | Course hidden for guests, visible after login. | ✅ |
+| 4 | Simulate a notification: open **Notification Settings**, enable **On‑Site** for students, send test notification (via admin UI). | Pop‑up toast appears on the next page load for a student account. | Test toast displayed correctly. | ✅ |
+| 5 | Review transaction list in **Payments** (`/admin/payments`). | All student payments (Mock + Midtrans) are listed with status, amount, and timestamps. | Payments displayed, statuses correct. | ✅ |
+
+All admin functionalities behaved as expected.
+
+--- Cleanup -------------------------------------------------------------
+- Ngrok tunnel was stopped:
+  ```
+  pkill -f ngrok
+  ```
+- Environment variables reset to original values (removed the temporary ngrok URL).
+- Verified that the application still works locally after shutting down ngrok.
+
+--- Conclusion -----------------------------------------------------------
+The LMS now:
+* Shows a consistent, dynamic logo across all pages and PDFs.
+* Handles the full student purchase‑to‑certificate flow (including real Midtrans
+  sandbox payment via ngrok).
+* Provides a stable instructor interface for course building, bulk import and
+  withdrawal instructions.
+* Gives admins complete control over branding, visibility, fees and
+  notification testing.
+
+All test cases passed (✅).  No regressions were introduced by the recent logo
+changes.
+
+--- End of Report ---

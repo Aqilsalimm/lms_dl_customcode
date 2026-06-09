@@ -304,7 +304,7 @@ const rightFeatures = ref([
         </section>
 
         <!-- 3. TENTANG DRASTHA LEARNING SECTION -->
-        <section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 text-center">
+        <section id="tentang-kami" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 text-center scroll-mt-24">
           <h2 class="text-3xl md:text-4xl font-extrabold text-[#1A2B49] mb-4">
             Tentang <span class="text-[#264790]">Drastha Learning</span>
           </h2>
@@ -381,7 +381,7 @@ const rightFeatures = ref([
         </section>
 
         <!-- 5. PILIHAN BERBAGAI KELAS SECTION -->
-        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+        <section id="pilihan-kelas" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 scroll-mt-24">
           
           <div class="flex flex-col items-center text-center mb-12 md:mb-16">
             <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full border-[1.5px] border-[#1A2B49] bg-transparent mb-6">
@@ -485,7 +485,7 @@ const rightFeatures = ref([
         </section>
 
         <!-- TIM PROFESIONAL SECTION -->
-        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
+        <section id="tim-kami" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 scroll-mt-24">
           
           <!-- Header Tim -->
           <div class="flex flex-col items-center text-center mb-12">
@@ -546,7 +546,7 @@ const rightFeatures = ref([
         </section>
 
         <!-- BLOG AKTIVITAS SECTION -->
-        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
+        <section id="blog-aktivitas" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 scroll-mt-24">
 
           <!-- Header Section -->
           <div class="flex flex-col items-center text-center mb-12">
@@ -625,7 +625,7 @@ const rightFeatures = ref([
         </section>
 
         <!-- HUBUNGI KAMI SECTION -->
-        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+        <section id="hubungi-kami" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 scroll-mt-24">
           
           <div class="flex flex-col items-center text-center mb-12 md:mb-16">
             <h2 class="text-3xl md:text-4xl font-extrabold text-[#1A2B49] mb-4">

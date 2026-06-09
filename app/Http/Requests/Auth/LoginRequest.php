@@ -42,12 +42,40 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
+        // 1. Validate Fraud Protection (reCAPTCHA)
+        $fraudEnabled = \App\Models\Setting::where('key', 'fraud_protection_enabled')->value('value');
+        if (filter_var($fraudEnabled, FILTER_VALIDATE_BOOLEAN)) {
+            $method = \App\Models\Setting::where('key', 'fraud_protection_method')->value('value');
+            if (in_array($method, ['recaptcha_v2', 'recaptcha_v3'])) {
+                $secret = \App\Models\Setting::where('key', 'recaptcha_secret_key')->value('value');
+                $gResponse = $this->input('g-recaptcha-response');
+                if ($secret && $gResponse) {
+                    $verify = @file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret={$secret}&response={$gResponse}");
+                    if ($verify) {
+                        $captchaResponse = json_decode($verify);
+                        if (!isset($captchaResponse->success) || !$captchaResponse->success) {
+                            throw ValidationException::withMessages([
+                                'email' => 'reCAPTCHA verification failed. Please try again.',
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
+        }
+
+        // 2. Limit Concurrent Login Sessions
+        $limitSessions = \App\Models\Setting::where('key', 'limit_login_sessions')->value('value');
+        if (filter_var($limitSessions, FILTER_VALIDATE_BOOLEAN)) {
+            // Native Laravel invalidation of other active devices sessions
+            Auth::logoutOtherDevices($this->string('password'));
         }
 
         RateLimiter::clear($this->throttleKey());
