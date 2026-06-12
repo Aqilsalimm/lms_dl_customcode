@@ -23,6 +23,7 @@ class Course extends Model
         'bg_color',
         'icon_type',
         'price',
+        'access_duration_months',
         'level',
         'capacity',
         'status'
@@ -30,6 +31,7 @@ class Course extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'access_duration_months' => 'integer',
     ];
 
     protected $appends = [

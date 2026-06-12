@@ -5,6 +5,7 @@ import {
   ShoppingCart, User, Globe, ChevronDown, 
   GraduationCap, Home, Newspaper, X, Eye, EyeOff
 } from 'lucide-vue-next';
+import FloatingChat from '@/Components/FloatingChat.vue';
 
 const props = defineProps({
   spotlightMode: {
@@ -279,56 +280,53 @@ const Logo = () => {
             >
               <div 
                 v-show="isTentangKamiOpen" 
-                class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[720px] bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-slate-100 p-8 z-50 cursor-default grid grid-cols-2 gap-x-12 gap-y-6 text-left"
+                class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[650px] bg-white rounded-3xl shadow-[0_15px_40px_rgb(0,0,0,0.08)] border border-slate-100 p-8 z-50 cursor-default"
               >
-                <!-- Column 1 -->
-                <div class="flex flex-col gap-6">
+                <!-- Grid 2 Kolom untuk layout Mega Menu -->
+                <div class="grid grid-cols-2 gap-x-10 gap-y-8">
                   <a 
                     href="#" 
                     @click.prevent="navigateAndScroll('tentang-kami')" 
-                    class="group block flex flex-col gap-1 transition-all"
+                    class="group flex flex-col items-start text-left text-[#1A2B49] hover:bg-slate-50 p-3 -m-3 rounded-2xl transition-all w-full"
                   >
-                    <span class="font-extrabold text-[#1A2B49] text-base group-hover:text-[#44A6D9] transition-colors">Tentang</span>
-                    <span class="text-xs text-slate-400 font-semibold leading-relaxed">Pelajari lebih lanjut tentang Drastha Learning</span>
+                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">Tentang</span>
+                    <span class="text-slate-500 text-xs font-medium leading-relaxed">Pelajari lebih lanjut tentang Drastha Learning</span>
                   </a>
-                  
-                  <a 
-                    href="#" 
-                    @click.prevent="navigateAndScroll('tim-kami')" 
-                    class="group block flex flex-col gap-1 transition-all"
-                  >
-                    <span class="font-extrabold text-[#1A2B49] text-base group-hover:text-[#44A6D9] transition-colors">Tim</span>
-                    <span class="text-xs text-slate-400 font-semibold leading-relaxed">Seluruh Tim yang ada di dalam struktural Drastha Learning</span>
-                  </a>
-                  
-                  <a 
-                    href="#" 
-                    @click.prevent="navigateAndScroll('hubungi-kami')" 
-                    class="group block flex flex-col gap-1 transition-all"
-                  >
-                    <span class="font-extrabold text-[#1A2B49] text-base group-hover:text-[#44A6D9] transition-colors">Kontak</span>
-                    <span class="text-xs text-slate-400 font-semibold leading-relaxed">Customer Service yang menyediakan layanan di Drastha Learning</span>
-                  </a>
-                </div>
 
-                <!-- Column 2 -->
-                <div class="flex flex-col gap-6">
                   <a 
                     href="#" 
                     @click.prevent="navigateAndScroll('blog-aktivitas')" 
-                    class="group block flex flex-col gap-1 transition-all"
+                    class="group flex flex-col items-start text-left text-[#1A2B49] hover:bg-slate-50 p-3 -m-3 rounded-2xl transition-all w-full"
                   >
-                    <span class="font-extrabold text-[#1A2B49] text-base group-hover:text-[#44A6D9] transition-colors">Blog</span>
-                    <span class="text-xs text-slate-400 font-semibold leading-relaxed">Artikel Berita, Wawasan, dan Rekomendasi terbaru dari kami</span>
+                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">Blog</span>
+                    <span class="text-slate-500 text-xs font-medium leading-relaxed">Artikel Berita, Wawasan, dan Rekomendasi terbaru dari kami</span>
                   </a>
-                  
+
+                  <a 
+                    href="#" 
+                    @click.prevent="navigateAndScroll('tim-kami')" 
+                    class="group flex flex-col items-start text-left text-[#1A2B49] hover:bg-slate-50 p-3 -m-3 rounded-2xl transition-all w-full"
+                  >
+                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">Tim</span>
+                    <span class="text-slate-500 text-xs font-medium leading-relaxed">Seluruh Tim yang ada di dalam struktural Drastha Learning</span>
+                  </a>
+
                   <a 
                     href="#" 
                     @click.prevent="navigateAndScroll('pilihan-kelas')" 
-                    class="group block flex flex-col gap-1 transition-all"
+                    class="group flex flex-col items-start text-left text-[#1A2B49] hover:bg-slate-50 p-3 -m-3 rounded-2xl transition-all w-full"
                   >
-                    <span class="font-extrabold text-[#1A2B49] text-base group-hover:text-[#44A6D9] transition-colors">Kelas</span>
-                    <span class="text-xs text-slate-400 font-semibold leading-relaxed">Seluruh Layanan Course khusus untuk Online/Offline Course</span>
+                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">Kelas</span>
+                    <span class="text-slate-500 text-xs font-medium leading-relaxed">Seluruh Layanan Course khusus untuk Online/Offline Course</span>
+                  </a>
+
+                  <a 
+                    href="#" 
+                    @click.prevent="navigateAndScroll('hubungi-kami')" 
+                    class="group flex flex-col items-start text-left text-[#1A2B49] hover:bg-slate-50 p-3 -m-3 rounded-2xl transition-all w-full"
+                  >
+                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">Kontak</span>
+                    <span class="text-slate-500 text-xs font-medium leading-relaxed">Customer Service yang menyediakan layanan di Drastha Learning</span>
                   </a>
                 </div>
               </div>
@@ -486,7 +484,7 @@ const Logo = () => {
     <!-- MOCK GOOGLE ACCOUNT SELECTION PROMPT -->
     <div 
       v-if="isGooglePromptOpen"
-      class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-55 flex items-center justify-center p-4 transition-all duration-300"
+      class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-all duration-300"
     >
       <div class="bg-white rounded-3xl max-w-sm w-full p-6 sm:p-8 border border-slate-100 shadow-2xl flex flex-col gap-5 text-center">
         <!-- Close Account selector button -->
@@ -556,6 +554,8 @@ const Logo = () => {
       <div class="h-safe-area-bottom bg-[#FFFFFF]"></div>
     </div>
 
+    <!-- Global Floating Chat Support -->
+    <FloatingChat />
   </div>
 </template>
 

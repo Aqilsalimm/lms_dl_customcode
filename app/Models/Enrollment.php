@@ -11,7 +11,9 @@ class Enrollment extends Model
         'user_id', 
         'course_id', 
         'bundle_id', 
+        'status',
         'enrolled_at',
+        'expires_at',
         'completed_lessons',
         'completed_quizzes',
         'completed_at'
@@ -19,6 +21,7 @@ class Enrollment extends Model
 
     protected $casts = [
         'enrolled_at' => 'datetime',
+        'expires_at' => 'datetime',
         'completed_lessons' => 'array',
         'completed_quizzes' => 'array',
         'completed_at' => 'datetime',
@@ -41,6 +44,21 @@ class Enrollment extends Model
 
     protected static function booted()
     {
+        static::creating(function ($enrollment) {
+            if (empty($enrollment->enrolled_at)) {
+                $enrollment->enrolled_at = now();
+            }
+            if (empty($enrollment->status)) {
+                $enrollment->status = 'active';
+            }
+            if ($enrollment->course_id) {
+                $course = $enrollment->course ?: Course::find($enrollment->course_id);
+                if ($course && $course->access_duration_months) {
+                    $enrollment->expires_at = $enrollment->enrolled_at->copy()->addMonths($course->access_duration_months);
+                }
+            }
+        });
+
         static::created(function ($enrollment) {
             $user = $enrollment->user;
             $course = $enrollment->course;

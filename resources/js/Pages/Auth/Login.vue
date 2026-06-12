@@ -166,7 +166,7 @@ const selectGoogleAccount = (email) => {
         <!-- MOCK GOOGLE ACCOUNT SELECTION PROMPT -->
         <div 
           v-if="isGooglePromptOpen"
-          class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-55 flex items-center justify-center p-4 transition-all duration-300"
+          class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4 transition-all duration-300"
         >
           <div class="bg-white rounded-3xl max-w-sm w-full p-6 sm:p-8 border border-slate-100 shadow-2xl flex flex-col gap-5 text-center">
             <div class="flex justify-between items-center pb-2 border-b border-slate-50">

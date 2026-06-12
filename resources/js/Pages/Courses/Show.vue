@@ -5,10 +5,12 @@ import {
   ShoppingCart, User, Globe, ChevronDown, GraduationCap, 
   Home, Newspaper, Calendar, Clock, MapPin, Code,
   Share2, CheckCircle2, Map, CreditCard, Play,
-  BarChart3, RotateCw, Award
+  BarChart3, RotateCw, Award, Image as ImageIcon,
+  Instagram, Twitter, Facebook, Linkedin
 } from 'lucide-vue-next';
 import axios from 'axios';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
+import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 
 // Leaflet.js setup
 import 'leaflet/dist/leaflet.css';
@@ -28,6 +30,28 @@ const props = defineProps({
 
 const isProcessing = ref(false);
 const showSuccessOverlay = ref(false);
+
+const activeMediaTab = ref('image');
+
+const introVideoUrl = computed(() => {
+  if (props.course.about && props.course.about.startsWith('{') && props.course.about.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(props.course.about);
+      return parsed.intro_video_url || '';
+    } catch (e) {
+      return '';
+    }
+  }
+  return '';
+});
+
+const youtubeEmbedUrl = computed(() => {
+  const url = introVideoUrl.value;
+  if (!url) return '';
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : '';
+});
 
 // Accordion Collapsible State for Syllabus Modules
 const expandedModules = ref({});
@@ -118,6 +142,11 @@ onMounted(() => {
 
 // Checkout action (Add to cart and go to Cart page)
 const handleRegister = () => {
+  if (!usePage().props.auth.user) {
+    alert('Silakan login terlebih dahulu untuk mendaftar kelas.');
+    router.get('/login');
+    return;
+  }
   isProcessing.value = true;
   
   router.post('/cart/add', {
@@ -132,6 +161,19 @@ const handleRegister = () => {
       alert('Gagal menambahkan kelas ke keranjang belanja.');
     }
   });
+};
+
+const handleAccessLesson = (lesson) => {
+  if (!usePage().props.auth.user) {
+    alert('Silakan login terlebih dahulu untuk mengakses kelas.');
+    router.get('/login');
+    return;
+  }
+  if (!props.isEnrolled) {
+    alert('Anda belum terdaftar di kelas ini. Silakan daftar terlebih dahulu.');
+    return;
+  }
+  router.get(`/courses/${props.course.slug}/learn`);
 };
 
 const handleShare = () => {
@@ -221,20 +263,81 @@ import { usePage } from '@inertiajs/vue3';
             </div>
           </div>
 
-          <!-- Banner Visual Panel -->
-          <div 
-            class="w-full h-80 sm:h-96 rounded-3xl overflow-hidden relative flex items-center justify-center shadow-sm mb-10 transition-transform duration-300 hover:shadow-md"
-            :style="{ backgroundColor: course.bg_color || '#44A6D9' }"
-          >
-            <div class="text-black scale-125 sm:scale-150 transform">
-              <!-- Render code icon default as per screenshot -->
-              <Code :size="80" :stroke-width="2.5" />
-            </div>
+          <!-- Media Card Wrapper -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100/80 shadow-[0_8px_30px_rgba(0,0,0,0.015)] mb-10">
             
-            <!-- Glassmorphism corner design from screenshot -->
-            <div class="absolute -bottom-6 -right-6 text-black opacity-10 transform -rotate-45">
-               <div class="w-32 h-4 bg-black rounded-full mb-3"></div>
-               <div class="w-20 h-4 bg-black rounded-full"></div>
+            <!-- Media Switcher Tabs (Segmented Control Pill Style) -->
+            <div class="flex items-center bg-slate-100/80 p-1.5 rounded-2xl w-full mb-5 border border-slate-200/20">
+              <button 
+                @click="activeMediaTab = 'image'"
+                :class="activeMediaTab === 'image' ? 'bg-white text-[#1A2B49] shadow-sm' : 'text-slate-500 hover:text-[#1A2B49]'"
+                class="flex-1 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 outline-none cursor-pointer"
+              >
+                <ImageIcon :size="16" /> Sampul Kursus
+              </button>
+              <button 
+                @click="activeMediaTab = 'video'"
+                :class="activeMediaTab === 'video' ? 'bg-white text-[#1A2B49] shadow-sm' : 'text-slate-500 hover:text-[#1A2B49]'"
+                class="flex-1 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 outline-none cursor-pointer"
+              >
+                <Play :size="16" fill="currentColor" /> Intro Video
+              </button>
+            </div>
+
+            <!-- Banner Visual Panel -->
+            <div 
+              class="w-full h-80 sm:h-96 rounded-2xl overflow-hidden relative shadow-sm border border-slate-100/50"
+            >
+              <!-- Image Tab -->
+              <template v-if="activeMediaTab === 'image'">
+                <div v-if="course.thumbnail" class="w-full h-full">
+                  <img :src="`/storage/${course.thumbnail}`" class="w-full h-full object-cover" :alt="course.title" />
+                </div>
+                
+                <!-- Default HTML/CSS Placeholder -->
+                <div 
+                  v-else
+                  class="w-full h-full flex items-center justify-center relative"
+                  :style="{ backgroundColor: course.bg_color || '#44A6D9' }"
+                >
+                  <div class="text-black scale-125 sm:scale-150 transform">
+                    <!-- Render code icon default as per screenshot -->
+                    <Code :size="80" :stroke-width="2.5" />
+                  </div>
+                  
+                  <!-- Glassmorphism corner design from screenshot -->
+                  <div class="absolute -bottom-6 -right-6 text-black opacity-10 transform -rotate-45">
+                     <div class="w-32 h-4 bg-black rounded-full mb-3"></div>
+                     <div class="w-20 h-4 bg-black rounded-full"></div>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Video Tab -->
+              <template v-else-if="activeMediaTab === 'video'">
+                <div v-if="youtubeEmbedUrl" class="w-full h-full relative z-0">
+                  <iframe 
+                    :src="youtubeEmbedUrl"
+                    class="w-full h-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                  ></iframe>
+                </div>
+                
+                <!-- Fallback: No Video Intro -->
+                <div 
+                  v-else
+                  class="w-full h-full flex flex-col items-center justify-center bg-slate-50 p-8 text-center"
+                >
+                  <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4 text-slate-400">
+                    <Play :size="24" class="text-slate-400 ml-0.5" />
+                  </div>
+                  <h4 class="font-extrabold text-base text-[#1A2B49] mb-1">Tidak ada Video intro</h4>
+                  <p class="text-slate-400 font-semibold text-xs sm:text-sm max-w-xs leading-relaxed">
+                    Kelas ini belum memiliki video cuplikan atau pengenalan. Anda tetap bisa langsung mendaftar kelas ini.
+                  </p>
+                </div>
+              </template>
             </div>
           </div>
 
@@ -334,8 +437,11 @@ import { usePage } from '@inertiajs/vue3';
                   <div 
                     v-for="(les, lesIdx) in mod.lessons" 
                     :key="les.id"
-                    :class="lesIdx === 0 ? 'bg-[#264790] text-white shadow-sm' : 'bg-[#F4F7F9] text-[#1A2B49]'"
-                    class="flex items-center justify-between p-4 rounded-xl transition-all"
+                    @click="handleAccessLesson(les)"
+                    :class="[
+                      lesIdx === 0 ? 'bg-[#264790] hover:bg-[#1C356E] text-white shadow-sm' : 'bg-[#F4F7F9] hover:bg-slate-200/70 text-[#1A2B49]',
+                      'flex items-center justify-between p-4 rounded-xl transition-all cursor-pointer hover:shadow-sm'
+                    ]"
                   >
                     <div class="flex items-center gap-3">
                       <div 
@@ -513,41 +619,78 @@ import { usePage } from '@inertiajs/vue3';
     </div>
 
     <!-- CLEAN FOOTER -->
-    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 mt-16 border-t border-slate-100">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <!-- Inline SVG DL Logo -->
-          <div class="flex items-center gap-2 mb-4" v-html="Logo()"></div>
-          <p class="text-slate-500 font-medium text-xs max-w-sm">
-            Platform Learning Management System (LMS) yang dirancang untuk mendukung pembelajaran modern, interaktif, dan berkelanjutan.
-          </p>
-        </div>
+    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32 md:pb-12 mt-16">
+      
+      <div class="bg-[#FFFFFF] rounded-[2.5rem] p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-slate-50">
+        
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-8 mb-12">
+          
+          <div class="md:col-span-5 flex flex-col gap-6">
+            
+            <div class="flex items-center gap-2">
+              <ApplicationLogo />
+            </div>
 
-        <div class="flex flex-wrap gap-x-12 gap-y-6">
-          <div>
-            <h4 class="font-bold text-xs text-[#1A2B49] uppercase tracking-wider mb-3">Tautan Cepat</h4>
-            <div class="flex flex-col gap-2 text-xs font-semibold text-slate-400">
-              <Link href="/" class="hover:text-[#44A6D9] transition-colors">Home</Link>
-              <Link href="/courses" class="hover:text-[#44A6D9] transition-colors">Kelas Kami</Link>
-              <Link href="/#hubungi-kami" class="hover:text-[#44A6D9] transition-colors">Hubungi Kami</Link>
+            <p class="text-[#264790] text-sm md:text-base font-medium leading-relaxed max-w-md">
+              Platform Learning Management System (LMS) yang dirancang untuk mendukung pembelajaran modern, interaktif, dan berkelanjutan.
+            </p>
+
+            <div class="flex items-center gap-4">
+              <a href="#" class="text-[#264790] hover:text-[#44A6D9] transition-colors p-1 border-[1.5px] border-[#264790] hover:border-[#44A6D9] rounded-lg">
+                <Instagram :size="20" :stroke-width="2.5" />
+              </a>
+              <a href="#" class="text-[#264790] hover:text-[#44A6D9] transition-colors p-1 border-[1.5px] border-[#264790] hover:border-[#44A6D9] rounded-lg">
+                <Twitter :size="20" :stroke-width="2.5" />
+              </a>
+              <a href="#" class="text-[#264790] hover:text-[#44A6D9] transition-colors p-1 border-[1.5px] border-[#264790] hover:border-[#44A6D9] rounded-lg">
+                <Facebook :size="20" :stroke-width="2.5" />
+              </a>
+              <a href="#" class="text-[#264790] hover:text-[#44A6D9] transition-colors p-1 border-[1.5px] border-[#264790] hover:border-[#44A6D9] rounded-lg">
+                <Linkedin :size="20" :stroke-width="2.5" />
+              </a>
             </div>
           </div>
-          <div>
-            <h4 class="font-bold text-xs text-[#1A2B49] uppercase tracking-wider mb-3">Kontak</h4>
-            <p class="text-xs font-semibold text-slate-400 mb-1">PT. DRASTHA BERKAH SENTOSA</p>
-            <p class="text-xs font-semibold text-slate-400">Jl. Budi Luhur B/2, Wagir, Kwangsan, Sedati</p>
+
+          <div class="md:col-span-3 flex flex-col gap-5">
+            <h4 class="font-extrabold text-[#1A2B49] text-lg">Tautan Cepat</h4>
+            <ul class="flex flex-col gap-3">
+              <li><Link href="/" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Home</Link></li>
+              <li><Link href="/courses" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Kelas Kami</Link></li>
+              <li><Link href="/#hubungi-kami" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Hubungi Kami</Link></li>
+              <li><Link href="/about" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Tentang Kami</Link></li>
+              <li><Link href="/clients" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Klien Kami</Link></li>
+              <li><Link href="/blog" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Blog Kami</Link></li>
+            </ul>
+          </div>
+
+          <div class="md:col-span-4 flex flex-col gap-5">
+            <h4 class="font-extrabold text-[#1A2B49] text-lg">Kontak</h4>
+            <ul class="flex flex-col gap-3 text-[#264790] text-sm md:text-base font-medium leading-relaxed">
+              <li class="font-bold text-[#264790] uppercase tracking-wide">
+                PT. DRASTHA BERKAH SENTOSA
+              </li>
+              <li>031-9960-5068 (Pulsa)</li>
+              <li>0812-3485-9768 (WhatsApp)</li>
+              <li class="max-w-xs">
+                Jl Budi Luhur B/2 Wagir Indah Kwangsan, Sedati Sidoarjo Jawa Timur 61253
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+        <div class="w-full h-px bg-slate-300/50 mb-6"></div>
+
+        <div class="flex flex-col-reverse md:flex-row justify-between items-center gap-4 text-[#264790] text-xs md:text-sm font-semibold">
+          <p>&copy; 2026 Drastha Learning, All Rights Reserved</p>
+          
+          <div class="flex flex-wrap justify-center gap-4 md:gap-8">
+            <Link href="#" class="hover:text-[#44A6D9] transition-colors border-b border-transparent hover:border-[#44A6D9] pb-0.5">Privacy Policy</Link>
+            <Link href="#" class="hover:text-[#44A6D9] transition-colors border-b border-transparent hover:border-[#44A6D9] pb-0.5">Terms of Service</Link>
+            <Link href="#" class="hover:text-[#44A6D9] transition-colors border-b border-transparent hover:border-[#44A6D9] pb-0.5">Cookies Settings</Link>
           </div>
         </div>
-      </div>
 
-      <div class="h-px bg-slate-100 my-8"></div>
-
-      <div class="flex flex-col sm:flex-row justify-between items-center text-[10px] font-bold text-slate-400 gap-4">
-        <span>&copy; 2026 Drastha Learning. All Rights Reserved</span>
-        <div class="flex gap-6">
-          <a href="#" class="hover:text-[#44A6D9] transition-colors">Privacy Policy</a>
-          <a href="#" class="hover:text-[#44A6D9] transition-colors">Terms of Service</a>
-        </div>
       </div>
     </footer>
 

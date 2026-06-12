@@ -11,6 +11,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
+
         $middleware->web(append: [
             \App\Http\Middleware\CheckMaintenanceMode::class,
             \App\Http\Middleware\LicenseMiddleware::class,
@@ -20,7 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->validateCsrfTokens(except: [
-            '/payment/notification',
+            'payment/notification',
+            'payment/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

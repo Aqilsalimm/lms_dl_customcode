@@ -36,6 +36,11 @@ const filteredCourses = computed(() => {
   return props.enrolledCourses;
 });
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+};
 </script>
 
 <template>
@@ -128,13 +133,23 @@ const filteredCourses = computed(() => {
               <span class="bg-[#F9CC6B] text-[#1A2B49] text-[10px] font-extrabold px-3 py-1.5 rounded-lg uppercase tracking-wider">
                 Kelas {{ course.level }}
               </span>
-              <span class="text-slate-400 text-xs font-bold">{{ course.lessons_count }} Sesi</span>
+              <div class="flex items-center gap-2">
+                <span v-if="course.enrollment_status === 'expired'" class="bg-rose-500 text-white text-[9px] font-extrabold px-2.5 py-1 rounded-md uppercase tracking-wider">
+                  Akses Habis
+                </span>
+                <span class="text-slate-400 text-xs font-bold">{{ course.lessons_count }} Sesi</span>
+              </div>
             </div>
             
             <h4 class="font-extrabold text-[#1A2B49] text-base leading-tight mb-2 min-h-[2.5rem] line-clamp-2 group-hover:text-[#264790] transition-colors">
               {{ course.title }}
             </h4>
-            <p class="text-slate-400 text-xs font-medium mb-6">Oleh: <span class="font-bold text-slate-500">{{ course.instructor_name }}</span></p>
+            <div class="flex flex-col gap-0.5 mb-6">
+              <p class="text-slate-400 text-xs font-medium">Oleh: <span class="font-bold text-slate-500">{{ course.instructor_name }}</span></p>
+              <p v-if="course.expires_at" class="text-slate-400 text-[10px] font-medium">
+                Masa akses: <span class="font-bold" :class="course.enrollment_status === 'expired' ? 'text-rose-500' : 'text-slate-500'">{{ course.enrollment_status === 'expired' ? 'Habis' : formatDate(course.expires_at) }}</span>
+              </p>
+            </div>
           </div>
 
           <div>
@@ -150,6 +165,14 @@ const filteredCourses = computed(() => {
             </div>
 
             <Link 
+              v-if="course.enrollment_status === 'expired'"
+              :href="`/courses/${course.slug}`"
+              class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 py-3 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-1.5"
+            >
+              Akses Habis (Beli Lagi) <ArrowRight :size="16" />
+            </Link>
+            <Link 
+              v-else
               :href="`/courses/${course.slug}/learn`"
               class="w-full bg-[#F4F7F9] hover:bg-[#264790] text-[#264790] hover:text-white border border-transparent py-3 rounded-2xl font-bold text-sm transition-colors flex items-center justify-center gap-1.5"
             >

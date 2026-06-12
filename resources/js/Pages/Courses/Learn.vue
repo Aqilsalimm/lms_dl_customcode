@@ -90,23 +90,27 @@ const getModuleDuration = (mod) => {
 const getEmbedUrl = computed(() => {
   if (!activeLesson.value) return '';
   
-  let url = activeLesson.value.video_url;
-  
-  // Canva / Slides type
-  if (activeLesson.value.content && activeLesson.value.content.startsWith('{') && activeLesson.value.content.endsWith('}')) {
-    try {
-      const obj = JSON.parse(activeLesson.value.content);
-      if (obj.type === 'slides') {
-        url = obj.slides_url || '';
-        // extract iframe src if needed
-        if (url.includes('src="')) {
-          const match = url.match(/src="([^"]+)"/);
-          if (match) url = match[1];
+  if (activeLessonType.value === 'slides') {
+    if (activeLesson.value.slide_url) {
+      return activeLesson.value.slide_url;
+    }
+    if (activeLesson.value.content && activeLesson.value.content.startsWith('{') && activeLesson.value.content.endsWith('}')) {
+      try {
+        const obj = JSON.parse(activeLesson.value.content);
+        if (obj.type === 'slides') {
+          let url = obj.slides_url || '';
+          if (url.includes('src="')) {
+            const match = url.match(/src="([^"]+)"/);
+            if (match) url = match[1];
+          }
+          return url;
         }
-        return url;
-      }
-    } catch (e) {}
+      } catch (e) {}
+    }
+    return '';
   }
+  
+  let url = activeLesson.value.video_url;
 
   if (!url) return '';
 
@@ -239,6 +243,7 @@ const currentSlideIndex = ref(0);
 
 const activeLessonType = computed(() => {
   if (!activeLesson.value) return 'video';
+  if (activeLesson.value.slide_url) return 'slides';
   const content = activeLesson.value.content;
   if (content && content.startsWith('{') && content.endsWith('}')) {
     try {
@@ -255,10 +260,24 @@ const pptSlides = computed(() => {
   if (content && content.startsWith('{') && content.endsWith('}')) {
     try {
       const obj = JSON.parse(content);
-      if (obj.type === 'ppt') return obj.slides || [];
+      if (obj.type === 'ppt') {
+        return (obj.slides || []).map((s, idx) => ({
+          id: s.id || idx,
+          title: s.title || '',
+          body_text: s.body_text || s.content || '',
+          bg_color: s.bg_color || '#1e293b',
+          text_color: s.text_color || '#ffffff'
+        }));
+      }
     } catch (e) {}
   }
-  return [{ title: activeLesson.value.title, content: activeLesson.value.content || 'Materi tertulis...' }];
+  return [{
+    id: 1,
+    title: activeLesson.value.title,
+    body_text: activeLesson.value.content || 'Materi tertulis...',
+    bg_color: '#1e293b',
+    text_color: '#ffffff'
+  }];
 });
 
 // Interactive Quiz States
@@ -486,8 +505,8 @@ const Logo = () => {
                       class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-sm"
                     >
                       <CheckCircle2 v-if="isCompleted(les.id)" :size="14" />
-                      <Presentation v-else-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'ppt'" :size="12" />
-                      <FileText v-else-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'slides'" :size="12" />
+                      <Presentation v-else-if="(!les.slide_url && les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'ppt')" :size="12" />
+                      <FileText v-else-if="les.slide_url || (les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'slides')" :size="12" />
                       <Play v-else :size="11" :stroke-width="3" />
                     </div>
                     <div>
@@ -556,8 +575,25 @@ const Logo = () => {
 
           <!-- A. LESSON COMPONENT PLAYER -->
           <div v-if="activeLesson" class="flex flex-col gap-6">
-            <!-- Video / Canva Slides Player Frame -->
-            <div v-if="activeLessonType === 'video' || activeLessonType === 'slides'" class="rounded-3xl overflow-hidden bg-slate-900 border border-slate-950 shadow-lg aspect-video w-full relative">
+            <!-- Canva / Google Slides Player Frame -->
+            <div v-if="activeLessonType === 'slides'" class="w-full">
+              <div v-if="getEmbedUrl" class="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-slate-50 relative">
+                <iframe 
+                  :src="getEmbedUrl"
+                  class="w-full h-full absolute inset-0"
+                  allowfullscreen
+                  loading="lazy"
+                  sandbox="allow-scripts allow-same-origin allow-presentation"
+                ></iframe>
+              </div>
+              <div v-else class="w-full aspect-video rounded-2xl bg-slate-900 border border-slate-950 shadow-lg flex flex-col items-center justify-center text-slate-400 gap-3">
+                <Play :size="48" class="text-slate-500 animate-pulse" />
+                <span class="text-sm font-semibold">Memuat materi belajar...</span>
+              </div>
+            </div>
+
+            <!-- Video Player Frame -->
+            <div v-else-if="activeLessonType === 'video'" class="rounded-3xl overflow-hidden bg-slate-900 border border-slate-950 shadow-lg aspect-video w-full relative">
               <iframe 
                 v-if="getEmbedUrl"
                 :src="getEmbedUrl"
@@ -573,41 +609,72 @@ const Logo = () => {
             </div>
 
             <!-- PPT Manual Slides Player Frame -->
-            <div v-else-if="activeLessonType === 'ppt'" class="rounded-3xl overflow-hidden bg-slate-800 border border-slate-900 shadow-lg aspect-video w-full relative flex flex-col justify-between p-8 text-white select-none">
-              <!-- Slide content top -->
-              <div class="flex justify-between items-center border-b border-white/10 pb-4">
-                <span class="text-[10px] font-bold tracking-widest text-[#44A6D9] uppercase">Slaid Presentasi Pembelajaran</span>
-                <span class="text-xs font-bold text-slate-300 bg-white/10 px-2.5 py-1 rounded-full">{{ currentSlideIndex + 1 }} / {{ pptSlides.length }}</span>
-              </div>
-              
-              <!-- Slide Body -->
-              <div class="flex-grow flex flex-col justify-center gap-4 py-4 overflow-y-auto">
-                <h2 class="text-xl sm:text-2xl font-extrabold text-white text-center leading-snug">
-                  {{ pptSlides[currentSlideIndex]?.title || 'Slaid ' + (currentSlideIndex + 1) }}
-                </h2>
-                <p class="text-slate-200 font-medium text-sm sm:text-base text-center max-w-xl mx-auto leading-relaxed whitespace-pre-line">
-                  {{ pptSlides[currentSlideIndex]?.content || 'Tidak ada isi penjelasan untuk slide ini.' }}
-                </p>
-              </div>
-              
-              <!-- Navigation buttons -->
-              <div class="flex justify-between items-center border-t border-white/10 pt-4">
-                <button 
-                  type="button"
-                  @click="currentSlideIndex = Math.max(0, currentSlideIndex - 1)"
-                  :disabled="currentSlideIndex === 0"
-                  class="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-30 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft :size="14" /> Sebelumnya
-                </button>
-                <button 
-                  type="button"
-                  @click="currentSlideIndex = Math.min(pptSlides.length - 1, currentSlideIndex + 1)"
-                  :disabled="currentSlideIndex === pptSlides.length - 1"
-                  class="px-4 py-2 bg-[#44A6D9] hover:bg-[#44A6D9]/90 disabled:opacity-30 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  Berikutnya <ChevronRight :size="14" />
-                </button>
+            <div v-else-if="activeLessonType === 'ppt'" class="w-full">
+              <div 
+                :style="{ 
+                  backgroundColor: pptSlides[currentSlideIndex]?.bg_color || '#1e293b', 
+                  color: pptSlides[currentSlideIndex]?.text_color || '#ffffff' 
+                }"
+                class="rounded-2xl overflow-hidden shadow-md aspect-video w-full relative flex flex-col justify-between p-6 sm:p-10 select-none transition-all duration-300 border border-black/5"
+              >
+                <!-- Slide content top -->
+                <div class="flex justify-between items-center border-b border-white/10 pb-4">
+                  <span class="text-[10px] font-bold tracking-widest uppercase opacity-75">Presentasi Native Pembelajaran</span>
+                  <span class="text-xs font-bold bg-white/10 px-3 py-1 rounded-full">Slide {{ currentSlideIndex + 1 }} dari {{ pptSlides.length }}</span>
+                </div>
+                
+                <!-- Slide Body (with Transition) -->
+                <div class="flex-grow flex flex-col justify-center items-center gap-4 py-6 overflow-y-auto">
+                  <Transition name="fade-slide" mode="out-in">
+                    <div :key="currentSlideIndex" class="text-center max-w-xl mx-auto space-y-4">
+                      <h2 class="text-xl sm:text-3xl font-extrabold leading-snug">
+                        {{ pptSlides[currentSlideIndex]?.title || 'Slide ' + (currentSlideIndex + 1) }}
+                      </h2>
+                      <p class="opacity-90 font-medium text-sm sm:text-base leading-relaxed whitespace-pre-line">
+                        {{ pptSlides[currentSlideIndex]?.body_text || 'Tidak ada isi penjelasan untuk slide ini.' }}
+                      </p>
+                    </div>
+                  </Transition>
+                </div>
+                
+                <!-- Slide Navigation & Progress Bar Footer -->
+                <div class="flex flex-col gap-4 border-t border-white/10 pt-4">
+                  <!-- Progress Bar Indicator -->
+                  <div class="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div 
+                      :style="{ width: `${((currentSlideIndex + 1) / pptSlides.length) * 100}%` }"
+                      class="h-full bg-current opacity-75 transition-all duration-350"
+                    ></div>
+                  </div>
+
+                  <div class="flex justify-between items-center">
+                    <button 
+                      type="button"
+                      @click="currentSlideIndex = Math.max(0, currentSlideIndex - 1)"
+                      :disabled="currentSlideIndex === 0"
+                      class="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-20 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed border border-white/5"
+                    >
+                      <ChevronLeft :size="14" /> Sebelumnya
+                    </button>
+                    
+                    <button 
+                      type="button"
+                      @click="
+                        if (currentSlideIndex < pptSlides.length - 1) {
+                          currentSlideIndex++;
+                        } else {
+                          if (!isCompleted(activeLesson?.id)) {
+                            toggleComplete();
+                          }
+                        }
+                      "
+                      class="px-5 py-2 bg-white text-slate-900 hover:bg-white/90 disabled:opacity-30 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1 cursor-pointer border border-white/5"
+                    >
+                      <span>{{ currentSlideIndex === pptSlides.length - 1 ? 'Selesai' : 'Berikutnya' }}</span>
+                      <ChevronRight v-if="currentSlideIndex < pptSlides.length - 1" :size="14" />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -951,4 +1018,18 @@ const Logo = () => {
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
 .font-montserrat { font-family: 'Montserrat', sans-serif; }
+
+/* Native Slide Transition */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.25s ease;
+}
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
 </style>

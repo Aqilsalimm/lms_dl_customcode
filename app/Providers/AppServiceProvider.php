@@ -21,5 +21,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        if (request()->secure() || str_contains(request()->header('X-Forwarded-Proto', ''), 'https')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
+        \Illuminate\Support\Facades\Mail::extend('brevo', function (array $config) {
+            return new \App\Mail\Transports\BrevoApiTransport($config['key'] ?? env('BREVO_API_KEY'));
+        });
     }
 }

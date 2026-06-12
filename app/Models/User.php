@@ -12,7 +12,7 @@ use Illuminate\Notifications\Notifiable;
 
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'email', 'password', 'role'])]
+#[Fillable(['name', 'email', 'password', 'role', 'personal_goal', 'photo'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -72,6 +72,20 @@ class User extends Authenticatable
     // Check enrollment helper
     public function hasEnrolled(int $courseId): bool
     {
-        return $this->enrollments()->where('course_id', $courseId)->exists();
+        $enrollment = $this->enrollments()->where('course_id', $courseId)->first();
+        if (!$enrollment) {
+            return false;
+        }
+
+        if ($enrollment->status === 'expired') {
+            return false;
+        }
+
+        if ($enrollment->expires_at && $enrollment->expires_at->isPast()) {
+            $enrollment->update(['status' => 'expired']);
+            return false;
+        }
+
+        return true;
     }
 }

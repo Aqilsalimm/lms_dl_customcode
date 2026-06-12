@@ -7,6 +7,12 @@ use App\Models\Order;
 use App\Models\User;
 use App\Models\Enrollment;
 use App\Models\QuizAttempt;
+use App\Models\Category;
+use App\Models\Lesson;
+use App\Models\Module;
+use App\Models\Tag;
+use App\Models\Quiz;
+use App\Models\QuizQuestion;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -282,5 +288,842 @@ class DashboardController extends Controller
     public function placeholder()
     {
         return redirect()->route('dashboard')->with('info', 'This feature is currently under development.');
+    }
+
+    /**
+     * Display Course Builder Settings page (Admin only)
+     */
+    public function courseBuilderSettings()
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin()) {
+            return redirect()->route('dashboard')->with('error', 'Unauthorized access.');
+        }
+
+        $categories = Category::with('parent')->get();
+        $tags = Tag::all();
+
+        return Inertia::render('Dashboard/Admin/CourseBuilderSettings', [
+            'categories' => $categories,
+            'tags' => $tags,
+        ]);
+    }
+
+    /**
+     * Store a new category
+     */
+    public function storeCategory(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'parent_id' => 'nullable|exists:categories,id',
+        ]);
+
+        Category::create([
+            'name' => $request->name,
+            'description' => $request->description,
+            'parent_id' => $request->parent_id ?: null,
+        ]);
+
+        return redirect()->back()->with('success', 'Category created successfully.');
+    }
+
+    /**
+     * Update a category
+     */
+    public function updateCategory(Request $request, Category $category)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'parent_id' => 'nullable|exists:categories,id|different:id',
+        ]);
+
+        $category->update([
+            'name' => $request->name,
+            'description' => $request->description,
+            'parent_id' => $request->parent_id ?: null,
+        ]);
+
+        return redirect()->back()->with('success', 'Category updated successfully.');
+    }
+
+    /**
+     * Delete a category
+     */
+    public function deleteCategory(Category $category)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $category->delete();
+
+        return redirect()->back()->with('success', 'Category deleted successfully.');
+    }
+
+    /**
+     * Store a new tag
+     */
+    public function storeTag(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255|unique:tags,name',
+        ]);
+
+        Tag::create([
+            'name' => $request->name,
+        ]);
+
+        return redirect()->back()->with('success', 'Tag created successfully.');
+    }
+
+    /**
+     * Update a tag
+     */
+    public function updateTag(Request $request, Tag $tag)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255|unique:tags,name,' . $tag->id,
+        ]);
+
+        $tag->update([
+            'name' => $request->name,
+        ]);
+
+        return redirect()->back()->with('success', 'Tag updated successfully.');
+    }
+
+    /**
+     * Delete a tag
+     */
+    public function deleteTag(Tag $tag)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $tag->delete();
+
+        return redirect()->back()->with('success', 'Tag deleted successfully.');
+    }
+
+    /**
+     * Download the importer Excel template
+     */
+    public function downloadImportTemplate()
+    {
+        $headers = [
+            'Row Type', 'Title', 'Description', 'Publish Status', 'Difficulty Level', 
+            'Duration Hours', 'Duration Minutes', 'Price Type', 'Price', 'Strike Price',
+            'ACF: Usia Peserta', 'ACF: Tipe Kelas', 'ACF: Informasi Sesi', 'ACF: Informasi Durasi',
+            'ACF: Tipe Satuan Produk', 'ACF: Status Pendaftaran'
+        ];
+        
+        $data = [
+            ['course', 'Kelas Pemrograman Web Fullstack', 'Belajar HTML, CSS, Javascript, PHP dan Database MySQL dari nol.', 'publish', 'SD', '40', '0', 'paid', '250000', '500000', '15', 'Online Class', 'Two Session per Week', '2 Hours for 1 Session', '/Bulan', 'Buka'],
+            ['topic', 'Bagian 1: Pengenalan HTML & CSS', 'Dasar markup internet dan styling halaman web.', 'publish', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['lesson', 'Pelajaran 1: Apa itu HTML?', 'Penjelasan dasar tentang tag HTML dan strukturnya.', 'publish', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['lesson', 'Pelajaran 2: Styling dengan CSS', 'Cara mempercantik halaman web menggunakan CSS.', 'publish', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['topic', 'Bagian 2: Javascript Interaktif', 'Membuat website menjadi dinamis dan interaktif.', 'publish', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['lesson', 'Pelajaran 1: Variabel dan Kondisional', 'Belajar logika dasar pemrograman Javascript.', 'publish', '', '', '', '', '', '', '', '', '', '', '', '']
+        ];
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'xlsx');
+        if (DrasthaXlsxWriter::generate($tempFile, $headers, $data)) {
+            return response()->download($tempFile, 'drastha_lms_course_template.xlsx')->deleteFileAfterSend(true);
+        }
+
+        return redirect()->back()->with('error', 'Gagal membuat template.');
+    }
+
+    /**
+     * Import courses from uploaded XLSX or CSV file
+     */
+    public function importCourses(Request $request)
+    {
+        if (!auth()->user()->isAdmin() && !auth()->user()->isInstructor()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'import_file' => 'required|file',
+            'course_id' => 'nullable|integer|exists:courses,id'
+        ]);
+
+        $courseId = $request->input('course_id');
+        if ($courseId) {
+            $course = Course::find($courseId);
+            if (!auth()->user()->isAdmin() && $course->instructor_id !== auth()->id()) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+        }
+
+        $file = $request->file('import_file');
+        $extension = strtolower($file->getClientOriginalExtension());
+        $path = $file->getRealPath();
+
+        $rows = [];
+
+        if ($extension === 'xlsx') {
+            try {
+                $rows = DrasthaXlsxReader::read($path);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'logs' => ['<span style="color:#ef4444; font-weight:bold;">Error: ' . $e->getMessage() . '</span>']
+                ]);
+            }
+        } elseif ($extension === 'csv' || $extension === 'txt') {
+            if (($handle = fopen($path, "r")) !== FALSE) {
+                while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                    $rows[] = $data;
+                }
+                fclose($handle);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'logs' => ['<span style="color:#ef4444; font-weight:bold;">Error: Gagal membuka file CSV.</span>']
+                ]);
+            }
+        } else {
+            return response()->json([
+                'success' => false,
+                'logs' => ['<span style="color:#ef4444; font-weight:bold;">Error: Format file tidak didukung. Harap unggah file .csv atau .xlsx.</span>']
+            ]);
+        }
+
+        if (empty($rows) || count($rows) <= 1) {
+            return response()->json([
+                'success' => false,
+                'logs' => ['<span style="color:#ef4444; font-weight:bold;">Error: File kosong atau hanya berisi baris header saja.</span>']
+            ]);
+        }
+
+        // Process the rows
+        $logs = $this->processImportRows($rows, $courseId);
+
+        return response()->json([
+            'success' => true,
+            'logs' => $logs
+        ]);
+    }
+
+    /**
+     * Process parsed spreadsheet rows to insert Course, Module, Lesson
+     */
+    private function processImportRows($rows, $courseId = null)
+    {
+        $log = [];
+        $header = array_map('strtolower', array_map('trim', $rows[0]));
+        
+        $idx_type = array_search('row type', $header) !== false ? array_search('row type', $header) : 0;
+        $idx_title = array_search('title', $header) !== false ? array_search('title', $header) : 1;
+        $idx_desc = array_search('description', $header) !== false ? array_search('description', $header) : 2;
+        $idx_publish_status = array_search('publish status', $header) !== false ? array_search('publish status', $header) : 3;
+        $idx_difficulty = array_search('difficulty level', $header) !== false ? array_search('difficulty level', $header) : 4;
+        $idx_hours = array_search('duration hours', $header) !== false ? array_search('duration hours', $header) : 5;
+        $idx_minutes = array_search('duration minutes', $header) !== false ? array_search('duration minutes', $header) : 6;
+        $idx_price_type = array_search('price type', $header) !== false ? array_search('price type', $header) : 7;
+        $idx_price = array_search('price', $header) !== false ? array_search('price', $header) : 8;
+        
+        // ACF/Custom meta
+        $idx_usia = array_search('acf: usia peserta', $header) !== false ? array_search('acf: usia peserta', $header) : 10;
+        $idx_tipe_kelas = array_search('acf: tipe kelas', $header) !== false ? array_search('acf: tipe kelas', $header) : 11;
+        $idx_sesi = array_search('acf: informasi sesi', $header) !== false ? array_search('acf: informasi sesi', $header) : 12;
+        $idx_durasi = array_search('acf: informasi durasi', $header) !== false ? array_search('acf: informasi durasi', $header) : 13;
+        $idx_satuan = array_search('acf: tipe satuan produk', $header) !== false ? array_search('acf: tipe satuan produk', $header) : 14;
+        $idx_status_pendaftaran = array_search('acf: status pendaftaran', $header) !== false ? array_search('acf: status pendaftaran', $header) : 15;
+
+        $current_course_id = $courseId ?: 0;
+        $current_module_id = 0;
+        $module_order = 0;
+        $lesson_order = 0;
+        $row_count = 0;
+
+        $log[] = '<span style="color:#10b981; font-weight:bold;">[START] Memulai pemrosesan baris data kelas...</span>';
+
+        for ($i = 1; $i < count($rows); $i++) {
+            $data = $rows[$i];
+            if (empty($data) || !isset($data[$idx_type]) || empty(trim($data[$idx_type]))) {
+                continue;
+            }
+
+            $type = strtolower(trim($data[$idx_type]));
+            $title = isset($data[$idx_title]) ? trim($data[$idx_title]) : '';
+            $desc = isset($data[$idx_desc]) ? trim($data[$idx_desc]) : '';
+            
+            $publish_status = isset($data[$idx_publish_status]) ? strtolower(trim($data[$idx_publish_status])) : 'publish';
+            $status = ($publish_status === 'publish' || $publish_status === 'published') ? 'published' : 'draft';
+
+            if (empty($title)) {
+                $log[] = '<span style="color:#f59e0b;">[Baris ' . ($i + 1) . '] Lewati: Judul kosong.</span>';
+                continue;
+            }
+
+            if ($type === 'course') {
+                if ($courseId) {
+                    $current_course_id = $courseId;
+                    $log[] = '<span style="color:#38bdf8;">[COURSE APPEND] Menyisipkan materi ke kelas yang sedang aktif (ID: ' . $courseId . ')</span>';
+                    continue;
+                }
+                
+                $current_module_id = 0;
+                $module_order = 0;
+                $lesson_order = 0;
+
+                // Map difficulty level to course level: SD, SMP, SMA, Umum
+                $diff_input = isset($data[$idx_difficulty]) ? strtolower(trim($data[$idx_difficulty])) : '';
+                $level = 'Umum';
+                if (str_contains($diff_input, 'sd') || str_contains($diff_input, 'begin')) {
+                    $level = 'SD';
+                } elseif (str_contains($diff_input, 'smp') || str_contains($diff_input, 'inter')) {
+                    $level = 'SMP';
+                } elseif (str_contains($diff_input, 'sma') || str_contains($diff_input, 'adv')) {
+                    $level = 'SMA';
+                }
+
+                $price_type = isset($data[$idx_price_type]) ? strtolower(trim($data[$idx_price_type])) : 'free';
+                $price = 0.00;
+                if ($price_type === 'paid' && isset($data[$idx_price])) {
+                    $price = (float) filter_var($data[$idx_price], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+                }
+
+                // ACF info formatting to save as "about" (Benefit) in our model
+                $usia = isset($data[$idx_usia]) ? trim($data[$idx_usia]) : '';
+                $tipe_kelas = isset($data[$idx_tipe_kelas]) ? trim($data[$idx_tipe_kelas]) : '';
+                $sesi = isset($data[$idx_sesi]) ? trim($data[$idx_sesi]) : '';
+                $durasi = isset($data[$idx_durasi]) ? trim($data[$idx_durasi]) : '';
+                $satuan = isset($data[$idx_satuan]) ? trim($data[$idx_satuan]) : '';
+                $status_pendaftaran = isset($data[$idx_status_pendaftaran]) ? trim($data[$idx_status_pendaftaran]) : '';
+
+                $about_bullets = [];
+                if (!empty($usia)) $about_bullets[] = "Usia Peserta: " . $usia;
+                if (!empty($tipe_kelas)) $about_bullets[] = "Tipe Kelas: " . $tipe_kelas;
+                if (!empty($sesi)) $about_bullets[] = "Informasi Sesi: " . $sesi;
+                if (!empty($durasi)) $about_bullets[] = "Informasi Durasi: " . $durasi;
+                if (!empty($satuan)) $about_bullets[] = "Satuan Produk: " . $satuan;
+                if (!empty($status_pendaftaran)) $about_bullets[] = "Status Pendaftaran: " . $status_pendaftaran;
+                
+                $about = implode(', ', $about_bullets) ?: 'Modul Lengkap, E-Certificate, Dokumentasi Belajar';
+
+                try {
+                    $course = Course::create([
+                        'instructor_id' => auth()->id(),
+                        'category_id' => null,
+                        'title' => $title,
+                        'description' => $desc,
+                        'about' => $about,
+                        'bg_color' => '#44A6D9',
+                        'icon_type' => 'code',
+                        'price' => $price,
+                        'level' => $level,
+                        'capacity' => 20,
+                        'status' => $status
+                    ]);
+
+                    $current_course_id = $course->id;
+                    $log[] = '<span style="color:#38bdf8;">[COURSE CREATED] ID ' . $current_course_id . ' : ' . htmlspecialchars($title) . ' (' . $status . ')</span>';
+                    if (!empty($about_bullets)) {
+                        $log[] = ' -> <span style="color:#94a3b8;">Metadata imported: ' . htmlspecialchars($about) . '</span>';
+                    }
+                } catch (\Exception $e) {
+                    $log[] = '<span style="color:#ef4444;">[COURSE FAILED] Gagal membuat Kursus "' . htmlspecialchars($title) . '": ' . $e->getMessage() . '</span>';
+                }
+
+            } elseif ($type === 'topic' || $type === 'module') {
+                if ($current_course_id <= 0) {
+                    $log[] = '<span style="color:#ef4444;">[MODULE FAILED] Gagal membuat Bab/Topic "' . htmlspecialchars($title) . '": Tidak ada Kursus aktif di baris sebelumnya.</span>';
+                    continue;
+                }
+
+                $module_order++;
+                $lesson_order = 0;
+
+                try {
+                    $module = Module::create([
+                        'course_id' => $current_course_id,
+                        'title' => $title,
+                        'sort_order' => $module_order
+                    ]);
+
+                    $current_module_id = $module->id;
+                    $log[] = '<span style="color:#a855f7;">  [MODULE CREATED] ID ' . $current_module_id . ' : ' . htmlspecialchars($title) . ' (Urutan: ' . $module_order . ')</span>';
+                } catch (\Exception $e) {
+                    $log[] = '<span style="color:#ef4444;">  [MODULE FAILED] Gagal membuat Bab: ' . $e->getMessage() . '</span>';
+                }
+
+            } elseif ($type === 'lesson') {
+                if ($current_course_id <= 0 || $current_module_id <= 0) {
+                    $log[] = '<span style="color:#ef4444;">[LESSON FAILED] Gagal membuat Pelajaran "' . htmlspecialchars($title) . '": Harus berada di bawah Kursus dan Bab yang valid.</span>';
+                    continue;
+                }
+
+                $lesson_order++;
+
+                // Parse duration minutes
+                $hours = isset($data[$idx_hours]) ? (int)$data[$idx_hours] : 0;
+                $mins = isset($data[$idx_minutes]) ? (int)$data[$idx_minutes] : 0;
+                $duration = ($hours * 60) + $mins;
+                if ($duration <= 0) $duration = 30; // default 30 mins
+
+                try {
+                    Lesson::create([
+                        'module_id' => $current_module_id,
+                        'title' => $title,
+                        'content' => json_encode([
+                            'type' => 'text',
+                            'text' => $desc
+                        ]),
+                        'video_url' => '',
+                        'duration_minutes' => $duration,
+                        'sort_order' => $lesson_order
+                    ]);
+
+                    $log[] = '<span style="color:#10b981;">    [LESSON CREATED] ' . htmlspecialchars($title) . ' (Durasi: ' . $duration . ' Menit, Urutan: ' . $lesson_order . ')</span>';
+                } catch (\Exception $e) {
+                    $log[] = '<span style="color:#ef4444;">    [LESSON FAILED] Gagal membuat Pelajaran: ' . $e->getMessage() . '</span>';
+                }
+            } else {
+                $log[] = '<span style="color:#f59e0b;">[UNKNOWN TYPE] Lewati tipe baris tidak dikenal: "' . htmlspecialchars($type) . '"</span>';
+            }
+
+            $row_count++;
+        }
+
+        $log[] = '<span style="color:#10b981; font-weight:bold;">[FINISH] Selesai memproses ' . $row_count . ' baris kurikulum kelas.</span>';
+        return $log;
+    }
+
+    /**
+     * Get list of courses with their modules for dynamic target selection
+     */
+    public function getCoursesWithModules()
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $courses = Course::with('modules')->orderBy('title')->get();
+
+        return response()->json($courses);
+    }
+
+    /**
+     * Download the quiz importer Excel template
+     */
+    public function downloadQuizTemplate()
+    {
+        $headers = [
+            'Question Type', 'Question Text', 'Points / Marks', 'Choice A', 'Choice B', 'Choice C', 'Choice D', 'Choice E', 'Correct Answer Key'
+        ];
+        
+        $data = [
+            ['single_choice', 'Siapa penemu gaya gravitasi universal?', '10', 'Albert Einstein', 'Isaac Newton', 'Nikola Tesla', 'Marie Curie', '', 'B'],
+            ['multiple_choice', 'Manakah yang termasuk bahasa pemrograman back-end? (Pilih semua yang benar)', '15', 'HTML', 'CSS', 'PHP', 'Python', 'Node.js', 'C, D, E'],
+            ['true_false', 'Bumi adalah planet terdekat dari Matahari.', '10', 'True', 'False', '', '', '', 'B'],
+            ['single_choice', 'Apa kepanjangan dari CSS?', '10', 'Creative Style Sheets', 'Cascading Style Sheets', 'Computer Style Sheets', 'Colorful Style Sheets', '', 'B']
+        ];
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'xlsx');
+        if (DrasthaXlsxWriter::generate($tempFile, $headers, $data)) {
+            return response()->download($tempFile, 'drastha_lms_quiz_template.xlsx')->deleteFileAfterSend(true);
+        }
+
+        return redirect()->back()->with('error', 'Gagal membuat template kuis.');
+    }
+
+    /**
+     * Import quizzes from uploaded XLSX or CSV file
+     */
+    public function importQuizzes(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'quiz_title' => 'required|string|max:255',
+            'target_module' => 'required|exists:modules,id',
+            'import_file' => 'required|file'
+        ]);
+
+        $file = $request->file('import_file');
+        $extension = strtolower($file->getClientOriginalExtension());
+        $path = $file->getRealPath();
+
+        $rows = [];
+
+        if ($extension === 'xlsx') {
+            try {
+                $rows = DrasthaXlsxReader::read($path);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'logs' => ['<span style="color:#ef4444; font-weight:bold;">Error: ' . $e->getMessage() . '</span>']
+                ]);
+            }
+        } elseif ($extension === 'csv' || $extension === 'txt') {
+            if (($handle = fopen($path, "r")) !== FALSE) {
+                while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                    $rows[] = $data;
+                }
+                fclose($handle);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'logs' => ['<span style="color:#ef4444; font-weight:bold;">Error: Gagal membuka file CSV.</span>']
+                ]);
+            }
+        } else {
+            return response()->json([
+                'success' => false,
+                'logs' => ['<span style="color:#ef4444; font-weight:bold;">Error: Format file tidak didukung. Harap unggah file .csv atau .xlsx.</span>']
+            ]);
+        }
+
+        if (empty($rows) || count($rows) <= 1) {
+            return response()->json([
+                'success' => false,
+                'logs' => ['<span style="color:#ef4444; font-weight:bold;">Error: File kosong atau hanya berisi baris header saja.</span>']
+            ]);
+        }
+
+        $logs = $this->processQuizImportRows($rows, $request->quiz_title, $request->target_module);
+
+        return response()->json([
+            'success' => true,
+            'logs' => $logs
+        ]);
+    }
+
+    /**
+     * Process parsed spreadsheet rows to insert Quiz and QuizQuestion
+     */
+    private function processQuizImportRows($rows, $quiz_title, $module_id)
+    {
+        $log = [];
+        $header = array_map('strtolower', array_map('trim', $rows[0]));
+        
+        $idx_type = array_search('question type', $header) !== false ? array_search('question type', $header) : 0;
+        $idx_text = array_search('question text', $header) !== false ? array_search('question text', $header) : 1;
+        $idx_points = array_search('points / marks', $header) !== false ? array_search('points / marks', $header) : 2;
+        $idx_choice_a = array_search('choice a', $header) !== false ? array_search('choice a', $header) : 3;
+        $idx_choice_b = array_search('choice b', $header) !== false ? array_search('choice b', $header) : 4;
+        $idx_choice_c = array_search('choice c', $header) !== false ? array_search('choice c', $header) : 5;
+        $idx_choice_d = array_search('choice d', $header) !== false ? array_search('choice d', $header) : 6;
+        $idx_choice_e = array_search('choice e', $header) !== false ? array_search('choice e', $header) : 7;
+        $idx_correct = array_search('correct answer key', $header) !== false ? array_search('correct answer key', $header) : 8;
+
+        $log[] = '<span style="color:#10b981; font-weight:bold;">[START] Memulai pemrosesan kuis...</span>';
+
+        $module = Module::find($module_id);
+        if (!$module) {
+            $log[] = '<span style="color:#ef4444; font-weight:bold;">[ERROR] Bab/Module target tidak ditemukan.</span>';
+            return $log;
+        }
+
+        try {
+            $quiz = Quiz::create([
+                'module_id' => $module_id,
+                'title' => $quiz_title,
+                'description' => 'Quiz imported from spreadsheet template.',
+                'time_limit_minutes' => 30,
+                'sort_order' => ($module->quizzes()->count() + 1)
+            ]);
+
+            $log[] = '<span style="color:#38bdf8; font-weight:bold;">[QUIZ CREATED] ID: ' . $quiz->id . ' - "' . htmlspecialchars($quiz_title) . '" berhasil ditautkan ke Bab "' . htmlspecialchars($module->title) . '".</span>';
+        } catch (\Exception $e) {
+            $log[] = '<span style="color:#ef4444; font-weight:bold;">[QUIZ FAILED] Gagal membuat kuis di database: ' . $e->getMessage() . '</span>';
+            return $log;
+        }
+
+        $question_count = 0;
+
+        for ($i = 1; $i < count($rows); $i++) {
+            $data = $rows[$i];
+            if (empty($data) || !isset($data[$idx_text]) || empty(trim($data[$idx_text]))) {
+                continue;
+            }
+
+            $q_type = isset($data[$idx_type]) ? strtolower(trim($data[$idx_type])) : 'single_choice';
+            $q_text = trim($data[$idx_text]);
+            $correct_key_raw = isset($data[$idx_correct]) ? strtoupper(trim($data[$idx_correct])) : '';
+
+            $options = [];
+            if ($q_type === 'true_false' || $q_type === 'true/false') {
+                $options = ['True', 'False'];
+            } else {
+                if (!empty($data[$idx_choice_a])) $options[] = trim($data[$idx_choice_a]);
+                if (!empty($data[$idx_choice_b])) $options[] = trim($data[$idx_choice_b]);
+                if (!empty($data[$idx_choice_c])) $options[] = trim($data[$idx_choice_c]);
+                if (!empty($data[$idx_choice_d])) $options[] = trim($data[$idx_choice_d]);
+                if (!empty($data[$idx_choice_e])) $options[] = trim($data[$idx_choice_e]);
+            }
+
+            if (empty($options)) {
+                $log[] = '<span style="color:#f59e0b;">  [SOAL LEWATI] Baris ' . ($i + 1) . ': Opsi jawaban kosong.</span>';
+                continue;
+            }
+
+            $correct_index = 0;
+            if ($q_type === 'true_false' || $q_type === 'true/false') {
+                if ($correct_key_raw === 'B' || strtolower($correct_key_raw) === 'false') {
+                    $correct_index = 1;
+                } else {
+                    $correct_index = 0;
+                }
+            } else {
+                $first_key = 'A';
+                if (!empty($correct_key_raw)) {
+                    $split_keys = preg_split('/[\s,|]+/', $correct_key_raw);
+                    if (!empty($split_keys[0])) {
+                        $first_key = strtoupper(trim($split_keys[0]));
+                    }
+                }
+
+                $map = ['A' => 0, 'B' => 1, 'C' => 2, 'D' => 3, 'E' => 4];
+                $correct_index = isset($map[$first_key]) ? $map[$first_key] : 0;
+                
+                if ($correct_index >= count($options)) {
+                    $correct_index = 0;
+                }
+            }
+
+            try {
+                QuizQuestion::create([
+                    'quiz_id' => $quiz->id,
+                    'question_text' => $q_text,
+                    'options' => $options,
+                    'correct_option_index' => $correct_index,
+                    'sort_order' => ($question_count + 1)
+                ]);
+
+                $log[] = '<span style="color:#a855f7;">  [SOAL BERHASIL] ID: ' . ($question_count + 1) . ' | Tipe: ' . $q_type . ' | "' . htmlspecialchars($q_text) . '"</span>';
+                $log[] = '    -> Opsi: [' . implode(', ', array_map(function($opt, $idx) use ($correct_index) {
+                    return $idx === $correct_index ? '<span style="color:#10b981; font-weight:bold;">' . htmlspecialchars($opt) . '</span>' : htmlspecialchars($opt);
+                }, $options, array_keys($options))) . ']';
+
+                $question_count++;
+            } catch (\Exception $e) {
+                $log[] = '<span style="color:#ef4444;">  [SOAL GAGAL] Gagal menyuntikkan soal baris ' . ($i + 1) . ': ' . $e->getMessage() . '</span>';
+            }
+        }
+
+        $log[] = '<span style="color:#10b981; font-weight:bold;">[FINISH] Selesai menyuntikkan ' . $question_count . ' soal kuis ke database!</span>';
+        return $log;
+    }
+}
+
+class DrasthaXlsxReader
+{
+    public static function read($file_path)
+    {
+        if (!class_exists('ZipArchive')) {
+            throw new \Exception('Ekstensi PHP ZipArchive tidak aktif pada server Anda.');
+        }
+
+        $zip = new \ZipArchive();
+        if ($zip->open($file_path) !== TRUE) {
+            throw new \Exception('Gagal membuka file Excel (.xlsx). File mungkin rusak.');
+        }
+
+        // Parse Shared Strings
+        $shared_strings = [];
+        $shared_strings_xml = $zip->getFromName('xl/sharedStrings.xml');
+        if ($shared_strings_xml) {
+            $shared_strings_xml = preg_replace('/xmlns[^=]*="[^"]*"/i', '', $shared_strings_xml);
+            $xml = simplexml_load_string($shared_strings_xml);
+            if ($xml && isset($xml->si)) {
+                foreach ($xml->si as $si) {
+                    if (isset($si->t)) {
+                        $shared_strings[] = (string)$si->t;
+                    } elseif (isset($si->r)) {
+                        $text = '';
+                        foreach ($si->r as $r) {
+                            if (isset($r->t)) {
+                                $text .= (string)$r->t;
+                            }
+                        }
+                        $shared_strings[] = $text;
+                    } else {
+                        $shared_strings[] = '';
+                    }
+                }
+            }
+        }
+
+        // Parse Sheet 1
+        $rows = [];
+        $sheet_xml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        if ($sheet_xml) {
+            $sheet_xml = preg_replace('/xmlns[^=]*="[^"]*"/i', '', $sheet_xml);
+            $xml = simplexml_load_string($sheet_xml);
+            if ($xml && isset($xml->sheetData->row)) {
+                foreach ($xml->sheetData->row as $row) {
+                    $row_idx = intval($row['r']) - 1;
+                    $row_data = [];
+                    
+                    foreach ($row->c as $c) {
+                        $cell_ref = (string)$c['r'];
+                        preg_match('/^[A-Z]+/i', $cell_ref, $matches);
+                        if (empty($matches)) continue;
+                        $col_name = $matches[0];
+                        $col_idx = self::colNameToIndex($col_name);
+                        
+                        $type = (string)$c['t'];
+                        $val = '';
+                        if ($type === 'inlineStr' && isset($c->is->t)) {
+                            $val = (string)$c->is->t;
+                        } elseif (isset($c->v)) {
+                            $val = (string)$c->v;
+                            if ($type === 's') {
+                                $idx = intval($val);
+                                $val = isset($shared_strings[$idx]) ? $shared_strings[$idx] : '';
+                            }
+                        }
+                        $row_data[$col_idx] = $val;
+                    }
+                    
+                    if (!empty($row_data)) {
+                        $max_col = max(array_keys($row_data));
+                        for ($i = 0; $i <= $max_col; $i++) {
+                            if (!isset($row_data[$i])) {
+                                $row_data[$i] = '';
+                            }
+                        }
+                        ksort($row_data);
+                    }
+                    $rows[$row_idx] = $row_data;
+                }
+            }
+        }
+        $zip->close();
+
+        if (!empty($rows)) {
+            $max_row = max(array_keys($rows));
+            for ($i = 0; $i <= $max_row; $i++) {
+                if (!isset($rows[$i])) {
+                    $rows[$i] = [];
+                }
+            }
+            ksort($rows);
+        }
+
+        return $rows;
+    }
+
+    private static function colNameToIndex($col)
+    {
+        $col = strtoupper($col);
+        $len = strlen($col);
+        $index = 0;
+        for ($i = 0; $i < $len; $i++) {
+            $index = $index * 26 + (ord($col[$i]) - 64);
+        }
+        return $index - 1;
+    }
+}
+
+class DrasthaXlsxWriter
+{
+    public static function generate($filename, $headers, $data)
+    {
+        $zip = new \ZipArchive();
+        if ($zip->open($filename, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== TRUE) {
+            return false;
+        }
+
+        // [Content_Types].xml
+        $content_types = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+</Types>';
+        $zip->addFromString('[Content_Types].xml', $content_types);
+
+        // _rels/.rels
+        $rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>';
+        $zip->addFromString('_rels/.rels', $rels);
+
+        // xl/workbook.xml
+        $workbook = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+    <sheet name="Tutor LMS Import Template" sheetId="1" r:id="rId1"/>
+  </sheets>
+</workbook>';
+        $zip->addFromString('xl/workbook.xml', $workbook);
+
+        // xl/_rels/workbook.xml.rels
+        $workbook_rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>';
+        $zip->addFromString('xl/_rels/workbook.xml.rels', $workbook_rels);
+
+        // xl/worksheets/sheet1.xml
+        $sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>';
+
+        $colLetter = function($idx) {
+            $letter = '';
+            while ($idx >= 0) {
+                $letter = chr(65 + ($idx % 26)) . $letter;
+                $idx = intval($idx / 26) - 1;
+            }
+            return $letter;
+        };
+
+        // Headers
+        $sheet .= '<row r="1">';
+        foreach ($headers as $c_idx => $header_text) {
+            $ref = $colLetter($c_idx) . '1';
+            $esc_text = htmlspecialchars($header_text, ENT_QUOTES, 'UTF-8');
+            $sheet .= '<c r="' . $ref . '" t="inlineStr"><is><t>' . $esc_text . '</t></is></c>';
+        }
+        $sheet .= '</row>';
+
+        // Data Rows
+        foreach ($data as $r_idx => $row_data) {
+            $row_num = $r_idx + 2;
+            $sheet .= '<row r="' . $row_num . '">';
+            foreach ($row_data as $c_idx => $val) {
+                $ref = $colLetter($c_idx) . $row_num;
+                $esc_val = htmlspecialchars($val, ENT_QUOTES, 'UTF-8');
+                $sheet .= '<c r="' . $ref . '" t="inlineStr"><is><t>' . $esc_val . '</t></is></c>';
+            }
+            $sheet .= '</row>';
+        }
+
+        $sheet .= '  </sheetData>
+</worksheet>';
+        $zip->addFromString('xl/worksheets/sheet1.xml', $sheet);
+
+        $zip->close();
+        return true;
     }
 }

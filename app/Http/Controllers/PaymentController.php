@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Enrollment;
 use App\Models\Course;
 use App\Models\Bundle;
+use App\Models\Coupon;
 use App\Services\MidtransService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,7 @@ class PaymentController extends Controller
         $request->validate([
             'buyable_type' => 'required|string|in:course,bundle',
             'buyable_id' => 'required|integer',
+            'coupon_code' => 'nullable|string',
         ]);
 
         $user = auth()->user();
@@ -55,22 +57,47 @@ class PaymentController extends Controller
             return back()->with('error', 'Anda sudah terdaftar di kelas/bundle ini.');
         }
 
+        $couponId = null;
+        $discountAmount = 0.00;
+        $finalAmount = $item->price;
+
+        if ($request->coupon_code) {
+            $coupon = Coupon::where('code', $request->coupon_code)->first();
+            if ($coupon) {
+                if ($coupon->isValidForCourse($request->buyable_type === 'course' ? $item->id : null)) {
+                    $couponId = $coupon->id;
+                    $discountAmount = $coupon->calculateDiscount($item->price);
+                    $finalAmount = max(0.00, $item->price - $discountAmount);
+                }
+            }
+        }
+
         $autoCompleteOrders = filter_var(
             \App\Models\Setting::where('key', 'auto_complete_ecommerce_orders')->value('value'),
             FILTER_VALIDATE_BOOLEAN
         );
+
+        $isFree = $finalAmount <= 0;
+        $orderStatus = ($autoCompleteOrders || $isFree) ? 'completed' : 'pending';
+        $paymentType = ($autoCompleteOrders || $isFree) ? 'auto_complete' : null;
 
         // Create Order
         $order = Order::create([
             'user_id' => $user->id,
             'buyable_type' => $buyableClass,
             'buyable_id' => $item->id,
-            'amount' => $item->price,
-            'status' => $autoCompleteOrders ? 'completed' : 'pending',
-            'payment_type' => $autoCompleteOrders ? 'auto_complete' : null,
+            'amount' => $finalAmount,
+            'status' => $orderStatus,
+            'payment_type' => $paymentType,
+            'coupon_id' => $couponId,
+            'discount_amount' => $discountAmount,
         ]);
 
-        if ($autoCompleteOrders) {
+        if ($order->status === 'completed') {
+            if ($couponId) {
+                Coupon::find($couponId)->increment('uses');
+            }
+
             // Enroll User
             if ($order->buyable_type === Course::class) {
                 Enrollment::firstOrCreate([
@@ -126,6 +153,12 @@ class PaymentController extends Controller
 
         $orderIdField = $payload['order_id'] ?? '';
         
+        // Handle Midtrans test notification ping
+        if (str_contains($orderIdField, 'test') || str_contains($orderIdField, 'payment_notif_test')) {
+            logger()->info('Midtrans Test Notification Ping successful');
+            return response()->json(['message' => 'Test notification received successfully'], 200);
+        }
+
         // Extract order ID from "DRSTH-{id}-{timestamp}"
         $parts = explode('-', $orderIdField);
         if (count($parts) < 2) {
@@ -149,6 +182,10 @@ class PaymentController extends Controller
                         'payment_type' => $paymentType
                     ]);
 
+                    if ($order->coupon_id) {
+                        Coupon::find($order->coupon_id)->increment('uses');
+                    }
+
                     // Enroll User
                     if ($order->buyable_type === Course::class) {
                         Enrollment::firstOrCreate([
@@ -160,7 +197,6 @@ class PaymentController extends Controller
                     } elseif ($order->buyable_type === Bundle::class) {
                         $bundle = Bundle::find($order->buyable_id);
                         if ($bundle) {
-                            // Enroll in bundle itself
                             Enrollment::firstOrCreate([
                                 'user_id' => $order->user_id,
                                 'bundle_id' => $bundle->id,
@@ -168,7 +204,6 @@ class PaymentController extends Controller
                                 'enrolled_at' => now(),
                             ]);
 
-                            // Enroll in all courses of this bundle
                             foreach ($bundle->courses as $course) {
                                 Enrollment::firstOrCreate([
                                     'user_id' => $order->user_id,
@@ -195,7 +230,6 @@ class PaymentController extends Controller
      */
     public function completeMockPayment(Request $request, Order $order)
     {
-        // Only allow this if midtrans credentials are unset (mock mode)
         $serverKey = config('midtrans.server_key');
         if (!empty($serverKey) && !str_contains($serverKey, 'placeholder')) {
             return response()->json(['message' => 'Not allowed in production/configured mode'], 403);
@@ -206,6 +240,10 @@ class PaymentController extends Controller
                 'status' => 'completed',
                 'payment_type' => 'mock_payment'
             ]);
+
+            if ($order->coupon_id) {
+                Coupon::find($order->coupon_id)->increment('uses');
+            }
 
             // Enroll User
             if ($order->buyable_type === Course::class) {
@@ -238,5 +276,99 @@ class PaymentController extends Controller
         });
 
         return response()->json(['message' => 'Mock payment succeeded. User enrolled!']);
+    }
+
+    /**
+     * Validate Coupon endpoint
+     */
+    public function validateCoupon(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string',
+            'items' => 'required|array',
+        ]);
+
+        $coupon = Coupon::where('code', $request->code)->first();
+        if (!$coupon) {
+            return response()->json(['valid' => false, 'message' => 'Kode kupon tidak valid.'], 422);
+        }
+
+        if (!$coupon->is_active) {
+            return response()->json(['valid' => false, 'message' => 'Kupon ini sudah tidak aktif.'], 422);
+        }
+
+        if ($coupon->expires_at && $coupon->expires_at->isPast()) {
+            return response()->json(['valid' => false, 'message' => 'Kupon ini sudah kedaluwarsa.'], 422);
+        }
+
+        if ($coupon->max_uses !== null && $coupon->uses >= $coupon->max_uses) {
+            return response()->json(['valid' => false, 'message' => 'Kupon ini sudah mencapai batas kuota.'], 422);
+        }
+
+        // Check course specific constraint
+        if ($coupon->course_id !== null) {
+            $hasCourse = false;
+            $coursePrice = 0;
+            foreach ($request->items as $item) {
+                if ($item['type'] === 'course' && $item['id'] == $coupon->course_id) {
+                    $hasCourse = true;
+                    $courseModel = Course::find($item['id']);
+                    if ($courseModel) {
+                        $coursePrice = $courseModel->price;
+                    }
+                    break;
+                }
+            }
+
+            if (!$hasCourse) {
+                $courseName = $coupon->course ? $coupon->course->title : 'kelas tertentu';
+                return response()->json(['valid' => false, 'message' => "Kupon ini hanya berlaku untuk kelas: {$courseName}."], 422);
+            }
+
+            $discount = $coupon->calculateDiscount($coursePrice);
+        } else {
+            $totalPrice = 0;
+            foreach ($request->items as $item) {
+                if ($item['type'] === 'course') {
+                    $m = Course::find($item['id']);
+                    if ($m) $totalPrice += $m->price;
+                } else {
+                    $m = Bundle::find($item['id']);
+                    if ($m) $totalPrice += $m->price;
+                }
+            }
+            $discount = $coupon->calculateDiscount($totalPrice);
+        }
+
+        return response()->json([
+            'valid' => true,
+            'coupon_id' => $coupon->id,
+            'code' => $coupon->code,
+            'type' => $coupon->type,
+            'value' => $coupon->value,
+            'discount_amount' => (float) $discount,
+        ]);
+    }
+
+    /**
+     * Download Invoice PDF
+     */
+    public function downloadInvoice(Order $order)
+    {
+        $user = auth()->user();
+        if ($order->user_id !== $user->id && $user->role !== 'admin') {
+            abort(403, 'Anda tidak memiliki akses ke invoice ini.');
+        }
+
+        if ($order->status !== 'completed') {
+            abort(400, 'Invoice belum tersedia karena transaksi belum selesai.');
+        }
+
+        $pdfContent = \App\Services\InvoiceService::generatePdf($order);
+
+        return response($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="Invoice-DRSTH-' . $order->id . '.pdf"',
+        ]);
     }
 }

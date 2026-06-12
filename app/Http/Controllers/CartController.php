@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Bundle;
 use App\Models\Order;
+use App\Models\Enrollment;
+use App\Models\Coupon;
 use App\Services\MidtransService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -117,6 +119,10 @@ class CartController extends Controller
             return response()->json(['message' => 'Silakan login terlebih dahulu.'], 401);
         }
 
+        $request->validate([
+            'coupon_code' => 'nullable|string',
+        ]);
+
         $cartIds = session('cart', []);
         if (empty($cartIds)) {
             return response()->json(['message' => 'Keranjang belanja Anda kosong.'], 400);
@@ -129,11 +135,35 @@ class CartController extends Controller
 
         $totalPrice = $courses->sum('price');
 
+        $couponId = null;
+        $discountAmount = 0.00;
+        $finalAmount = $totalPrice;
+
+        if ($request->coupon_code) {
+            $coupon = Coupon::where('code', $request->coupon_code)->first();
+            if ($coupon && $coupon->is_active) {
+                if ($coupon->course_id !== null) {
+                    $targetCourse = $courses->firstWhere('id', $coupon->course_id);
+                    if ($targetCourse && $coupon->isValidForCourse($targetCourse->id)) {
+                        $couponId = $coupon->id;
+                        $discountAmount = $coupon->calculateDiscount($targetCourse->price);
+                        $finalAmount = max(0.00, $totalPrice - $discountAmount);
+                    }
+                } else {
+                    if ($coupon->isValidForCourse(null)) {
+                        $couponId = $coupon->id;
+                        $discountAmount = $coupon->calculateDiscount($totalPrice);
+                        $finalAmount = max(0.00, $totalPrice - $discountAmount);
+                    }
+                }
+            }
+        }
+
         // Compile items into a dynamic Bundle
         $bundle = Bundle::create([
             'title' => 'Keranjang Belanja - ' . $user->name . ' - ' . now()->format('d M Y H:i'),
             'description' => 'Pembelian gabungan dari Keranjang Belanja.',
-            'price' => $totalPrice,
+            'price' => $finalAmount,
             'status' => 'published',
         ]);
 
@@ -145,17 +175,27 @@ class CartController extends Controller
             FILTER_VALIDATE_BOOLEAN
         );
 
+        $isFree = $finalAmount <= 0;
+        $orderStatus = ($autoCompleteOrders || $isFree) ? 'completed' : 'pending';
+        $paymentType = ($autoCompleteOrders || $isFree) ? 'auto_complete' : null;
+
         // Create Order
         $order = Order::create([
             'user_id' => $user->id,
             'buyable_type' => Bundle::class,
             'buyable_id' => $bundle->id,
-            'amount' => $totalPrice,
-            'status' => $autoCompleteOrders ? 'completed' : 'pending',
-            'payment_type' => $autoCompleteOrders ? 'auto_complete' : null,
+            'amount' => $finalAmount,
+            'status' => $orderStatus,
+            'payment_type' => $paymentType,
+            'coupon_id' => $couponId,
+            'discount_amount' => $discountAmount,
         ]);
 
-        if ($autoCompleteOrders) {
+        if ($order->status === 'completed') {
+            if ($couponId) {
+                Coupon::find($couponId)->increment('uses');
+            }
+
             // Enroll in bundle
             Enrollment::firstOrCreate([
                 'user_id' => $user->id,
@@ -196,5 +236,41 @@ class CartController extends Controller
             'snap_token' => $snapToken,
             'order_id' => $order->id,
         ]);
+    }
+
+    /**
+     * Resume an abandoned checkout by restoring cart items and redirecting.
+     */
+    public function resumeCheckout(Order $order)
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return redirect()->route('login', ['redirect' => route('checkout.resume', $order->id)]);
+        }
+
+        if ($order->user_id !== $user->id) {
+            abort(403, 'Unauthorized access to this order.');
+        }
+
+        if ($order->status === 'completed') {
+            return redirect()->route('dashboard')->with('success', 'Transaksi ini telah selesai dibayar.');
+        }
+
+        // Restore cart items
+        $cartIds = [];
+        if ($order->buyable_type === Course::class) {
+            $cartIds[] = $order->buyable_id;
+        } elseif ($order->buyable_type === Bundle::class) {
+            $bundle = Bundle::find($order->buyable_id);
+            if ($bundle) {
+                $cartIds = $bundle->courses()->pluck('courses.id')->toArray();
+            }
+        }
+
+        if (!empty($cartIds)) {
+            session(['cart' => $cartIds]);
+        }
+
+        return redirect()->route('cart.checkout-page')->with('info', 'Checkout Anda berhasil dipulihkan.');
     }
 }

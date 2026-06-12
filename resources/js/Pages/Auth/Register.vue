@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3';
 import { Code, Key, ChevronDown, CheckCircle2 } from 'lucide-vue-next';
 
 // State to track current registration step
@@ -16,8 +16,30 @@ const form = useForm({
     password: '',
     password_confirmation: '', // Handled under-the-hood in Step 1 transition
     otp_code: '',
-    personal_goal: 'Pilih Keahlian',
+    personal_goal: '',
     photo: null,
+});
+
+const photoPreviewUrl = ref(null);
+
+const handlePhotoChange = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    form.photo = file;
+    photoPreviewUrl.value = URL.createObjectURL(file);
+  } else {
+    form.photo = null;
+    photoPreviewUrl.value = null;
+  }
+};
+
+const personalGoals = computed(() => {
+  const settings = usePage().props.settings;
+  const rawGoals = settings?.personal_goals;
+  if (rawGoals) {
+    return rawGoals.split(',').map(g => g.trim()).filter(g => g.length > 0);
+  }
+  return ['Web Developer', 'Mobile Developer', 'UI/UX Designer', 'Data Scientist', 'Python Developer'];
 });
 
 // Generated dummy OTP for visual presentation and testing ease
@@ -29,7 +51,7 @@ const generateUsername = (email) => {
   return email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '') + '123';
 };
 
-// Transition Step 1 to Step 2
+// Transition Step 1 to OTP (send OTP email)
 const handleStep1Continue = () => {
   // Client-side validations
   if (!form.name || form.name.length > 50) {
@@ -45,41 +67,48 @@ const handleStep1Continue = () => {
     return;
   }
 
-  // Set password confirmation to avoid Breeze validation errors
+  // Ensure password confirmation for Breeze
   form.password_confirmation = form.password;
 
-  // Transition to OTP step
-  step.value = 2;
-
-  // Show a helpful mock notification containing the test OTP
-  showOtpAlert.value = true;
-  setTimeout(() => {
-    showOtpAlert.value = false;
-  }, 10000);
+  // Send OTP to backend
+  router.post(route('otp.send'), { email: form.email }, {
+    preserveState: true,
+    onSuccess: () => {
+      // Advance to OTP entry step
+      step.value = 2;
+    },
+    onError: (errors) => {
+      alert(Object.values(errors).join('\n'));
+    },
+  });
 };
 
-// Transition Step 2 to Step 3
+// Transition Step 2 to verify OTP
 const handleStep2Continue = () => {
   if (!form.otp_code) {
     alert('Silakan masukkan 6 digit kode OTP Anda.');
     return;
   }
-
-  // Accept any 6 digit input or the default 123456
   if (form.otp_code.length !== 6) {
     alert('Kode OTP harus terdiri dari tepat 6 digit.');
     return;
   }
 
-  step.value = 3;
+  // Verify OTP with backend
+  router.post(route('otp.verify'), { email: form.email, otp_code: form.otp_code }, {
+    preserveState: true,
+    onSuccess: () => {
+      // Advance to Step 3 if backend confirms
+      step.value = 3;
+    },
+    onError: (errors) => {
+      alert(Object.values(errors).join('\n'));
+    },
+  });
 };
 
 // Submit form and finalize signup to backend
 const handleStep3Continue = () => {
-  if (form.personal_goal === 'Pilih Keahlian') {
-    alert('Silakan pilih Personal Goal / Keahlian belajar Anda terlebih dahulu.');
-    return;
-  }
 
   // Trigger Breeze registration
   form.post(route('register'), {
@@ -288,7 +317,8 @@ const Logo = () => {
             
             <!-- Custom Upload Circle graphic representation -->
             <div class="w-20 h-20 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-4 shadow-sm relative overflow-hidden">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+              <img v-if="photoPreviewUrl" :src="photoPreviewUrl" class="w-full h-full object-cover animate-fade-in" />
+              <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
             </div>
 
             <h3 class="text-lg sm:text-xl font-extrabold text-[#1A2B49] mb-0.5 leading-snug">
@@ -306,12 +336,14 @@ const Logo = () => {
               
               <div class="relative w-full bg-[#F4F7F9] border border-slate-100 rounded-2xl px-5 py-3.5 flex items-center justify-between overflow-hidden">
                 <span class="text-xs sm:text-sm font-extrabold text-slate-700">Choose File</span>
-                <span class="text-xs text-slate-400 font-semibold truncate max-w-[180px]">No file chosen</span>
+                <span class="text-xs text-slate-400 font-semibold truncate max-w-[180px]">
+                  {{ form.photo ? form.photo.name : 'No file chosen' }}
+                </span>
                 <!-- Hidden native input -->
                 <input 
                   type="file" 
                   accept="image/jpeg,image/png,image/jpg"
-                  @change="(e) => { form.photo = e.target.files[0] }"
+                  @change="handlePhotoChange"
                   class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                 />
               </div>
@@ -320,20 +352,16 @@ const Logo = () => {
               </span>
             </div>
 
-            <!-- Personal Goal Select Field -->
-            <div class="flex flex-col gap-2 relative">
-              <label class="text-xs sm:text-sm font-extrabold text-[#264790]">Personal Goal</label>
-              <div class="relative">
+            <!-- Personal Goal Select Field (Clean border/shadow wrapper structure) -->
+            <div class="flex flex-col gap-2">
+              <label class="text-xs sm:text-sm font-extrabold text-[#264790]">Personal Goal (Optional)</label>
+              <div class="relative w-full bg-[#F4F7F9] border border-slate-100 rounded-2xl overflow-hidden focus-within:border-[#44A6D9]/50 focus-within:bg-white transition-all">
                 <select 
                   v-model="form.personal_goal"
-                  class="w-full bg-[#F4F7F9] border border-slate-100 rounded-2xl px-5 py-4 text-xs sm:text-sm text-slate-700 font-bold focus:outline-none appearance-none cursor-pointer outline-none"
+                  class="w-full bg-transparent border-0 px-5 py-4 text-xs sm:text-sm text-slate-700 font-bold focus:outline-none focus:ring-0 appearance-none cursor-pointer outline-none shadow-none"
                 >
-                  <option disabled value="Pilih Keahlian">Pilih Keahlian</option>
-                  <option value="Web Developer">Web Developer</option>
-                  <option value="Mobile Developer">Mobile Developer</option>
-                  <option value="UI/UX Designer">UI/UX Designer</option>
-                  <option value="Data Scientist">Data Scientist</option>
-                  <option value="Python Developer">Python Developer</option>
+                  <option value="">Pilih Keahlian (Opsional)</option>
+                  <option v-for="goal in personalGoals" :key="goal" :value="goal">{{ goal }}</option>
                 </select>
                 <div class="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                   <ChevronDown :size="16" />

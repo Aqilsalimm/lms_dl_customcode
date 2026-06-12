@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { Head, Link, usePage, router } from '@inertiajs/vue3';
+import { ref, computed, watch } from 'vue';
 import { 
   BookOpen, Plus, Trash2, ArrowLeft, Settings, 
   ChevronRight, Save, Layout, Edit, Video, HelpCircle,
@@ -10,6 +10,7 @@ import {
   Clock, RefreshCw, Presentation, FileText, Paperclip, Award
 } from 'lucide-vue-next';
 import axios from 'axios';
+import RichTextEditor from '@/Components/RichTextEditor.vue';
 
 const props = defineProps({
   course: Object,
@@ -20,6 +21,18 @@ const props = defineProps({
 
 const page = usePage();
 const authUser = computed(() => page.props.auth.user);
+
+const isNativePptEnabled = computed(() => {
+  const settings = page.props.settings || {};
+  const isEnabled = settings.enable_native_ppt !== false && settings.enable_native_ppt !== 'false' && settings.enable_native_ppt !== 0 && settings.enable_native_ppt !== '0';
+  if (!isEnabled) return false;
+  
+  const access = settings.native_ppt_access || 'all';
+  if (access === 'admin') {
+    return authUser.value && authUser.value.role === 'admin';
+  }
+  return true;
+});
 
 // Step Navigation State (1: Basics, 2: Curriculum, 3: Additional)
 const currentStep = ref(1);
@@ -36,6 +49,7 @@ const form = ref({
   icon_type: props.course.icon_type || 'code',
   category_id: props.course.category_id || '',
   capacity: props.course.capacity || 20,
+  access_duration_months: props.course.access_duration_months || 0,
   tags: props.course.tags ? props.course.tags.map(t => t.id) : []
 });
 
@@ -51,7 +65,44 @@ const searchCategoryQuery = ref('');
 const searchTagQuery = ref('');
 const isVisibilityPublic = ref(props.course.status === 'published');
 const pricingModel = ref(parseFloat(props.course.price) > 0 ? 'paid' : 'free');
-const youtubeVideoUrl = ref('');
+const getYoutubeEmbedUrl = (url) => {
+  if (!url) return '';
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : '';
+};
+const getEmbedSlideUrl = (url) => {
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if (host.includes('docs.google.com')) {
+      const presentationMatch = url.match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/i);
+      if (presentationMatch) {
+        return `https://docs.google.com/presentation/d/${presentationMatch[1]}/embed?start=false&loop=false&delayms=3000`;
+      }
+    }
+    if (host.includes('canva.com')) {
+      const designMatch = url.match(/\/design\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)/i);
+      if (designMatch) {
+        return `https://www.canva.com/design/${designMatch[1]}/${designMatch[2]}/view?embed`;
+      }
+    }
+  } catch (e) {
+    if (url.includes('docs.google.com/presentation/d/')) {
+      const presentationMatch = url.match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/i);
+      if (presentationMatch) {
+        return `https://docs.google.com/presentation/d/${presentationMatch[1]}/embed?start=false&loop=false&delayms=3000`;
+      }
+    } else if (url.includes('canva.com/design/')) {
+      const designMatch = url.match(/\/design\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)/i);
+      if (designMatch) {
+        return `https://www.canva.com/design/${designMatch[1]}/${designMatch[2]}/view?embed`;
+      }
+    }
+  }
+  return '';
+};
 const dripType = ref('none');
 
 // Sync Visibility state with form.status
@@ -103,6 +154,7 @@ const lessonForm = ref({
   playback_time: { hour: 0, min: 0, sec: 0 }, 
   exercise_files: [], is_preview: false 
 });
+const activeAdminSlideIdx = ref(0);
 const assignmentForm = ref({
   id: null, title: '', content: '', attachments: [], 
   time_limit: 0, time_limit_unit: 'Weeks', set_deadline_from_start: false,
@@ -119,6 +171,41 @@ const quizSettingsForm = ref({
 const questionForm = ref({
   id: null, question_text: '', options: ['', '', '', ''], correct_option_index: 0
 });
+
+const isSaving = ref(false);
+
+const customAlert = ref({
+  show: false,
+  title: '',
+  message: '',
+  type: 'info', // 'info', 'success', 'warning', 'error', 'confirm'
+  onConfirm: null,
+  confirmText: 'OK',
+  cancelText: 'Batal'
+});
+
+const showCustomAlert = (title, message, type = 'info', onConfirm = null, confirmText = 'OK', cancelText = 'Batal') => {
+  customAlert.value = {
+    show: true,
+    title,
+    message,
+    type,
+    onConfirm,
+    confirmText,
+    cancelText
+  };
+};
+
+const handleAlertConfirm = () => {
+  if (customAlert.value.onConfirm) {
+    customAlert.value.onConfirm();
+  }
+  customAlert.value.show = false;
+};
+
+const handleAlertCancel = () => {
+  customAlert.value.show = false;
+};
 
 // Handle Featured Image Upload (Local Mock state or URL placeholder)
 const featuredImagePreview = ref(props.course.thumbnail ? `/storage/${props.course.thumbnail}` : null);
@@ -170,7 +257,8 @@ const initialAbout = () => {
         live_zoom_link: parsed.live_zoom_link || '',
         live_zoom_data: parsed.live_zoom_data || null,
         live_gmeet_link: parsed.live_gmeet_link || '',
-        live_gmeet_data: parsed.live_gmeet_data || null
+        live_gmeet_data: parsed.live_gmeet_data || null,
+        intro_video_url: parsed.intro_video_url || ''
       };
     } catch (e) {}
   }
@@ -189,7 +277,8 @@ const initialAbout = () => {
     live_zoom_link: '',
     live_zoom_data: null,
     live_gmeet_link: '',
-    live_gmeet_data: null
+    live_gmeet_data: null,
+    intro_video_url: ''
   };
 };
 
@@ -279,33 +368,6 @@ const removeAttachment = (id) => {
   additionalForm.value.attachments = additionalForm.value.attachments.filter(a => a.id !== id);
 };
 
-// Rich Text Editing exec commands
-const execCommand = (command, value = null) => {
-  document.execCommand(command, false, value);
-};
-
-const addLinkPrompt = () => {
-  const url = prompt('Masukkan URL Link:');
-  if (url) {
-    execCommand('createLink', url);
-  }
-};
-
-const addImagePrompt = () => {
-  const url = prompt('Masukkan URL Gambar:');
-  if (url) {
-    execCommand('insertImage', url);
-  }
-};
-
-const insertCodeBlock = () => {
-  const code = prompt('Masukkan baris kode sumber:');
-  if (code) {
-    const formatted = `<pre class="bg-slate-800 text-slate-100 p-3 rounded-lg font-mono text-xs my-2 overflow-x-auto"><code>${code}</code></pre>`;
-    execCommand('insertHTML', formatted);
-  }
-};
-
 // Custom Meeting Modal states
 const showMeetingModal = ref(false);
 const meetingModalType = ref('zoom'); // 'zoom' or 'gmeet'
@@ -351,7 +413,7 @@ const openMeetingModal = (type) => {
 const generateMeetingLink = () => {
   const formVal = meetingModalForm.value;
   if (!formVal.name) {
-    alert('Nama meeting wajib diisi!');
+    showCustomAlert('Peringatan', 'Nama meeting wajib diisi!', 'warning');
     return;
   }
   
@@ -397,6 +459,7 @@ const handleUpdate = () => {
   formData.append('bg_color', form.value.bg_color);
   formData.append('icon_type', form.value.icon_type);
   formData.append('capacity', form.value.capacity);
+  formData.append('access_duration_months', form.value.access_duration_months || 0);
   if (form.value.category_id) {
     formData.append('category_id', form.value.category_id);
   }
@@ -420,14 +483,14 @@ const handleUpdate = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       if (res.data.course && res.data.course.status === 'pending') {
-        alert('Course information saved! Status set to "Pending" awaiting Admin approval.');
+        showCustomAlert('Menunggu Persetujuan', 'Informasi kelas disimpan! Status diatur ke "Pending" untuk disetujui Admin.', 'success');
       } else {
-        alert('Course information saved successfully!');
+        showCustomAlert('Berhasil', 'Informasi kelas berhasil disimpan!', 'success');
       }
     }
   })
   .catch(err => {
-    alert('Failed to update course. Please check your inputs.');
+    showCustomAlert('Gagal', 'Gagal memperbarui kelas. Silakan periksa kembali input Anda.', 'error');
   });
 };
 
@@ -447,29 +510,45 @@ const openModuleModal = (module = null) => {
 };
 
 const saveModule = () => {
+  if (isSaving.value) return;
+  isSaving.value = true;
   if (moduleForm.value.id) {
     axios.put(`/course-builder/modules/${moduleForm.value.id}`, { title: moduleForm.value.title })
       .then(res => {
         const idx = modules.value.findIndex(m => m.id === moduleForm.value.id);
         modules.value[idx].title = res.data.module.title;
         currentModal.value = '';
+      })
+      .finally(() => {
+        isSaving.value = false;
       });
   } else {
     axios.post(`/course-builder/courses/${props.course.id}/modules`, { title: moduleForm.value.title })
       .then(res => {
         modules.value.push({ ...res.data.module, lessons: [], quizzes: [] });
         currentModal.value = '';
+      })
+      .finally(() => {
+        isSaving.value = false;
       });
   }
 };
 
 const deleteModule = (moduleId) => {
-  if (confirm('Hapus bab ini beserta seluruh isinya?')) {
-    axios.delete(`/course-builder/modules/${moduleId}`)
-      .then(() => {
-        modules.value = modules.value.filter(m => m.id !== moduleId);
-      });
-  }
+  showCustomAlert(
+    'Konfirmasi Hapus',
+    'Apakah Anda yakin ingin menghapus bab ini beserta seluruh isinya?',
+    'confirm',
+    () => {
+      axios.delete(`/course-builder/modules/${moduleId}`)
+        .then(() => {
+          modules.value = modules.value.filter(m => m.id !== moduleId);
+          showCustomAlert('Berhasil', 'Bab berhasil dihapus.', 'success');
+        });
+    },
+    'Hapus',
+    'Batal'
+  );
 };
 
 // --- LESSON CRUD ---
@@ -479,7 +558,7 @@ const openLessonModal = (module, lesson = null) => {
     let parsedContent = lesson.content || '';
     let parsedType = 'video';
     let parsedPptSlides = [];
-    let parsedSlidesUrl = '';
+    let parsedSlidesUrl = lesson.slide_url || '';
     
     // New fields
     let parsedFeaturedImage = null;
@@ -516,6 +595,8 @@ const openLessonModal = (module, lesson = null) => {
       parsedPlaybackTime = { hour: Math.floor(lesson.duration_minutes / 60), min: lesson.duration_minutes % 60, sec: 0 };
     }
 
+    activeAdminSlideIdx.value = 0;
+
     lessonForm.value = { 
       id: lesson.id, 
       title: lesson.title, 
@@ -528,9 +609,16 @@ const openLessonModal = (module, lesson = null) => {
       playback_time: parsedPlaybackTime,
       exercise_files: parsedExerciseFiles,
       is_preview: parsedIsPreview,
-      ppt_slides: parsedPptSlides.length > 0 ? parsedPptSlides : [{ title: 'Slide 1: Pengantar', content: 'Tulis penjelasan slide di sini...' }]
+      ppt_slides: parsedPptSlides.length > 0 ? parsedPptSlides.map((s, idx) => ({
+        id: s.id || (Date.now() + idx),
+        title: s.title || '',
+        body_text: s.body_text || s.content || '',
+        bg_color: s.bg_color || '#ffffff',
+        text_color: s.text_color || '#1e293b'
+      })) : [{ id: Date.now(), title: 'Slide 1: Pengantar', body_text: 'Tulis penjelasan slide di sini...', bg_color: '#ffffff', text_color: '#1e293b' }]
     };
   } else {
+    activeAdminSlideIdx.value = 0;
     lessonForm.value = { 
       id: null, 
       title: '', 
@@ -544,7 +632,7 @@ const openLessonModal = (module, lesson = null) => {
       exercise_files: [],
       is_preview: false,
       ppt_slides: [
-        { title: 'Slide 1: Pengantar', content: 'Tulis penjelasan slide di sini...' }
+        { id: Date.now(), title: 'Slide 1: Pengantar', body_text: 'Tulis penjelasan slide di sini...', bg_color: '#ffffff', text_color: '#1e293b' }
       ]
     };
   }
@@ -552,6 +640,8 @@ const openLessonModal = (module, lesson = null) => {
 };
 
 const saveLesson = () => {
+  if (isSaving.value) return;
+  isSaving.value = true;
   let finalContentObj = {
     type: lessonForm.value.lesson_type,
     summary: lessonForm.value.content,
@@ -583,6 +673,7 @@ const saveLesson = () => {
     title: lessonForm.value.title,
     content: JSON.stringify(finalContentObj),
     video_url: finalVideoUrl,
+    slide_url: lessonForm.value.lesson_type === 'slides' ? lessonForm.value.slides_url : '',
     duration_minutes: calcDuration
   };
 
@@ -593,6 +684,9 @@ const saveLesson = () => {
         const lesIdx = modules.value[modIdx].lessons.findIndex(l => l.id === lessonForm.value.id);
         modules.value[modIdx].lessons[lesIdx] = res.data.lesson;
         currentModal.value = '';
+      })
+      .finally(() => {
+        isSaving.value = false;
       });
   } else {
     axios.post(`/course-builder/modules/${selectedModule.value.id}/lessons`, payload)
@@ -600,6 +694,9 @@ const saveLesson = () => {
         const modIdx = modules.value.findIndex(m => m.id === selectedModule.value.id);
         modules.value[modIdx].lessons.push(res.data.lesson);
         currentModal.value = '';
+      })
+      .finally(() => {
+        isSaving.value = false;
       });
   }
 };
@@ -664,6 +761,8 @@ const openAssignmentModal = (module, assignment = null) => {
 };
 
 const saveAssignment = () => {
+  if (isSaving.value) return;
+  isSaving.value = true;
   const finalContentObj = {
     type: 'assignment',
     summary: assignmentForm.value.content,
@@ -694,6 +793,9 @@ const saveAssignment = () => {
         const lesIdx = modules.value[modIdx].lessons.findIndex(l => l.id === assignmentForm.value.id);
         modules.value[modIdx].lessons[lesIdx] = res.data.lesson;
         currentModal.value = '';
+      })
+      .finally(() => {
+        isSaving.value = false;
       });
   } else {
     axios.post(`/course-builder/modules/${selectedModule.value.id}/lessons`, payload)
@@ -701,18 +803,29 @@ const saveAssignment = () => {
         const modIdx = modules.value.findIndex(m => m.id === selectedModule.value.id);
         modules.value[modIdx].lessons.push(res.data.lesson);
         currentModal.value = '';
+      })
+      .finally(() => {
+        isSaving.value = false;
       });
   }
 };
 
 const deleteLesson = (module, lessonId) => {
-  if (confirm('Hapus sesi materi ini?')) {
-    axios.delete(`/course-builder/lessons/${lessonId}`)
-      .then(() => {
-        const modIdx = modules.value.findIndex(m => m.id === module.id);
-        modules.value[modIdx].lessons = modules.value[modIdx].lessons.filter(l => l.id !== lessonId);
-      });
-  }
+  showCustomAlert(
+    'Konfirmasi Hapus',
+    'Apakah Anda yakin ingin menghapus sesi materi ini?',
+    'confirm',
+    () => {
+      axios.delete(`/course-builder/lessons/${lessonId}`)
+        .then(() => {
+          const modIdx = modules.value.findIndex(m => m.id === module.id);
+          modules.value[modIdx].lessons = modules.value[modIdx].lessons.filter(l => l.id !== lessonId);
+          showCustomAlert('Berhasil', 'Sesi materi berhasil dihapus.', 'success');
+        });
+    },
+    'Hapus',
+    'Batal'
+  );
 };
 
 // --- QUIZ CRUD ---
@@ -732,6 +845,8 @@ const openQuizModal = (module, quiz = null) => {
 };
 
 const saveQuiz = () => {
+  if (isSaving.value) return;
+  isSaving.value = true;
   if (quizForm.value.id) {
     axios.put(`/course-builder/quizzes/${quizForm.value.id}`, quizForm.value)
       .then(res => {
@@ -740,6 +855,9 @@ const saveQuiz = () => {
         const questionsTemp = modules.value[modIdx].quizzes[qIdx].questions || [];
         modules.value[modIdx].quizzes[qIdx] = { ...res.data.quiz, questions: questionsTemp };
         currentModal.value = '';
+      })
+      .finally(() => {
+        isSaving.value = false;
       });
   } else {
     axios.post(`/course-builder/modules/${selectedModule.value.id}/quizzes`, quizForm.value)
@@ -748,18 +866,29 @@ const saveQuiz = () => {
         if (!modules.value[modIdx].quizzes) modules.value[modIdx].quizzes = [];
         modules.value[modIdx].quizzes.push({ ...res.data.quiz, questions: [] });
         currentModal.value = '';
+      })
+      .finally(() => {
+        isSaving.value = false;
       });
   }
 };
 
 const deleteQuiz = (module, quizId) => {
-  if (confirm('Hapus kuis ini?')) {
-    axios.delete(`/course-builder/quizzes/${quizId}`)
-      .then(() => {
-        const modIdx = modules.value.findIndex(m => m.id === module.id);
-        modules.value[modIdx].quizzes = modules.value[modIdx].quizzes.filter(q => q.id !== quizId);
-      });
-  }
+  showCustomAlert(
+    'Konfirmasi Hapus',
+    'Apakah Anda yakin ingin menghapus kuis ini?',
+    'confirm',
+    () => {
+      axios.delete(`/course-builder/quizzes/${quizId}`)
+        .then(() => {
+          const modIdx = modules.value.findIndex(m => m.id === module.id);
+          modules.value[modIdx].quizzes = modules.value[modIdx].quizzes.filter(q => q.id !== quizId);
+          showCustomAlert('Berhasil', 'Kuis berhasil dihapus.', 'success');
+        });
+    },
+    'Hapus',
+    'Batal'
+  );
 };
 
 const openQuizSettingsModal = (module, quiz) => {
@@ -793,6 +922,8 @@ const openQuizSettingsModal = (module, quiz) => {
 };
 
 const saveQuizSettings = () => {
+  if (isSaving.value) return;
+  isSaving.value = true;
   const payload = {
     id: selectedQuiz.value.id,
     title: selectedQuiz.value.title,
@@ -807,6 +938,9 @@ const saveQuizSettings = () => {
       const questionsTemp = modules.value[modIdx].quizzes[qIdx].questions || [];
       modules.value[modIdx].quizzes[qIdx] = { ...res.data.quiz, questions: questionsTemp };
       currentModal.value = '';
+    })
+    .finally(() => {
+      isSaving.value = false;
     });
 };
 
@@ -847,6 +981,8 @@ const openQuestionModal = (quiz, question = null) => {
 };
 
 const saveQuestion = () => {
+  if (isSaving.value) return;
+  isSaving.value = true;
   let finalOptions = [...questionForm.value.options];
   let finalCorrectIndex = questionForm.value.correct_option_index;
 
@@ -879,6 +1015,9 @@ const saveQuestion = () => {
           }
         }
         currentModal.value = '';
+      })
+      .finally(() => {
+        isSaving.value = false;
       });
   } else {
     axios.post(`/course-builder/quizzes/${selectedQuiz.value.id}/questions`, payload)
@@ -894,23 +1033,200 @@ const saveQuestion = () => {
           }
         }
         currentModal.value = '';
+      })
+      .finally(() => {
+        isSaving.value = false;
       });
   }
 };
 
 const deleteQuestion = (quiz, questionId) => {
-  if (confirm('Hapus pertanyaan ini?')) {
-    axios.delete(`/course-builder/questions/${questionId}`)
-      .then(() => {
-        for (let m = 0; m < modules.value.length; m++) {
-          const qIdx = (modules.value[m].quizzes || []).findIndex(q => q.id === quiz.id);
-          if (qIdx !== -1) {
-            modules.value[m].quizzes[qIdx].questions = modules.value[m].quizzes[qIdx].questions.filter(q => q.id !== questionId);
-            break;
+  showCustomAlert(
+    'Konfirmasi Hapus',
+    'Apakah Anda yakin ingin menghapus pertanyaan ini?',
+    'confirm',
+    () => {
+      axios.delete(`/course-builder/questions/${questionId}`)
+        .then(() => {
+          for (let m = 0; m < modules.value.length; m++) {
+            const qIdx = (modules.value[m].quizzes || []).findIndex(q => q.id === quiz.id);
+            if (qIdx !== -1) {
+              modules.value[m].quizzes[qIdx].questions = modules.value[m].quizzes[qIdx].questions.filter(q => q.id !== questionId);
+              break;
+            }
           }
+          showCustomAlert('Berhasil', 'Pertanyaan berhasil dihapus.', 'success');
+        });
+    },
+    'Hapus',
+    'Batal'
+  );
+};
+
+// --- QUICK IMPORTER STATE ---
+const showQuickImporter = ref(false);
+const quickImporterTab = ref('course'); // 'course' or 'quiz'
+
+// Course Importer
+const courseImportFile = ref(null);
+const courseDragActive = ref(false);
+const courseFileInputRef = ref(null);
+const isImportingCourse = ref(false);
+const courseImportLogs = ref([]);
+
+// Quiz Importer
+const quickQuizTitle = ref('');
+const quickSelectedModuleId = ref('');
+const quizImportFile = ref(null);
+const quizDragActive = ref(false);
+const quizFileInputRef = ref(null);
+const isImportingQuiz = ref(false);
+const quizImportLogs = ref([]);
+
+// Watch for modules reload
+watch(() => props.course.modules, (newVal) => {
+  modules.value = [...newVal];
+}, { deep: true });
+
+const isValidExcelOrCsv = (file) => {
+  if (!file) return false;
+  const name = file.name.toLowerCase();
+  return name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv');
+};
+
+const handleCourseFileSelect = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    if (!isValidExcelOrCsv(file)) {
+      showCustomAlert('Format Salah', 'Format berkas tidak valid. Harap unggah berkas Excel (.xlsx, .xls) atau CSV (.csv).', 'warning');
+      if (courseFileInputRef.value) courseFileInputRef.value.value = '';
+      courseImportFile.value = null;
+      return;
+    }
+    courseImportFile.value = file;
+  }
+};
+
+const handleCourseFileDrop = (e) => {
+  courseDragActive.value = false;
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    if (!isValidExcelOrCsv(file)) {
+      showCustomAlert('Format Salah', 'Format berkas tidak valid. Harap unggah berkas Excel (.xlsx, .xls) atau CSV (.csv).', 'warning');
+      courseImportFile.value = null;
+      return;
+    }
+    courseImportFile.value = file;
+  }
+};
+
+const startCourseImport = () => {
+  if (!courseImportFile.value) {
+    showCustomAlert('Unggah File', 'Harap pilih berkas template kurikulum.', 'warning');
+    return;
+  }
+
+  isImportingCourse.value = true;
+  courseImportLogs.value = ['<span class="text-blue-400 font-bold">[UPLOAD] Mengunggah template kurikulum ke server...</span>'];
+
+  const formData = new FormData();
+  formData.append('import_file', courseImportFile.value);
+  formData.append('course_id', props.course.id);
+
+  axios.post('/dashboard/settings/course-builder/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+  .then(res => {
+    isImportingCourse.value = false;
+    if (res.data.success) {
+      courseImportLogs.value = res.data.logs;
+      router.reload({
+        only: ['course'],
+        onSuccess: () => {
+          modules.value = [...props.course.modules];
         }
       });
+    } else {
+      courseImportLogs.value = res.data.logs || ['<span class="text-red-500 font-bold">Gagal memproses impor kurikulum.</span>'];
+    }
+  })
+  .catch(err => {
+    isImportingCourse.value = false;
+    const msg = err.response?.data?.message || 'Gagal terhubung ke server.';
+    courseImportLogs.value = [`<span class="text-red-500 font-bold">Error: ${msg}</span>`];
+  });
+};
+
+const handleQuizFileSelect = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    if (!isValidExcelOrCsv(file)) {
+      showCustomAlert('Format Salah', 'Format berkas tidak valid. Harap unggah berkas Excel (.xlsx, .xls) atau CSV (.csv).', 'warning');
+      if (quizFileInputRef.value) quizFileInputRef.value.value = '';
+      quizImportFile.value = null;
+      return;
+    }
+    quizImportFile.value = file;
   }
+};
+
+const handleQuizFileDrop = (e) => {
+  quizDragActive.value = false;
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    if (!isValidExcelOrCsv(file)) {
+      showCustomAlert('Format Salah', 'Format berkas tidak valid. Harap unggah berkas Excel (.xlsx, .xls) atau CSV (.csv).', 'warning');
+      quizImportFile.value = null;
+      return;
+    }
+    quizImportFile.value = file;
+  }
+};
+
+const startQuizImport = () => {
+  if (!quickQuizTitle.value) {
+    showCustomAlert('Judul Kuis', 'Harap masukkan judul kuis.', 'warning');
+    return;
+  }
+  if (!quickSelectedModuleId.value) {
+    showCustomAlert('Target Bab', 'Harap pilih bab target.', 'warning');
+    return;
+  }
+  if (!quizImportFile.value) {
+    showCustomAlert('Unggah File', 'Harap pilih berkas template kuis.', 'warning');
+    return;
+  }
+
+  isImportingQuiz.value = true;
+  quizImportLogs.value = ['<span class="text-blue-400 font-bold">[UPLOAD] Mengunggah template kuis ke server...</span>'];
+
+  const formData = new FormData();
+  formData.append('quiz_title', quickQuizTitle.value);
+  formData.append('target_module', quickSelectedModuleId.value);
+  formData.append('import_file', quizImportFile.value);
+
+  axios.post('/dashboard/settings/course-builder/import-quiz', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+  .then(res => {
+    isImportingQuiz.value = false;
+    if (res.data.success) {
+      quizImportLogs.value = res.data.logs;
+      router.reload({
+        only: ['course'],
+        onSuccess: () => {
+          modules.value = [...props.course.modules];
+        }
+      });
+    } else {
+      quizImportLogs.value = res.data.logs || ['<span class="text-red-500 font-bold">Gagal memproses impor kuis.</span>'];
+    }
+  })
+  .catch(err => {
+    isImportingQuiz.value = false;
+    const msg = err.response?.data?.message || 'Gagal terhubung ke server.';
+    quizImportLogs.value = [`<span class="text-red-500 font-bold">Error: ${msg}</span>`];
+  });
 };
 </script>
 
@@ -1035,27 +1351,10 @@ const deleteQuestion = (quiz, questionId) => {
               <!-- Course Description -->
               <div>
                 <label class="block text-slate-400 text-xs font-bold mb-2 uppercase tracking-wide">Description</label>
-                <!-- Editor Header Mockup -->
-                <div class="border border-slate-200 rounded-2xl overflow-hidden focus-within:border-[#264790] transition-colors">
-                  <div class="bg-slate-50 px-4 py-2 border-b border-slate-200 flex flex-wrap items-center gap-3.5 text-slate-400">
-                    <button type="button" class="font-extrabold hover:text-[#1A2B49]">B</button>
-                    <button type="button" class="italic hover:text-[#1A2B49]">I</button>
-                    <button type="button" class="underline hover:text-[#1A2B49]">U</button>
-                    <div class="w-[1px] h-4 bg-slate-200"></div>
-                    <button type="button" class="hover:text-[#1A2B49] text-sm">List Bullets</button>
-                    <button type="button" class="hover:text-[#1A2B49] text-sm">List Numbers</button>
-                    <div class="w-[1px] h-4 bg-slate-200"></div>
-                    <button type="button" class="hover:text-[#1A2B49] text-sm">Link</button>
-                    <button type="button" class="hover:text-[#1A2B49] text-sm">Image</button>
-                    <button type="button" class="hover:text-[#1A2B49] text-sm">&lt;/&gt;</button>
-                  </div>
-                  <textarea 
-                    v-model="form.description"
-                    rows="6"
-                    placeholder="Enter a comprehensive course description here..."
-                    class="w-full bg-white px-4 py-3 outline-none text-[#1A2B49] font-medium resize-none"
-                  ></textarea>
-                </div>
+                <RichTextEditor 
+                  v-model="form.description"
+                  placeholder="Enter a comprehensive course description here..."
+                />
               </div>
 
               <!-- Session Info & Duration Selects -->
@@ -1073,16 +1372,18 @@ const deleteQuestion = (quiz, questionId) => {
                   </select>
                 </div>
                 <div>
-                  <label class="block text-slate-400 text-xs font-bold mb-2 uppercase tracking-wide">Duration</label>
+                  <label class="block text-slate-400 text-xs font-bold mb-2 uppercase tracking-wide">Masa Berlaku Akses (Lisensi Kelas)</label>
                   <select 
-                    v-model="courseDuration" 
+                    v-model="form.access_duration_months" 
                     class="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-[#264790] focus:bg-white rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium cursor-pointer transition-all duration-300"
                   >
-                    <option>Select Course Duration</option>
-                    <option>1 Bulan</option>
-                    <option>3 Bulan</option>
-                    <option>6 Bulan</option>
-                    <option>Akses Selamanya</option>
+                    <option :value="0">Akses Selamanya (Lifetime)</option>
+                    <option :value="1">1 Bulan</option>
+                    <option :value="3">3 Bulan</option>
+                    <option :value="6">6 Bulan</option>
+                    <option :value="12">12 Bulan (1 Tahun)</option>
+                    <option :value="24">24 Bulan (2 Tahun)</option>
+                    <option :value="36">36 Bulan (3 Tahun)</option>
                   </select>
                 </div>
               </div>
@@ -1355,15 +1656,23 @@ const deleteQuestion = (quiz, questionId) => {
               <div class="relative flex items-center">
                 <span class="absolute left-4.5 text-slate-400"><Video :size="16" /></span>
                 <input 
-                  v-model="youtubeVideoUrl"
+                  v-model="additionalForm.intro_video_url"
                   type="text" 
                   placeholder="YouTube Video Link" 
                   class="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-[#264790] focus:bg-white rounded-2xl pl-11 pr-4 py-3 outline-none text-[#1A2B49] font-medium text-xs transition-colors"
                 />
               </div>
 
-              <!-- Gray Mock Player -->
-              <div class="bg-slate-100 rounded-2xl aspect-[1.8/1] flex items-center justify-center text-slate-400 shadow-inner">
+              <!-- Gray Mock Player or Iframe Embed -->
+              <div v-if="getYoutubeEmbedUrl(additionalForm.intro_video_url)" class="rounded-2xl overflow-hidden aspect-[1.8/1] shadow-inner relative z-0">
+                <iframe 
+                  :src="getYoutubeEmbedUrl(additionalForm.intro_video_url)"
+                  class="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              </div>
+              <div v-else class="bg-slate-100 rounded-2xl aspect-[1.8/1] flex items-center justify-center text-slate-400 shadow-inner">
                 <Play :size="32" fill="currentColor" class="text-slate-300 cursor-pointer hover:text-[#264790] transition-colors" />
               </div>
             </div>
@@ -1551,7 +1860,7 @@ const deleteQuestion = (quiz, questionId) => {
                   <button @click="openModuleModal(mod)" class="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition-colors">
                     <Edit :size="16" />
                   </button>
-                  <button @click="deleteModule(mod.id)" class="p-2 hover:bg-rose-50 rounded-xl text-slate-400 hover:text-rose-600 transition-colors">
+                  <button @click="deleteModule(mod.id)" :disabled="isSaving" class="p-2 hover:bg-rose-50 rounded-xl text-slate-400 hover:text-rose-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     <Trash2 :size="16" />
                   </button>
                 </div>
@@ -1604,7 +1913,7 @@ const deleteQuestion = (quiz, questionId) => {
                         <button v-else @click="openLessonModal(mod, les)" class="p-1 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-slate-600">
                           <Edit :size="14" />
                         </button>
-                        <button @click="deleteLesson(mod, les.id)" class="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600">
+                        <button @click="deleteLesson(mod, les.id)" :disabled="isSaving" class="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 disabled:opacity-50 disabled:cursor-not-allowed">
                           <Trash :size="14" />
                         </button>
                       </div>
@@ -1646,7 +1955,7 @@ const deleteQuestion = (quiz, questionId) => {
                           <button @click="openQuizModal(mod, qz)" class="p-1 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-slate-600" title="Edit Quiz Basic Settings">
                             <Edit :size="14" />
                           </button>
-                          <button @click="deleteQuiz(mod, qz.id)" class="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600" title="Delete Quiz">
+                          <button @click="deleteQuiz(mod, qz.id)" :disabled="isSaving" class="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 disabled:opacity-50 disabled:cursor-not-allowed" title="Delete Quiz">
                             <Trash :size="14" />
                           </button>
                         </div>
@@ -1672,7 +1981,7 @@ const deleteQuestion = (quiz, questionId) => {
                           </div>
                           <div class="flex items-center gap-1 shrink-0">
                             <button @click="openQuestionModal(qz, qst)" class="p-0.5 hover:bg-slate-50 text-slate-400 hover:text-slate-600"><Edit :size="10" /></button>
-                            <button @click="deleteQuestion(qz, qst.id)" class="p-0.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600"><Trash :size="10" /></button>
+                            <button @click="deleteQuestion(qz, qst.id)" :disabled="isSaving" class="p-0.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 disabled:opacity-50 disabled:cursor-not-allowed"><Trash :size="10" /></button>
                           </div>
                         </div>
                         <div v-if="!qz.questions || qz.questions.length === 0" class="text-center py-2 text-[10px] text-slate-400 font-semibold">
@@ -1720,33 +2029,10 @@ const deleteQuestion = (quiz, questionId) => {
               <!-- What Will I Learn -->
               <div>
                 <label class="block text-slate-500 text-xs font-extrabold mb-2 uppercase tracking-wider">What Will I Learn?</label>
-                <div class="flex flex-col border border-slate-200 rounded-2xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-[#264790]/20 focus-within:border-[#264790] transition-all">
-                  <!-- Toolbar -->
-                  <div class="flex items-center gap-1 p-2 bg-slate-50 border-b border-slate-200 flex-wrap">
-                    <button type="button" @click="execCommand('bold')" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 font-bold transition-colors">B</button>
-                    <button type="button" @click="execCommand('italic')" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 italic transition-colors">I</button>
-                    <button type="button" @click="execCommand('underline')" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 underline transition-colors">U</button>
-                    <button type="button" @click="execCommand('strikeThrough')" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 line-through transition-colors">S</button>
-                    <div class="w-px h-5 bg-slate-300 mx-1"></div>
-                    <button type="button" @click="execCommand('insertUnorderedList')" class="px-2 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 text-xs font-bold transition-colors">• List</button>
-                    <button type="button" @click="execCommand('insertOrderedList')" class="px-2 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 text-xs font-bold transition-colors">1. List</button>
-                    <div class="w-px h-5 bg-slate-300 mx-1"></div>
-                    <button type="button" @click="addLinkPrompt" class="px-2 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 text-xs font-bold transition-colors">Link</button>
-                    <button type="button" @click="addImagePrompt" class="px-2 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 text-xs font-bold transition-colors">Image</button>
-                    <button type="button" @click="insertCodeBlock" class="px-2 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 text-xs font-mono font-bold transition-colors">&lt;/&gt;</button>
-                    <div class="w-px h-5 bg-slate-300 mx-1"></div>
-                    <button type="button" @click="execCommand('undo')" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 font-bold transition-colors">↶</button>
-                    <button type="button" @click="execCommand('redo')" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 font-bold transition-colors">↷</button>
-                  </div>
-                  <!-- Content Area -->
-                  <div 
-                    contenteditable="true"
-                    @blur="additionalForm.what_will_learn = $event.target.innerHTML"
-                    @input="additionalForm.what_will_learn = $event.target.innerHTML"
-                    class="p-4 min-h-[120px] max-h-[250px] overflow-y-auto outline-none bg-white text-slate-850 text-sm leading-relaxed prose prose-sm max-w-none"
-                    v-html="additionalForm.what_will_learn"
-                  ></div>
-                </div>
+                <RichTextEditor 
+                  v-model="additionalForm.what_will_learn"
+                  placeholder="Tulis apa saja yang akan dipelajari siswa di kelas ini..."
+                />
               </div>
 
               <!-- Target Audience -->
@@ -1792,33 +2078,10 @@ const deleteQuestion = (quiz, questionId) => {
               <!-- Requirements / Instructions -->
               <div>
                 <label class="block text-slate-500 text-xs font-extrabold mb-2 uppercase tracking-wider">Requirements / Instructions</label>
-                <div class="flex flex-col border border-slate-200 rounded-2xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-[#264790]/20 focus-within:border-[#264790] transition-all">
-                  <!-- Toolbar -->
-                  <div class="flex items-center gap-1 p-2 bg-slate-50 border-b border-slate-200 flex-wrap">
-                    <button type="button" @click="execCommand('bold')" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 font-bold transition-colors">B</button>
-                    <button type="button" @click="execCommand('italic')" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 italic transition-colors">I</button>
-                    <button type="button" @click="execCommand('underline')" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 underline transition-colors">U</button>
-                    <button type="button" @click="execCommand('strikeThrough')" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 line-through transition-colors">S</button>
-                    <div class="w-px h-5 bg-slate-300 mx-1"></div>
-                    <button type="button" @click="execCommand('insertUnorderedList')" class="px-2 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 text-xs font-bold transition-colors">• List</button>
-                    <button type="button" @click="execCommand('insertOrderedList')" class="px-2 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 text-xs font-bold transition-colors">1. List</button>
-                    <div class="w-px h-5 bg-slate-300 mx-1"></div>
-                    <button type="button" @click="addLinkPrompt" class="px-2 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 text-xs font-bold transition-colors">Link</button>
-                    <button type="button" @click="addImagePrompt" class="px-2 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 text-xs font-bold transition-colors">Image</button>
-                    <button type="button" @click="insertCodeBlock" class="px-2 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 text-xs font-mono font-bold transition-colors">&lt;/&gt;</button>
-                    <div class="w-px h-5 bg-slate-300 mx-1"></div>
-                    <button type="button" @click="execCommand('undo')" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 font-bold transition-colors">↶</button>
-                    <button type="button" @click="execCommand('redo')" class="w-8 h-8 flex items-center justify-center hover:bg-slate-200 rounded text-slate-700 font-bold transition-colors">↷</button>
-                  </div>
-                  <!-- Content Area -->
-                  <div 
-                    contenteditable="true"
-                    @blur="additionalForm.requirements = $event.target.innerHTML"
-                    @input="additionalForm.requirements = $event.target.innerHTML"
-                    class="p-4 min-h-[120px] max-h-[250px] overflow-y-auto outline-none bg-white text-slate-850 text-sm leading-relaxed prose prose-sm max-w-none"
-                    v-html="additionalForm.requirements"
-                  ></div>
-                </div>
+                <RichTextEditor 
+                  v-model="additionalForm.requirements"
+                  placeholder="Tulis instruksi atau persyaratan untuk mengikuti kelas ini..."
+                />
               </div>
             </div>
 
@@ -2255,8 +2518,10 @@ const deleteQuestion = (quiz, questionId) => {
             <label class="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Judul Bab</label>
             <input v-model="moduleForm.title" type="text" placeholder="Contoh: Pengenalan Sintaks Dasar" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium" />
           </div>
-          <button @click="saveModule" class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3 rounded-2xl font-bold text-sm shadow-sm transition-colors">
-            <Check :size="16" class="inline mr-1" /> Simpan Bab
+          <button @click="saveModule" :disabled="isSaving" class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3 rounded-2xl font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+            <RefreshCw v-if="isSaving" :size="16" class="animate-spin" />
+            <Check v-else :size="16" />
+            <span>{{ isSaving ? 'Menyimpan...' : 'Simpan Bab' }}</span>
           </button>
         </div>
       </div>
@@ -2342,7 +2607,7 @@ const deleteQuestion = (quiz, questionId) => {
                 <div class="flex bg-slate-100 rounded p-1 gap-1">
                   <button @click="lessonForm.lesson_type = 'video'" :class="lessonForm.lesson_type === 'video' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:bg-slate-200'" class="flex-1 py-1.5 text-xs font-medium rounded transition-colors">Video</button>
                   <button @click="lessonForm.lesson_type = 'slides'" :class="lessonForm.lesson_type === 'slides' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:bg-slate-200'" class="flex-1 py-1.5 text-xs font-medium rounded transition-colors">Slides</button>
-                  <button @click="lessonForm.lesson_type = 'ppt'" :class="lessonForm.lesson_type === 'ppt' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:bg-slate-200'" class="flex-1 py-1.5 text-xs font-medium rounded transition-colors">PPT</button>
+                  <button v-if="isNativePptEnabled" @click="lessonForm.lesson_type = 'ppt'" :class="lessonForm.lesson_type === 'ppt' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:bg-slate-200'" class="flex-1 py-1.5 text-xs font-medium rounded transition-colors">PPT</button>
                 </div>
               </div>
 
@@ -2363,19 +2628,168 @@ const deleteQuestion = (quiz, questionId) => {
                 </div>
               </div>
 
-              <div v-else-if="lessonForm.lesson_type === 'slides'">
-                <label class="block text-slate-700 text-sm font-medium mb-2">Canva/Google Slides URL</label>
-                <input v-model="lessonForm.slides_url" type="text" placeholder="https://..." class="w-full border border-slate-200 rounded-md px-3 py-2 text-sm outline-none" />
+              <div v-else-if="lessonForm.lesson_type === 'slides'" class="space-y-4">
+                <div>
+                  <label class="block text-slate-700 text-sm font-medium mb-2">Slide URL</label>
+                  <input 
+                    v-model="lessonForm.slides_url" 
+                    type="text" 
+                    placeholder="Contoh: https://docs.google.com/presentation/d/.../edit atau https://www.canva.com/design/.../view" 
+                    class="w-full border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:border-indigo-500 transition-colors" 
+                  />
+                  <p class="text-[10px] text-slate-400 mt-1">Hanya mendukung URL Google Slides (docs.google.com) dan Canva (canva.com)</p>
+                </div>
+
+                <!-- Live Preview Iframe -->
+                <div v-if="getEmbedSlideUrl(lessonForm.slides_url)" class="space-y-2">
+                  <span class="block text-slate-600 text-xs font-semibold">Live Preview:</span>
+                  <div class="relative w-full aspect-video rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-50">
+                    <iframe 
+                      :src="getEmbedSlideUrl(lessonForm.slides_url)"
+                      class="absolute inset-0 w-full h-full border-0"
+                      allowfullscreen
+                      loading="lazy"
+                      sandbox="allow-scripts allow-same-origin allow-presentation"
+                    ></iframe>
+                  </div>
+                </div>
               </div>
 
-              <div v-else-if="lessonForm.lesson_type === 'ppt'">
-                <label class="block text-slate-700 text-sm font-medium mb-2">PPT Slides</label>
-                <div class="flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
-                  <div v-for="(slide, sIdx) in lessonForm.ppt_slides" :key="sIdx" class="border border-slate-200 rounded p-2 text-xs flex gap-2">
-                    <input v-model="slide.title" class="flex-1 bg-slate-50 border border-slate-200 px-2 py-1 outline-none" placeholder="Title" />
-                    <button @click="lessonForm.ppt_slides.splice(sIdx,1)" class="text-red-500"><Trash :size="14"/></button>
+              <div v-else-if="lessonForm.lesson_type === 'ppt'" class="space-y-4">
+                <div class="flex justify-between items-center">
+                  <div class="flex flex-col">
+                    <label class="block text-slate-800 text-sm font-extrabold">Native Slide Builder</label>
+                    <span class="text-[10px] text-slate-400 font-semibold">{{ lessonForm.ppt_slides.length }} Slide dibuat</span>
                   </div>
-                  <button @click="lessonForm.ppt_slides.push({title:'', content:''})" class="text-xs text-blue-500 hover:underline">Add Slide</button>
+                  <button 
+                    type="button"
+                    @click="
+                      lessonForm.ppt_slides.push({
+                        id: Date.now(),
+                        title: 'Slide ' + (lessonForm.ppt_slides.length + 1),
+                        body_text: 'Tulis isi penjelasan slide baru di sini...',
+                        bg_color: '#ffffff',
+                        text_color: '#1e293b'
+                      });
+                      activeAdminSlideIdx = lessonForm.ppt_slides.length - 1;
+                    "
+                    class="text-xs bg-indigo-50 text-indigo-650 hover:bg-indigo-150 px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-1 shadow-sm"
+                  >
+                    <Plus :size="12" /> Tambah Slide
+                  </button>
+                </div>
+
+                <!-- Slide Navigation Grid / Tabs -->
+                <div class="flex flex-wrap gap-2.5 max-h-28 overflow-y-auto p-2 bg-slate-50/50 rounded-2xl border border-slate-200/60">
+                  <div 
+                    v-for="(slide, sIdx) in lessonForm.ppt_slides" 
+                    :key="slide.id || sIdx"
+                    class="relative"
+                  >
+                    <button
+                      type="button"
+                      @click="activeAdminSlideIdx = sIdx"
+                      :class="activeAdminSlideIdx === sIdx ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-650/15' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80'"
+                      class="px-4 py-2 text-xs rounded-xl transition-all cursor-pointer font-bold"
+                    >
+                      Slide {{ sIdx + 1 }}
+                    </button>
+                    <!-- Delete slide button -->
+                    <button
+                      v-if="lessonForm.ppt_slides.length > 1"
+                      type="button"
+                      @click.stop="
+                        lessonForm.ppt_slides.splice(sIdx, 1);
+                        if (activeAdminSlideIdx >= lessonForm.ppt_slides.length) {
+                          activeAdminSlideIdx = lessonForm.ppt_slides.length - 1;
+                        }
+                      "
+                      class="absolute -top-1.5 -right-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black shadow transition-all duration-200 hover:scale-110"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Slide Editor Form for Active Slide -->
+                <div v-if="lessonForm.ppt_slides[activeAdminSlideIdx]" class="p-6 bg-white border border-slate-200/80 rounded-[2rem] shadow-sm space-y-5">
+                  <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <span class="text-xs font-black text-slate-400 uppercase tracking-wider">Mengedit Slide {{ activeAdminSlideIdx + 1 }}</span>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Slide Title -->
+                    <div class="md:col-span-2">
+                      <label class="block text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">Judul Slide</label>
+                      <input 
+                        v-model="lessonForm.ppt_slides[activeAdminSlideIdx].title" 
+                        type="text" 
+                        placeholder="Contoh: Pengenalan Algoritma" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all font-semibold text-slate-700 placeholder:text-slate-400" 
+                      />
+                    </div>
+
+                    <!-- Slide Body -->
+                    <div class="md:col-span-2">
+                      <label class="block text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">Penjelasan Slide</label>
+                      <textarea 
+                        v-model="lessonForm.ppt_slides[activeAdminSlideIdx].body_text" 
+                        rows="3" 
+                        placeholder="Tuliskan penjelasan detail slide ini di sini..." 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all font-medium text-slate-700 placeholder:text-slate-400"
+                      ></textarea>
+                    </div>
+
+                    <!-- Background Color Hex -->
+                    <div>
+                      <label class="block text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">Warna Background</label>
+                      <div class="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl p-1.5 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+                        <input 
+                          v-model="lessonForm.ppt_slides[activeAdminSlideIdx].bg_color" 
+                          type="color" 
+                          class="w-7 h-7 rounded-lg cursor-pointer border-0 p-0 bg-transparent shrink-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch]:rounded-lg" 
+                        />
+                        <input 
+                          v-model="lessonForm.ppt_slides[activeAdminSlideIdx].bg_color" 
+                          type="text" 
+                          class="flex-1 bg-transparent border-0 p-0 text-xs font-mono font-bold text-slate-700 outline-none uppercase" 
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Text Color Hex -->
+                    <div>
+                      <label class="block text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">Warna Teks</label>
+                      <div class="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl p-1.5 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+                        <input 
+                          v-model="lessonForm.ppt_slides[activeAdminSlideIdx].text_color" 
+                          type="color" 
+                          class="w-7 h-7 rounded-lg cursor-pointer border-0 p-0 bg-transparent shrink-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch]:rounded-lg" 
+                        />
+                        <input 
+                          v-model="lessonForm.ppt_slides[activeAdminSlideIdx].text_color" 
+                          type="text" 
+                          class="flex-1 bg-transparent border-0 p-0 text-xs font-mono font-bold text-slate-700 outline-none uppercase" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Live Preview of Current Slide (Admin Side) -->
+                  <div class="mt-4 space-y-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Preview Slide:</span>
+                    <div 
+                      :style="{ 
+                        backgroundColor: lessonForm.ppt_slides[activeAdminSlideIdx].bg_color, 
+                        color: lessonForm.ppt_slides[activeAdminSlideIdx].text_color 
+                      }"
+                      class="w-full aspect-video rounded-2xl border border-slate-200/60 shadow-inner flex flex-col justify-center items-center p-6 text-center select-none transition-all duration-300"
+                    >
+                      <h3 class="text-sm sm:text-base font-extrabold mb-2">{{ lessonForm.ppt_slides[activeAdminSlideIdx].title || 'Judul Slide' }}</h3>
+                      <p class="text-[11px] leading-relaxed max-w-sm whitespace-pre-line">{{ lessonForm.ppt_slides[activeAdminSlideIdx].body_text || 'Tulis isi penjelasan slide...' }}</p>
+                    </div>
+                  </div>
+
                 </div>
               </div>
 
@@ -2420,8 +2834,9 @@ const deleteQuestion = (quiz, questionId) => {
 
               <!-- Save Button -->
               <div class="pt-2 border-t border-slate-200 mt-2">
-                <button @click="saveLesson" class="w-full bg-[#264790] hover:bg-blue-700 text-white py-2.5 rounded-md font-bold text-sm shadow-sm transition-colors">
-                  Save Lesson
+                <button @click="saveLesson" :disabled="isSaving" class="w-full bg-[#264790] hover:bg-blue-700 text-white py-2.5 rounded-md font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <RefreshCw v-if="isSaving" :size="16" class="animate-spin" />
+                  <span>{{ isSaving ? 'Menyimpan...' : 'Save Lesson' }}</span>
                 </button>
               </div>
 
@@ -2570,8 +2985,9 @@ const deleteQuestion = (quiz, questionId) => {
 
               <!-- Save Button -->
               <div class="pt-2 border-t border-slate-200 mt-2">
-                <button @click="saveAssignment" class="w-full bg-[#264790] hover:bg-blue-700 text-white py-2.5 rounded-md font-bold text-sm shadow-sm transition-colors">
-                  Save Assignment
+                <button @click="saveAssignment" :disabled="isSaving" class="w-full bg-[#264790] hover:bg-blue-700 text-white py-2.5 rounded-md font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <RefreshCw v-if="isSaving" :size="16" class="animate-spin" />
+                  <span>{{ isSaving ? 'Menyimpan...' : 'Save Assignment' }}</span>
                 </button>
               </div>
 
@@ -2748,8 +3164,9 @@ const deleteQuestion = (quiz, questionId) => {
           
           <!-- Sidebar Actions -->
           <div class="w-full md:w-64 flex flex-col gap-3">
-            <button @click="saveQuizSettings" class="w-full bg-[#264790] hover:bg-blue-700 text-white py-3 rounded-md font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-1.5">
-              Save Settings
+            <button @click="saveQuizSettings" :disabled="isSaving" class="w-full bg-[#264790] hover:bg-blue-700 text-white py-3 rounded-md font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+              <RefreshCw v-if="isSaving" :size="16" class="animate-spin" />
+              <span>{{ isSaving ? 'Menyimpan...' : 'Save Settings' }}</span>
             </button>
             <button @click="currentModal = ''" class="w-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 py-3 rounded-md font-bold text-sm shadow-sm transition-colors">
               Cancel
@@ -2780,8 +3197,10 @@ const deleteQuestion = (quiz, questionId) => {
             <textarea v-model="quizForm.description" rows="3" placeholder="Tuliskan petunjuk pengerjaan kuis..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium"></textarea>
           </div>
 
-          <button @click="saveQuiz" class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3 rounded-2xl font-bold text-sm shadow-sm transition-colors">
-            <Check :size="16" class="inline mr-1" /> Simpan Kuis
+          <button @click="saveQuiz" :disabled="isSaving" class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3 rounded-2xl font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+            <RefreshCw v-if="isSaving" :size="16" class="animate-spin" />
+            <Check v-else :size="16" />
+            <span>{{ isSaving ? 'Menyimpan...' : 'Simpan Kuis' }}</span>
           </button>
         </div>
       </div>
@@ -2888,12 +3307,340 @@ const deleteQuestion = (quiz, questionId) => {
             </div>
           </div>
 
-          <button @click="saveQuestion" class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3.5 rounded-2xl font-bold text-sm shadow-sm transition-colors">
-            <Check :size="16" class="inline mr-1" /> Simpan Pertanyaan Soal
+          <button @click="saveQuestion" :disabled="isSaving" class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3.5 rounded-2xl font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+            <RefreshCw v-if="isSaving" :size="16" class="animate-spin" />
+            <Check v-else :size="16" />
+            <span>{{ isSaving ? 'Menyimpan...' : 'Simpan Pertanyaan Soal' }}</span>
           </button>
         </div>
       </div>
     </div>
 
+    <!-- FLOATING ACTION BUTTON (QUICK IMPORTER) -->
+    <div class="fixed bottom-6 right-6 z-40">
+      <button 
+        @click="showQuickImporter = true"
+        class="flex items-center gap-2 px-5 py-3.5 bg-[#264790] hover:bg-[#44A6D9] text-white rounded-full font-extrabold text-sm shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 group"
+      >
+        <Upload :size="16" class="transition-transform group-hover:-translate-y-0.5" />
+        <span>Impor Kurikulum / Kuis</span>
+      </button>
+    </div>
+
+    <!-- QUICK IMPORTER MODAL -->
+    <div v-if="showQuickImporter" class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div class="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl relative border border-slate-100 flex flex-col gap-6 max-h-[90vh] overflow-y-auto">
+        <button @click="showQuickImporter = false" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600">
+          <X :size="20" />
+        </button>
+
+        <div class="flex items-center gap-3">
+          <div class="p-3 bg-[#264790]/10 text-[#264790] rounded-2xl">
+            <Upload :size="22" />
+          </div>
+          <div>
+            <h3 class="text-lg font-extrabold text-[#1A2B49] leading-tight">Pengimpor Cepat</h3>
+            <p class="text-xs text-slate-400 font-medium">Unggah materi kelas atau kuis instan tanpa keluar dari Builder</p>
+          </div>
+        </div>
+
+        <!-- Tab Selector -->
+        <div class="flex border-b border-slate-100">
+          <button 
+            @click="quickImporterTab = 'course'"
+            :class="quickImporterTab === 'course' ? 'border-[#264790] text-[#264790] font-bold' : 'border-transparent text-slate-400 hover:text-slate-600'"
+            class="flex-1 pb-3 text-center border-b-2 text-sm font-semibold transition-all"
+          >
+            Impor Kurikulum (.xlsx / .csv)
+          </button>
+          <button 
+            @click="quickImporterTab = 'quiz'"
+            :class="quickImporterTab === 'quiz' ? 'border-[#264790] text-[#264790] font-bold' : 'border-transparent text-slate-400 hover:text-slate-600'"
+            class="flex-1 pb-3 text-center border-b-2 text-sm font-semibold transition-all"
+          >
+            Impor Soal Kuis (.xlsx / .csv)
+          </button>
+        </div>
+
+        <!-- 1. COURSE CURRICULUM IMPORTER TAB -->
+        <div v-if="quickImporterTab === 'course'" class="flex flex-col gap-5">
+          <div class="flex items-center justify-between bg-slate-50 rounded-2xl p-4 border border-slate-100">
+            <div class="flex items-center gap-3">
+              <FileText class="text-slate-400" :size="20" />
+              <div>
+                <span class="block text-xs font-bold text-slate-500 uppercase tracking-wide">Template Kurikulum</span>
+                <span class="block text-xs text-slate-400 font-semibold">Gunakan format Excel standar untuk mengimpor bab dan materi.</span>
+              </div>
+            </div>
+            <a 
+              href="/dashboard/settings/course-builder/download-template" 
+              class="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-800 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+            >
+              Unduh Template
+            </a>
+          </div>
+
+          <!-- Drag and Drop Dropzone -->
+          <div 
+            @dragover.prevent="courseDragActive = true"
+            @dragleave.prevent="courseDragActive = false"
+            @drop.prevent="handleCourseFileDrop"
+            :class="[
+              courseDragActive ? 'border-[#264790] bg-[#264790]/5' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50',
+              courseImportFile ? 'border-emerald-300 bg-emerald-50/5' : ''
+            ]"
+            class="border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center gap-3"
+            @click="$refs.courseFileInputRef.click()"
+          >
+            <input 
+              type="file" 
+              ref="courseFileInputRef" 
+              class="hidden" 
+              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+              @change="handleCourseFileSelect"
+            />
+            
+            <div :class="courseImportFile ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'" class="p-4 rounded-2xl transition-colors">
+              <Upload :size="24" />
+            </div>
+
+            <div v-if="!courseImportFile">
+              <span class="block text-sm font-extrabold text-[#1A2B49]">Pilih berkas template kurikulum</span>
+              <span class="block text-xs text-slate-400 mt-1">Seret dan lepas file .xlsx atau .csv di sini</span>
+            </div>
+            <div v-else class="flex flex-col items-center">
+              <span class="block text-sm font-extrabold text-emerald-800">{{ courseImportFile.name }}</span>
+              <span class="block text-[10px] text-slate-400 mt-1 font-bold">{{ (courseImportFile.size / 1024).toFixed(1) }} KB</span>
+            </div>
+          </div>
+
+          <!-- Import Action Button -->
+          <button 
+            @click="startCourseImport"
+            :disabled="isImportingCourse || !courseImportFile"
+            :class="isImportingCourse || !courseImportFile ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-[#264790] hover:bg-[#44A6D9] text-white'"
+            class="w-full py-3.5 rounded-2xl font-bold text-sm shadow-sm transition-all duration-300 flex items-center justify-center gap-2"
+          >
+            <RefreshCw v-if="isImportingCourse" :size="16" class="animate-spin" />
+            <span>Mulai Impor Kurikulum</span>
+          </button>
+
+          <!-- Terminal Logs -->
+          <div v-if="courseImportLogs.length > 0" class="flex flex-col gap-2">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">Log Impor</span>
+            <div class="bg-slate-900 rounded-2xl p-4 font-mono text-xs text-slate-100 overflow-y-auto max-h-48 flex flex-col gap-1.5 shadow-inner border border-slate-800">
+              <div v-for="(log, idx) in courseImportLogs" :key="idx" v-html="log" class="leading-relaxed whitespace-pre-wrap"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. QUIZ IMPORTER TAB -->
+        <div v-if="quickImporterTab === 'quiz'" class="flex flex-col gap-5">
+          <div class="flex items-center justify-between bg-slate-50 rounded-2xl p-4 border border-slate-100">
+            <div class="flex items-center gap-3">
+              <Award class="text-slate-400" :size="20" />
+              <div>
+                <span class="block text-xs font-bold text-slate-500 uppercase tracking-wide">Template Soal Kuis</span>
+                <span class="block text-xs text-slate-400 font-semibold">Format standard untuk single choice, multiple choice, & true/false.</span>
+              </div>
+            </div>
+            <a 
+              href="/dashboard/settings/course-builder/download-quiz-template" 
+              class="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-800 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+            >
+              Unduh Template
+            </a>
+          </div>
+
+          <!-- Title Input -->
+          <div>
+            <label class="block text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Judul Kuis Baru</label>
+            <input 
+              v-model="quickQuizTitle"
+              type="text" 
+              placeholder="Contoh: Kuis Akhir Bab 1" 
+              class="w-full bg-slate-50 border border-slate-200 hover:border-slate-350 focus:border-[#264790] focus:bg-white rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium transition-all"
+            />
+          </div>
+
+          <!-- Module Selector -->
+          <div>
+            <label class="block text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Pilih Bab Target</label>
+            <select 
+              v-model="quickSelectedModuleId"
+              class="w-full bg-slate-50 border border-slate-200 hover:border-slate-350 focus:border-[#264790] focus:bg-white rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-bold text-xs cursor-pointer transition-all"
+            >
+              <option value="">-- Pilih Bab untuk Menaruh Kuis --</option>
+              <option v-for="mod in modules" :key="mod.id" :value="mod.id">
+                {{ mod.title }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Drag and Drop Dropzone -->
+          <div 
+            @dragover.prevent="quizDragActive = true"
+            @dragleave.prevent="quizDragActive = false"
+            @drop.prevent="handleQuizFileDrop"
+            :class="[
+              quizDragActive ? 'border-[#264790] bg-[#264790]/5' : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50',
+              quizImportFile ? 'border-emerald-300 bg-emerald-50/5' : ''
+            ]"
+            class="border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center gap-3"
+            @click="$refs.quizFileInputRef.click()"
+          >
+            <input 
+              type="file" 
+              ref="quizFileInputRef" 
+              class="hidden" 
+              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+              @change="handleQuizFileSelect"
+            />
+            
+            <div :class="quizImportFile ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'" class="p-4 rounded-2xl transition-colors">
+              <Upload :size="24" />
+            </div>
+
+            <div v-if="!quizImportFile">
+              <span class="block text-sm font-extrabold text-[#1A2B49]">Pilih berkas template kuis</span>
+              <span class="block text-xs text-slate-400 mt-1">Seret dan lepas file .xlsx atau .csv di sini</span>
+            </div>
+            <div v-else class="flex flex-col items-center">
+              <span class="block text-sm font-extrabold text-emerald-800">{{ quizImportFile.name }}</span>
+              <span class="block text-[10px] text-slate-400 mt-1 font-bold">{{ (quizImportFile.size / 1024).toFixed(1) }} KB</span>
+            </div>
+          </div>
+
+          <!-- Import Action Button -->
+          <button 
+            @click="startQuizImport"
+            :disabled="isImportingQuiz || !quizImportFile || !quickQuizTitle || !quickSelectedModuleId"
+            :class="isImportingQuiz || !quizImportFile || !quickQuizTitle || !quickSelectedModuleId ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-[#264790] hover:bg-[#44A6D9] text-white'"
+            class="w-full py-3.5 rounded-2xl font-bold text-sm shadow-sm transition-all duration-300 flex items-center justify-center gap-2"
+          >
+            <RefreshCw v-if="isImportingQuiz" :size="16" class="animate-spin" />
+            <span>Mulai Impor Kuis & Soal</span>
+          </button>
+
+          <!-- Terminal Logs -->
+          <div v-if="quizImportLogs.length > 0" class="flex flex-col gap-2">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">Log Impor</span>
+            <div class="bg-slate-900 rounded-2xl p-4 font-mono text-xs text-slate-100 overflow-y-auto max-h-48 flex flex-col gap-1.5 shadow-inner border border-slate-800">
+              <div v-for="(log, idx) in quizImportLogs" :key="idx" v-html="log" class="leading-relaxed whitespace-pre-wrap"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Custom Modern SweetAlert Modal -->
+    <Transition name="fade">
+      <div v-if="customAlert.show" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md">
+        <Transition name="scale">
+          <div v-if="customAlert.show" class="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800 text-center flex flex-col items-center transform transition-all">
+            <!-- Icon Container based on Alert Type -->
+            <div class="mb-5 flex items-center justify-center w-20 h-20 rounded-full animate-bounce" :class="{
+              'bg-emerald-50 text-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-400': customAlert.type === 'success',
+              'bg-rose-50 text-rose-500 dark:bg-rose-950/40 dark:text-rose-400': customAlert.type === 'error',
+              'bg-amber-50 text-amber-500 dark:bg-amber-950/40 dark:text-amber-400': customAlert.type === 'warning',
+              'bg-blue-50 text-blue-500 dark:bg-blue-950/40 dark:text-blue-400': customAlert.type === 'info',
+              'bg-indigo-50 text-indigo-500 dark:bg-indigo-950/40 dark:text-indigo-400': customAlert.type === 'confirm'
+            }">
+              <!-- Success: Check -->
+              <svg v-if="customAlert.type === 'success'" class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+              </svg>
+              <!-- Error: X -->
+              <svg v-else-if="customAlert.type === 'error'" class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+              <!-- Warning/Confirm: Help / Alert -->
+              <svg v-else-if="customAlert.type === 'warning' || customAlert.type === 'confirm'" class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+              <!-- Info: Info -->
+              <svg v-else class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+
+            <!-- Title & Message -->
+            <h3 class="text-xl font-black text-slate-800 dark:text-slate-100 mb-2">{{ customAlert.title }}</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">{{ customAlert.message }}</p>
+
+            <!-- Buttons -->
+            <div class="flex items-center gap-3 w-full">
+              <!-- Cancel Button (Only for confirm type) -->
+              <button 
+                v-if="customAlert.type === 'confirm'" 
+                @click="handleAlertCancel" 
+                class="flex-1 py-3 px-6 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-2xl text-sm font-bold transition-all duration-200"
+              >
+                {{ customAlert.cancelText || 'Batal' }}
+              </button>
+              
+              <!-- Confirm / OK Button -->
+              <button 
+                @click="handleAlertConfirm" 
+                class="flex-1 py-3 px-6 text-white rounded-2xl text-sm font-bold shadow-lg transition-all duration-200 transform active:scale-95"
+                :class="{
+                  'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20': customAlert.type === 'success',
+                  'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20': customAlert.type === 'error',
+                  'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20': customAlert.type === 'warning',
+                  'bg-blue-500 hover:bg-blue-600 shadow-blue-500/20': customAlert.type === 'info',
+                  'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20': customAlert.type === 'confirm'
+                }"
+              >
+                {{ customAlert.confirmText || 'OK' }}
+              </button>
+            </div>
+          </div>
+        </Transition>
+      </div>
+    </Transition>
+
   </AuthenticatedLayout>
 </template>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.scale-enter-active, .scale-leave-active {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+}
+.scale-enter-from, .scale-leave-to {
+  transform: scale(0.9);
+  opacity: 0;
+}
+
+/* Custom styles for rich text editor list formatting */
+:deep(.prose ul),
+:deep([contenteditable="true"] ul) {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+:deep(.prose ol),
+:deep([contenteditable="true"] ol) {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+:deep(.prose li),
+:deep([contenteditable="true"] li) {
+  display: list-item !important;
+  list-style: inherit !important;
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}
+</style>

@@ -125,6 +125,7 @@ class CourseBuilderController extends Controller
             'title' => 'required|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
             'price' => 'required|numeric|min:0',
+            'access_duration_months' => 'nullable|integer|min:0',
             'level' => 'required|string|in:SD,SMP,SMA,Umum',
             'capacity' => 'nullable|integer|min:1',
             'status' => 'required|string|in:draft,published,pending',
@@ -136,7 +137,7 @@ class CourseBuilderController extends Controller
         ]);
 
         $data = $request->only([
-            'title', 'category_id', 'price', 'level', 'capacity', 'status',
+            'title', 'category_id', 'price', 'access_duration_months', 'level', 'capacity', 'status',
             'description', 'about', 'bg_color', 'icon_type'
         ]);
 
@@ -233,20 +234,51 @@ class CourseBuilderController extends Controller
 
     public function addLesson(Request $request, Module $module)
     {
+        $contentObj = json_decode($request->content, true);
+        if ($contentObj && isset($contentObj['type']) && $contentObj['type'] === 'ppt') {
+            $settings = \App\Models\Setting::pluck('value', 'key')->toArray();
+            $enableNativePpt = !isset($settings['enable_native_ppt']) || ($settings['enable_native_ppt'] !== 'false' && $settings['enable_native_ppt'] !== false && $settings['enable_native_ppt'] !== '0' && $settings['enable_native_ppt'] !== 0);
+            if (!$enableNativePpt) {
+                return response()->json(['message' => 'Fitur Native PPT dinonaktifkan oleh Administrator.'], 403);
+            }
+            $pptAccess = $settings['native_ppt_access'] ?? 'all';
+            if ($pptAccess === 'admin' && !auth()->user()->isAdmin()) {
+                return response()->json(['message' => 'Akses terbatas: Hanya Admin yang diizinkan membuat Native PPT.'], 403);
+            }
+        }
+
         $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'nullable|string',
             'video_url' => 'nullable|string|url',
+            'slide_url' => [
+                'nullable',
+                'string',
+                'url',
+                function ($attribute, $value, $fail) {
+                    $parsed = parse_url($value);
+                    $host = isset($parsed['host']) ? strtolower($parsed['host']) : '';
+                    if (strpos($host, 'docs.google.com') === false && strpos($host, 'canva.com') === false) {
+                        $fail('Slide URL harus berupa tautan dari docs.google.com atau canva.com.');
+                    }
+                }
+            ],
             'duration_minutes' => 'required|integer|min:0',
         ]);
 
         $sortOrder = $module->lessons()->count();
+
+        $slideUrl = null;
+        if ($request->filled('slide_url')) {
+            $slideUrl = $this->parseSlideUrl($request->slide_url);
+        }
 
         $lesson = Lesson::create([
             'module_id' => $module->id,
             'title' => $request->title,
             'content' => $request->content,
             'video_url' => $request->video_url,
+            'slide_url' => $slideUrl,
             'duration_minutes' => $request->duration_minutes,
             'sort_order' => $sortOrder
         ]);
@@ -259,19 +291,84 @@ class CourseBuilderController extends Controller
 
     public function updateLesson(Request $request, Lesson $lesson)
     {
+        $contentObj = json_decode($request->content, true);
+        if ($contentObj && isset($contentObj['type']) && $contentObj['type'] === 'ppt') {
+            $settings = \App\Models\Setting::pluck('value', 'key')->toArray();
+            $enableNativePpt = !isset($settings['enable_native_ppt']) || ($settings['enable_native_ppt'] !== 'false' && $settings['enable_native_ppt'] !== false && $settings['enable_native_ppt'] !== '0' && $settings['enable_native_ppt'] !== 0);
+            if (!$enableNativePpt) {
+                return response()->json(['message' => 'Fitur Native PPT dinonaktifkan oleh Administrator.'], 403);
+            }
+            $pptAccess = $settings['native_ppt_access'] ?? 'all';
+            if ($pptAccess === 'admin' && !auth()->user()->isAdmin()) {
+                return response()->json(['message' => 'Akses terbatas: Hanya Admin yang diizinkan membuat Native PPT.'], 403);
+            }
+        }
+
         $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'nullable|string',
             'video_url' => 'nullable|string|url',
+            'slide_url' => [
+                'nullable',
+                'string',
+                'url',
+                function ($attribute, $value, $fail) {
+                    $parsed = parse_url($value);
+                    $host = isset($parsed['host']) ? strtolower($parsed['host']) : '';
+                    if (strpos($host, 'docs.google.com') === false && strpos($host, 'canva.com') === false) {
+                        $fail('Slide URL harus berupa tautan dari docs.google.com atau canva.com.');
+                    }
+                }
+            ],
             'duration_minutes' => 'required|integer|min:0',
         ]);
 
-        $lesson->update($request->only(['title', 'content', 'video_url', 'duration_minutes']));
+        $slideUrl = null;
+        if ($request->filled('slide_url')) {
+            $slideUrl = $this->parseSlideUrl($request->slide_url);
+        }
+
+        $lesson->update([
+            'title' => $request->title,
+            'content' => $request->content,
+            'video_url' => $request->video_url,
+            'slide_url' => $slideUrl,
+            'duration_minutes' => $request->duration_minutes,
+        ]);
 
         return response()->json([
             'message' => 'Lesson updated successfully',
             'lesson' => $lesson
         ]);
+    }
+
+    private function parseSlideUrl($url)
+    {
+        if (empty($url)) {
+            return null;
+        }
+
+        $parsed = parse_url($url);
+        $host = isset($parsed['host']) ? strtolower($parsed['host']) : '';
+
+        // Google Slides
+        if (strpos($host, 'docs.google.com') !== false) {
+            if (preg_match('/\/presentation\/d\/([a-zA-Z0-9_-]+)/i', $url, $matches)) {
+                $presentationId = $matches[1];
+                return "https://docs.google.com/presentation/d/{$presentationId}/embed?start=false&loop=false&delayms=3000";
+            }
+        }
+
+        // Canva
+        if (strpos($host, 'canva.com') !== false) {
+            if (preg_match('/\/design\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)/i', $url, $matches)) {
+                $designId = $matches[1];
+                $slug = $matches[2];
+                return "https://www.canva.com/design/{$designId}/{$slug}/view?embed";
+            }
+        }
+
+        return $url;
     }
 
     public function deleteLesson(Lesson $lesson)

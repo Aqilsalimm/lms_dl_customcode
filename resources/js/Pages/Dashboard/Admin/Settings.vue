@@ -94,6 +94,8 @@ const form = useForm({
     use_tutor_player_youtube: getSetting('use_tutor_player_youtube', true),
     use_tutor_player_vimeo: getSetting('use_tutor_player_vimeo', false),
     use_tutor_player_gdrive: getSetting('use_tutor_player_gdrive', false),
+    enable_native_ppt: getSetting('enable_native_ppt', true),
+    native_ppt_access: getSetting('native_ppt_access', 'all'),
     
     // Monetization Settings
     ecommerce_engine: getSetting('ecommerce_engine', 'native'),
@@ -247,6 +249,9 @@ const form = useForm({
 
     // License Settings
     license_key: getSetting('license_key', ''),
+
+    // Personal Goal options
+    personal_goals: getSetting('personal_goals', 'Web Developer, Mobile Developer, UI/UX Designer, Data Scientist, Python Developer'),
   }
 });
 
@@ -858,6 +863,43 @@ const triggerTestNotification = (eventType, role) => {
               <div class="relative inline-block w-12 h-7 cursor-pointer shrink-0 mt-1" @click="form.settings.use_tutor_player_gdrive = !form.settings.use_tutor_player_gdrive">
                 <div class="w-12 h-7 rounded-full transition-colors duration-300" :class="form.settings.use_tutor_player_gdrive ? 'bg-blue-600' : 'bg-slate-300'"></div>
                 <div class="absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm" :class="form.settings.use_tutor_player_gdrive ? 'translate-x-5' : 'translate-x-0'"></div>
+              </div>
+            </div>
+
+            <hr class="border-slate-100 my-2" />
+            <h4 class="text-lg font-bold text-slate-800 -mb-2">Native PPT Configuration</h4>
+
+            <!-- Native PPT Toggle -->
+            <div class="flex items-start justify-between group">
+              <div class="pr-6">
+                <label class="block text-sm font-bold text-slate-700">Enable Native PPT Feature</label>
+                <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">Toggle the availability of the Native PPT Slide Builder and Player across the platform.</p>
+              </div>
+              <div class="relative inline-block w-12 h-7 cursor-pointer shrink-0 mt-1" @click="form.settings.enable_native_ppt = !form.settings.enable_native_ppt">
+                <div class="w-12 h-7 rounded-full transition-colors duration-300" :class="form.settings.enable_native_ppt ? 'bg-blue-600' : 'bg-slate-300'"></div>
+                <div class="absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm" :class="form.settings.enable_native_ppt ? 'translate-x-5' : 'translate-x-0'"></div>
+              </div>
+            </div>
+
+            <!-- Native PPT Access Control -->
+            <div v-if="form.settings.enable_native_ppt">
+              <label class="block text-sm font-bold text-slate-700 mb-1.5">Native PPT Access Permissions</label>
+              <p class="text-xs text-slate-500 mb-3 leading-relaxed">Configure which roles are allowed to access and use the Native PPT Slide Builder.</p>
+              <div class="flex flex-col gap-3">
+                <label class="flex items-center gap-3 cursor-pointer">
+                  <input type="radio" v-model="form.settings.native_ppt_access" value="all" class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500" />
+                  <div>
+                    <span class="block text-sm font-bold text-slate-700">Admin & Instructor</span>
+                    <span class="text-xs text-slate-500">Allows both System Administrators and Instructors to build Native PPT lessons.</span>
+                  </div>
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer">
+                  <input type="radio" v-model="form.settings.native_ppt_access" value="admin" class="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500" />
+                  <div>
+                    <span class="block text-sm font-bold text-slate-700">Admin Only</span>
+                    <span class="text-xs text-slate-500">Restricts the Slide Builder feature exclusively to System Administrators.</span>
+                  </div>
+                </label>
               </div>
             </div>
 
@@ -2097,6 +2139,22 @@ const triggerTestNotification = (eventType, role) => {
                   <div class="w-12 h-7 rounded-full transition-colors duration-300" :class="form.settings.email_verification_enabled ? 'bg-blue-600' : 'bg-slate-300'"></div>
                   <div class="absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 shadow-sm" :class="form.settings.email_verification_enabled ? 'translate-x-5' : 'translate-x-0'"></div>
                 </div>
+              </div>
+            </div>
+
+            <!-- 8. Personal Goal Options -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-6">
+              <div class="flex flex-col gap-3">
+                <div>
+                  <span class="block text-sm font-bold text-slate-700">Personal Goal Options</span>
+                  <span class="text-xs text-slate-500 block mt-1">Specify options for the Personal Goal dropdown during student registration (separate with commas).</span>
+                </div>
+                <textarea 
+                  v-model="form.settings.personal_goals" 
+                  rows="3" 
+                  placeholder="Web Developer, Mobile Developer, UI/UX Designer, Data Scientist, Python Developer"
+                  class="w-full border-2 border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 text-sm font-semibold bg-slate-50 transition-colors"
+                ></textarea>
               </div>
             </div>
 

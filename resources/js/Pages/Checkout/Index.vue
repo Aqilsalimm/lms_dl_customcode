@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { 
   ShoppingCart, User, Globe, ChevronDown, GraduationCap, 
   Home, Newspaper, Calendar, Clock, MapPin, Code,
@@ -18,6 +18,43 @@ const props = defineProps({
 const isProcessing = ref(false);
 const showSuccessOverlay = ref(false);
 
+// Coupon states
+const couponCode = ref('');
+const appliedCoupon = ref(null);
+const couponError = ref('');
+const isCheckingCoupon = ref(false);
+
+const handleApplyCoupon = () => {
+  if (!couponCode.value) return;
+  couponError.value = '';
+  isCheckingCoupon.value = true;
+
+  const items = props.cartItems.map(item => ({
+    id: item.id,
+    type: 'course'
+  }));
+
+  axios.post('/payment/validate-coupon', {
+    code: couponCode.value.trim().toUpperCase(),
+    items: items
+  })
+  .then(res => {
+    isCheckingCoupon.value = false;
+    appliedCoupon.value = res.data;
+  })
+  .catch(err => {
+    isCheckingCoupon.value = false;
+    appliedCoupon.value = null;
+    couponError.value = err.response?.data?.message || 'Gagal memvalidasi kupon.';
+  });
+};
+
+const handleRemoveCoupon = () => {
+  couponCode.value = '';
+  appliedCoupon.value = null;
+  couponError.value = '';
+};
+
 // Formatting helpers
 const formatPrice = (val) => {
   return parseFloat(val).toLocaleString('id-ID');
@@ -31,6 +68,17 @@ const totalHargaRaw = computed(() => {
 
 const totalHargaFormatted = computed(() => {
   return formatPrice(totalHargaRaw.value);
+});
+
+const finalTotalHarga = computed(() => {
+  if (appliedCoupon.value) {
+    return Math.max(0, totalHargaRaw.value - appliedCoupon.value.discount_amount);
+  }
+  return totalHargaRaw.value;
+});
+
+const finalTotalHargaFormatted = computed(() => {
+  return formatPrice(finalTotalHarga.value);
 });
 
 // Remove item from checkout page (updates session cart and re-renders)
@@ -60,10 +108,11 @@ const handlePayNow = () => {
     router.get('/courses');
     return;
   }
-
   isProcessing.value = true;
 
-  axios.post('/cart/checkout')
+  axios.post('/cart/checkout', {
+    coupon_code: appliedCoupon.value?.code || null
+  })
   .then(res => {
     // If checkout was auto-completed (auto_complete_ecommerce_orders is enabled)
     if (res.data.completed) {
@@ -290,6 +339,52 @@ const Logo = () => {
                 <span>Harga Kelas :</span>
                 <span class="text-[#1A2B49] font-extrabold">Rp{{ totalHargaFormatted }}</span>
               </div>
+              <div v-if="appliedCoupon" class="flex items-center justify-between text-emerald-600">
+                <span>Diskon Promo:</span>
+                <span class="font-extrabold">-Rp{{ formatPrice(appliedCoupon.discount_amount) }}</span>
+              </div>
+            </div>
+
+            <div class="h-px bg-slate-100"></div>
+
+            <!-- Coupon Code Field -->
+            <div class="flex flex-col gap-2.5">
+              <label class="text-xs font-bold text-[#1A2B49] uppercase tracking-wider">Punya Kode Promo?</label>
+              
+              <div v-if="!appliedCoupon" class="flex gap-2">
+                <input 
+                  v-model="couponCode"
+                  type="text"
+                  placeholder="Masukkan kode promo"
+                  class="flex-grow border border-slate-200 hover:border-slate-350 focus:border-[#264790] rounded-xl px-4 py-2.5 text-xs outline-none text-[#1A2B49] uppercase font-mono font-bold"
+                  :disabled="isCheckingCoupon"
+                  @keyup.enter="handleApplyCoupon"
+                />
+                <button 
+                  type="button"
+                  @click="handleApplyCoupon"
+                  :disabled="isCheckingCoupon || !couponCode"
+                  class="bg-[#264790]/10 hover:bg-[#264790]/25 text-[#264790] px-4 rounded-xl font-bold text-xs transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                >
+                  Terapkan
+                </button>
+              </div>
+
+              <div v-else class="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 text-xs">
+                <div class="flex flex-col gap-0.5">
+                  <span class="font-bold text-emerald-800 font-mono text-sm uppercase">{{ appliedCoupon.code }}</span>
+                  <span class="text-emerald-600 font-medium">Potongan -Rp{{ formatPrice(appliedCoupon.discount_amount) }}</span>
+                </div>
+                <button 
+                  type="button"
+                  @click="handleRemoveCoupon"
+                  class="text-red-500 hover:text-red-700 font-bold transition-colors cursor-pointer"
+                >
+                  Hapus
+                </button>
+              </div>
+
+              <span v-if="couponError" class="text-xs text-red-500 font-bold mt-1">{{ couponError }}</span>
             </div>
 
             <div class="h-px bg-slate-100"></div>
@@ -298,7 +393,7 @@ const Logo = () => {
             <div class="flex items-center justify-between">
               <span class="text-slate-400 text-xs sm:text-sm font-semibold">Total Harga :</span>
               <span class="text-[#1A2B49] font-extrabold text-lg sm:text-xl">
-                Rp{{ totalHargaFormatted }},-
+                Rp{{ finalTotalHargaFormatted }},-
               </span>
             </div>
 

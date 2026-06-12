@@ -51,8 +51,13 @@ Route::get('/dashboard/withdrawals', [DashboardController::class, 'placeholder']
 Route::get('/dashboard/google-meet', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.google-meet');
 Route::get('/dashboard/zoom', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.zoom');
 
-// Auth routes group
-Route::middleware('auth')->group(function () {
+use App\Http\Controllers\Auth\OtpController;
+
+// OTP routes
+Route::post('/otp/send', [OtpController::class, 'send'])->name('otp.send');
+Route::post('/otp/verify', [OtpController::class, 'verify'])->name('otp.verify');
+
+    Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -63,6 +68,39 @@ Route::middleware('auth')->group(function () {
     // LMS Settings
     Route::get('/dashboard/settings', [DashboardController::class, 'settings'])->name('dashboard.settings');
     Route::post('/dashboard/settings', [DashboardController::class, 'updateSettings'])->name('dashboard.settings.update');
+    
+    // e-Commerce Settings & Analytics (Admin only)
+    Route::get('/dashboard/ecommerce/analytics', [\App\Http\Controllers\Admin\EcommerceController::class, 'analytics'])
+        ->name('dashboard.ecommerce.analytics');
+    Route::get('/dashboard/ecommerce/coupons', [\App\Http\Controllers\Admin\EcommerceController::class, 'coupons'])
+        ->name('dashboard.ecommerce.coupons');
+    Route::post('/dashboard/ecommerce/coupons', [\App\Http\Controllers\Admin\EcommerceController::class, 'storeCoupon'])
+        ->name('dashboard.ecommerce.coupons.store');
+    Route::put('/dashboard/ecommerce/coupons/{coupon}', [\App\Http\Controllers\Admin\EcommerceController::class, 'updateCoupon'])
+        ->name('dashboard.ecommerce.coupons.update');
+    Route::delete('/dashboard/ecommerce/coupons/{coupon}', [\App\Http\Controllers\Admin\EcommerceController::class, 'deleteCoupon'])
+        ->name('dashboard.ecommerce.coupons.destroy');
+    Route::get('/dashboard/ecommerce/settings', [\App\Http\Controllers\Admin\EcommerceController::class, 'settings'])
+        ->name('dashboard.ecommerce.settings');
+    Route::post('/dashboard/ecommerce/settings', [\App\Http\Controllers\Admin\EcommerceController::class, 'updateSettings'])
+        ->name('dashboard.ecommerce.settings.update');
+
+    // Coupon verification route
+    Route::post('/payment/validate-coupon', [\App\Http\Controllers\PaymentController::class, 'validateCoupon'])
+        ->name('payment.validate-coupon');
+    Route::get('/dashboard/settings/course-builder', [DashboardController::class, 'courseBuilderSettings'])->name('dashboard.settings.course-builder');
+    Route::post('/dashboard/settings/course-builder/categories', [DashboardController::class, 'storeCategory'])->name('dashboard.settings.course-builder.categories.store');
+    Route::put('/dashboard/settings/course-builder/categories/{category}', [DashboardController::class, 'updateCategory'])->name('dashboard.settings.course-builder.categories.update');
+    Route::delete('/dashboard/settings/course-builder/categories/{category}', [DashboardController::class, 'deleteCategory'])->name('dashboard.settings.course-builder.categories.destroy');
+
+    Route::post('/dashboard/settings/course-builder/tags', [DashboardController::class, 'storeTag'])->name('dashboard.settings.course-builder.tags.store');
+    Route::put('/dashboard/settings/course-builder/tags/{tag}', [DashboardController::class, 'updateTag'])->name('dashboard.settings.course-builder.tags.update');
+    Route::delete('/dashboard/settings/course-builder/tags/{tag}', [DashboardController::class, 'deleteTag'])->name('dashboard.settings.course-builder.tags.destroy');
+    Route::get('/dashboard/settings/course-builder/download-template', [DashboardController::class, 'downloadImportTemplate'])->name('dashboard.settings.course-builder.download-template');
+    Route::post('/dashboard/settings/course-builder/import', [DashboardController::class, 'importCourses'])->name('dashboard.settings.course-builder.import');
+    Route::get('/dashboard/settings/course-builder/courses', [DashboardController::class, 'getCoursesWithModules'])->name('dashboard.settings.course-builder.courses');
+    Route::get('/dashboard/settings/course-builder/download-quiz-template', [DashboardController::class, 'downloadQuizTemplate'])->name('dashboard.settings.course-builder.download-quiz-template');
+    Route::post('/dashboard/settings/course-builder/import-quiz', [DashboardController::class, 'importQuizzes'])->name('dashboard.settings.course-builder.import-quiz');
 
     // Course Builder Routes
     Route::prefix('course-builder')->name('course-builder.')->group(function () {
@@ -109,6 +147,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/payment/mock-complete/{order}', [PaymentController::class, 'completeMockPayment'])->name('payment.mock-complete');
     Route::post('/cart/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
     Route::get('/checkout', [CartController::class, 'checkoutPage'])->name('cart.checkout-page');
+    Route::get('/checkout/resume/{order}', [CartController::class, 'resumeCheckout'])->name('checkout.resume');
+    Route::get('/orders/{order}/invoice', [PaymentController::class, 'downloadInvoice'])->name('orders.invoice');
     Route::get('/courses/{course:slug}/learn', [CourseController::class, 'learn'])->name('courses.learn');
     Route::post('/courses/{course:slug}/lessons/{lesson}/toggle-complete', [CourseController::class, 'toggleLessonComplete'])->name('courses.lessons.complete');
     Route::post('/dashboard/blogs', [BlogController::class, 'store'])->name('blogs.store');

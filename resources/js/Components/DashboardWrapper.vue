@@ -225,6 +225,30 @@ const getInitials = (name) => {
               <Settings :size="18" :stroke-width="route().current('dashboard.settings') ? 2.5 : 2" />
               LMS Settings
             </Link>
+            <Link 
+              :href="route('dashboard.settings.course-builder')"
+              :class="[
+                route().current('dashboard.settings.course-builder')
+                  ? 'bg-slate-100 text-[#264790] shadow-sm'
+                  : 'text-slate-500 hover:bg-white hover:text-[#264790] hover:shadow-sm'
+              ]"
+              class="flex items-center gap-3 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-300 mt-1"
+            >
+              <Settings :size="18" :stroke-width="route().current('dashboard.settings.course-builder') ? 2.5 : 2" />
+              Course Builder Settings
+            </Link>
+            <Link 
+              :href="route('dashboard.ecommerce.analytics')"
+              :class="[
+                route().current('dashboard.ecommerce.analytics')
+                  ? 'bg-slate-100 text-[#264790] shadow-sm'
+                  : 'text-slate-500 hover:bg-white hover:text-[#264790] hover:shadow-sm'
+              ]"
+              class="flex items-center gap-3 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-300 mt-1"
+            >
+              <ShoppingCart :size="18" :stroke-width="route().current('dashboard.ecommerce.analytics') ? 2.5 : 2" />
+              e-Commerce
+            </Link>
           </template>
 
           <div class="mt-6 pt-4 border-t border-slate-200 flex flex-col gap-1">
