@@ -36,6 +36,11 @@ class HandleInertiaRequests extends Middleware
                 'notifications' => $request->user() ? $request->user()->unreadNotifications()->latest()->get() : [],
             ],
             'settings' => \App\Models\Setting::pluck('value', 'key')->toArray(),
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+                'logout_message' => $request->session()->get('logout_message'),
+            ],
         ];
     }
 }

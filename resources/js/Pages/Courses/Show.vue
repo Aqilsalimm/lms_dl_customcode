@@ -547,7 +547,7 @@ import { usePage } from '@inertiajs/vue3';
               <span class="text-slate-400 text-xs font-bold uppercase tracking-wider block mb-1">BIAYA PENDAFTARAN</span>
               <div class="flex items-baseline gap-1">
                 <span class="text-3xl font-extrabold text-[#1A2B49]">Rp{{ formatPrice(course.price) }}</span>
-                <span class="text-slate-400 font-bold text-xs">/ Bulan</span>
+                <span v-if="course.payment_type !== 'one-time'" class="text-slate-400 font-bold text-xs">/ Bulan</span>
               </div>
             </div>
 

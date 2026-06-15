@@ -2,10 +2,11 @@
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import DashboardWrapper from '@/Components/DashboardWrapper.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { 
   BookOpen, Award, Clock, ArrowRight, Play, Download,
-  CreditCard, CheckCircle, HelpCircle, Calendar, Trophy, AlertCircle
+  CreditCard, CheckCircle, HelpCircle, Calendar, Trophy, AlertCircle,
+  MessageSquare, Users, Activity, PlayCircle, Layers
 } from 'lucide-vue-next';
 
 const props = defineProps({

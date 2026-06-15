@@ -38,9 +38,25 @@ class PaymentController extends Controller
         if ($request->buyable_type === 'course') {
             $item = Course::findOrFail($request->buyable_id);
             $buyableClass = Course::class;
+
+            if ($item->course_type === 'live_class' && $item->max_participants) {
+                $currentParticipants = Enrollment::where('course_id', $item->id)->count();
+                if ($currentParticipants >= $item->max_participants) {
+                    return back()->with('error', 'Mohon maaf, kuota peserta untuk Live Class ini sudah penuh.');
+                }
+            }
         } else {
             $item = Bundle::findOrFail($request->buyable_id);
             $buyableClass = Bundle::class;
+
+            foreach($item->courses as $c) {
+                if ($c->course_type === 'live_class' && $c->max_participants) {
+                    $currentParticipants = Enrollment::where('course_id', $c->id)->count();
+                    if ($currentParticipants >= $c->max_participants) {
+                        return back()->with('error', 'Mohon maaf, salah satu kelas dalam bundle ini ('.$c->title.') sudah penuh kuotanya.');
+                    }
+                }
+            }
         }
 
         // Check if already enrolled

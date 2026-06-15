@@ -9,6 +9,7 @@ use App\Http\Controllers\BundleBuilderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\DiscussionController;
 use App\Models\Course;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -38,12 +39,18 @@ Route::get('/dashboard/enrolled-courses', [DashboardController::class, 'enrolled
     ->middleware(['auth', 'verified'])
     ->name('dashboard.enrolled-courses');
 
+Route::get('/dashboard/learning-progress', [DashboardController::class, 'learningProgress'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard.learning-progress');
+
+use App\Http\Controllers\Student\QaController;
+
 // Placeholder routes for unimplemented dashboard features
 Route::get('/dashboard/reviews', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.reviews');
 Route::get('/dashboard/quiz-attempts', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.quiz-attempts');
 Route::get('/dashboard/wishlist', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.wishlist');
 Route::get('/dashboard/order-history', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.order-history');
-Route::get('/dashboard/qa', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.qa');
+Route::get('/dashboard/qa', [DiscussionController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard.qa');
 
 // Instructor placeholder routes
 Route::get('/dashboard/announcements', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.announcements');
@@ -56,6 +63,9 @@ use App\Http\Controllers\Auth\OtpController;
 // OTP routes
 Route::post('/otp/send', [OtpController::class, 'send'])->name('otp.send');
 Route::post('/otp/verify', [OtpController::class, 'verify'])->name('otp.verify');
+
+use App\Http\Controllers\BillingController;
+Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middleware(['auth'])->name('billing.suspended');
 
     Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -149,16 +159,32 @@ Route::post('/otp/verify', [OtpController::class, 'verify'])->name('otp.verify')
     Route::get('/checkout', [CartController::class, 'checkoutPage'])->name('cart.checkout-page');
     Route::get('/checkout/resume/{order}', [CartController::class, 'resumeCheckout'])->name('checkout.resume');
     Route::get('/orders/{order}/invoice', [PaymentController::class, 'downloadInvoice'])->name('orders.invoice');
-    Route::get('/courses/{course:slug}/learn', [CourseController::class, 'learn'])->name('courses.learn');
+    Route::get('/courses/{course:slug}/learn', [CourseController::class, 'learn'])->middleware('active.subscription')->name('courses.learn');
     Route::post('/courses/{course:slug}/lessons/{lesson}/toggle-complete', [CourseController::class, 'toggleLessonComplete'])->name('courses.lessons.complete');
+    Route::post('/courses/{course:slug}/quizzes/{quiz}/toggle-complete', [CourseController::class, 'toggleQuizComplete'])->name('courses.quizzes.complete');
+    Route::post('/courses/{course:slug}/lessons/{lesson}/log-progress', [CourseController::class, 'logProgress'])->name('courses.lessons.log-progress');
     Route::post('/dashboard/blogs', [BlogController::class, 'store'])->name('blogs.store');
+    Route::put('/dashboard/blogs/{blog}', [BlogController::class, 'update'])->name('blogs.update');
     Route::delete('/dashboard/blogs/{blog}', [BlogController::class, 'destroy'])->name('blogs.destroy');
+    Route::post('/dashboard/blogs/{blog}/approve', [BlogController::class, 'approvePost'])->name('blogs.approve');
+    
+    Route::get('/dashboard/settings/blog', [BlogController::class, 'settings'])->name('dashboard.settings.blog');
+    Route::post('/dashboard/settings/blog', [BlogController::class, 'updateSettings'])->name('dashboard.settings.blog.update');
+    Route::post('/dashboard/settings/blog/approve-settings', [BlogController::class, 'approveSettingsRequest'])->name('dashboard.settings.blog.approve-settings');
+    Route::post('/dashboard/settings/blog/reject-settings', [BlogController::class, 'rejectSettingsRequest'])->name('dashboard.settings.blog.reject-settings');
+    Route::post('/dashboard/settings/blog/upload-image', [BlogController::class, 'uploadImage'])->name('dashboard.settings.blog.upload-image');
 
     // Notifications
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('/notifications/test-trigger', [NotificationController::class, 'testTrigger'])->name('notifications.test-trigger');
     Route::get('/courses/{course:slug}/certificate', [CourseController::class, 'certificate'])->name('courses.certificate');
+
+    // QnA & Discussions
+    Route::get('/discussions/lesson/{lesson}', [DiscussionController::class, 'getForMaterial'])->name('discussions.lesson');
+    Route::post('/discussions', [DiscussionController::class, 'store'])->name('discussions.store');
+    Route::post('/discussions/{discussion}/resolve', [DiscussionController::class, 'toggleResolved'])->name('discussions.resolve');
+    Route::get('/dashboard/qna', [DiscussionController::class, 'instructorInbox'])->name('dashboard.qna');
 });
 
 // Shopping Cart Public Routes

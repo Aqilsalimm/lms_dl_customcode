@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { 
   ShoppingCart, User, Globe, ChevronDown, GraduationCap, 
@@ -8,6 +8,7 @@ import {
   BookOpen, HelpCircle, Check, Presentation, FileText, ChevronLeft, ChevronRight, AlertCircle, Award
 } from 'lucide-vue-next';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
+import MaterialDiscussion from '@/Components/MaterialDiscussion.vue';
 import axios from 'axios';
 
 const props = defineProps({
@@ -131,6 +132,41 @@ const getEmbedUrl = computed(() => {
   return url;
 });
 
+// Progress logging telemetry
+let progressInterval = null;
+
+const startProgressLogging = () => {
+  if (progressInterval) clearInterval(progressInterval);
+  progressInterval = setInterval(() => {
+    if (!activeLesson.value) return;
+    axios.post(`/courses/${props.course.slug}/lessons/${activeLesson.value.id}/log-progress`, {
+      watch_seconds: 15,
+      activity_type: 'video_progress'
+    }).catch(err => {
+      console.error('Failed to log watch progress:', err);
+    });
+  }, 15000); // log every 15 seconds
+};
+
+const stopProgressLogging = () => {
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+  }
+};
+
+watch(activeLesson, (newLesson) => {
+  if (newLesson) {
+    startProgressLogging();
+  } else {
+    stopProgressLogging();
+  }
+}, { immediate: true });
+
+onBeforeUnmount(() => {
+  stopProgressLogging();
+});
+
 // Load completed state from LocalStorage on mount if DB records are empty
 onMounted(() => {
   if (completedLessons.value.length === 0) {
@@ -213,28 +249,79 @@ const totalLessons = computed(() => {
   return props.course.modules.reduce((acc, m) => acc + (m.lessons?.length || 0), 0);
 });
 
-const isCourseCompleted = computed(() => {
-  return completedLessons.value.length >= totalLessons.value && totalLessons.value > 0;
+const totalQuizzes = computed(() => {
+  if (!props.course.modules) return 0;
+  return props.course.modules.reduce((acc, m) => acc + (m.quizzes?.length || 0), 0);
 });
 
-// Tool tag mapper based on course name
+const isCourseCompleted = computed(() => {
+  const hasLessons = totalLessons.value > 0;
+  const lessonsDone = completedLessons.value.length >= totalLessons.value;
+  const quizzesDone = completedQuizzes.value.length >= totalQuizzes.value;
+  return lessonsDone && quizzesDone && (hasLessons || totalQuizzes.value > 0);
+});
+
+// Tool tag mapper based on course name or dynamic tools array
 const toolsList = computed(() => {
+  const customTools = props.course.tools || [];
+  
+  if (customTools.length > 0) {
+    const iconMap = {
+      'python': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/python/python-original.svg',
+      'vscode': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/vscode/vscode-original.svg',
+      'visual studio code': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/vscode/vscode-original.svg',
+      'terminal': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/bash/bash-original.svg',
+      'bash': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/bash/bash-original.svg',
+      'html': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/html5/html5-original.svg',
+      'css': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/css3/css3-original.svg',
+      'javascript': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/javascript/javascript-original.svg',
+      'js': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/javascript/javascript-original.svg',
+      'typescript': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/typescript/typescript-original.svg',
+      'ts': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/typescript/typescript-original.svg',
+      'supabase': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/supabase/supabase-original.svg',
+      'nodejs': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nodejs/nodejs-original-wordmark.svg',
+      'node': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nodejs/nodejs-original-wordmark.svg',
+      'react': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/react/react-original.svg',
+      'vue': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/vuejs/vuejs-original.svg',
+      'laravel': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/laravel/laravel-original.svg',
+      'php': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/php/php-original.svg',
+      'figma': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/figma/figma-original.svg',
+      'docker': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/docker/docker-original.svg',
+      'git': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/git/git-original.svg',
+      'github': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/github/github-original.svg',
+      'mysql': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/mysql/mysql-original.svg',
+      'postgresql': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/postgresql/postgresql-original.svg',
+      'tailwind': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/tailwindcss/tailwindcss-original.svg',
+      'tailwindcss': 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/tailwindcss/tailwindcss-original.svg',
+    };
+    const defaultIcon = 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/chrome/chrome-original.svg';
+
+    return customTools.map(tool => {
+      const key = tool.toLowerCase().trim();
+      return {
+        name: tool,
+        icon: iconMap[key] || defaultIcon
+      };
+    });
+  }
+
+  // Fallback if no custom tools defined
   const title = props.course.title.toLowerCase();
   if (title.includes('python')) {
     return [
-      { name: 'Python', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg' },
-      { name: 'VS Code', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vscode/vscode-original.svg' },
-      { name: 'Terminal', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/bash/bash-original.svg' }
+      { name: 'Python', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/python/python-original.svg' },
+      { name: 'VS Code', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/vscode/vscode-original.svg' },
+      { name: 'Terminal', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/bash/bash-original.svg' }
     ];
   }
   
   return [
-    { name: 'Visual Studio Code', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vscode/vscode-original.svg' },
-    { name: 'HTML', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg' },
-    { name: 'CSS', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg' },
-    { name: 'Javascript', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg' },
-    { name: 'Supabase', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/supabase/supabase-original.svg' },
-    { name: 'NodeJs', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg' }
+    { name: 'Visual Studio Code', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/vscode/vscode-original.svg' },
+    { name: 'HTML', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/html5/html5-original.svg' },
+    { name: 'CSS', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/css3/css3-original.svg' },
+    { name: 'Javascript', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/javascript/javascript-original.svg' },
+    { name: 'Supabase', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/supabase/supabase-original.svg' },
+    { name: 'NodeJs', icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nodejs/nodejs-original-wordmark.svg' }
   ];
 });
 
@@ -243,7 +330,15 @@ const currentSlideIndex = ref(0);
 
 const activeLessonType = computed(() => {
   if (!activeLesson.value) return 'video';
+  if (activeLesson.value.slide_content) {
+    try {
+      const slideContentObj = typeof activeLesson.value.slide_content === 'string' ? JSON.parse(activeLesson.value.slide_content) : activeLesson.value.slide_content;
+      if (slideContentObj && slideContentObj.type) return slideContentObj.type;
+    } catch(e) {}
+  }
   if (activeLesson.value.slide_url) return 'slides';
+  
+  // Legacy fallback
   const content = activeLesson.value.content;
   if (content && content.startsWith('{') && content.endsWith('}')) {
     try {
@@ -256,6 +351,23 @@ const activeLessonType = computed(() => {
 
 const pptSlides = computed(() => {
   if (!activeLesson.value) return [];
+  
+  if (activeLesson.value.slide_content) {
+    try {
+      const slideContentObj = typeof activeLesson.value.slide_content === 'string' ? JSON.parse(activeLesson.value.slide_content) : activeLesson.value.slide_content;
+      if (slideContentObj && slideContentObj.type === 'ppt') {
+        return (slideContentObj.slides || []).map((s, idx) => ({
+          id: s.id || idx,
+          title: s.title || '',
+          body_text: s.body_text || s.content || '',
+          bg_color: s.bg_color || '#1e293b',
+          text_color: s.text_color || '#ffffff'
+        }));
+      }
+    } catch (e) {}
+  }
+  
+  // Legacy fallback
   const content = activeLesson.value.content;
   if (content && content.startsWith('{') && content.endsWith('}')) {
     try {
@@ -279,6 +391,51 @@ const pptSlides = computed(() => {
     text_color: '#ffffff'
   }];
 });
+
+// Live Class Countdown Logic
+const timeRemaining = ref(0);
+const timeEndRemaining = ref(0);
+const countdown = ref({ days: '00', hours: '00', minutes: '00' });
+let countdownInterval = null;
+
+const updateCountdown = () => {
+  if (props.course.course_type !== 'live_class' || !props.course.start_date) return;
+  const now = new Date().getTime();
+  const startDate = new Date(props.course.start_date).getTime();
+  const endDate = new Date(props.course.end_date || props.course.start_date).getTime();
+  
+  timeRemaining.value = startDate - now;
+  timeEndRemaining.value = endDate - now;
+  
+  if (timeRemaining.value > 0) {
+    const d = Math.floor(timeRemaining.value / (1000 * 60 * 60 * 24));
+    const h = Math.floor((timeRemaining.value % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const m = Math.floor((timeRemaining.value % (1000 * 60 * 60)) / (1000 * 60));
+    
+    countdown.value = {
+      days: d.toString().padStart(2, '0'),
+      hours: h.toString().padStart(2, '0'),
+      minutes: m.toString().padStart(2, '0')
+    };
+  }
+};
+
+onMounted(() => {
+  if (props.course.course_type === 'live_class') {
+    updateCountdown();
+    countdownInterval = setInterval(updateCountdown, 60000); // update every minute
+  }
+});
+
+onBeforeUnmount(() => {
+  if (countdownInterval) clearInterval(countdownInterval);
+});
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
 
 // Interactive Quiz States
 const quizAnswers = ref({});
@@ -371,6 +528,22 @@ const submitQuiz = () => {
       }
       completionsMap[props.course.id] = completedQuizzes.value;
       localStorage.setItem('drastha_quiz_completions', JSON.stringify(completionsMap));
+
+      // Sync to database
+      axios.post(`/courses/${props.course.slug}/quizzes/${qId}/toggle-complete`)
+        .then(response => {
+          if (response.data.completedQuizzes) {
+            completedQuizzes.value = response.data.completedQuizzes;
+          }
+          if (response.data.completedAt) {
+            showCompletedOverlay.value = true;
+          } else {
+            showCompletedOverlay.value = false;
+          }
+        })
+        .catch(error => {
+          console.error('Failed to sync quiz completion:', error);
+        });
     }
   }
 };
@@ -573,8 +746,84 @@ const Logo = () => {
             </button>
           </div>
 
+          <!-- LIVE CLASS BANNER -->
+          <div v-if="course.course_type === 'live_class'" class="bg-gradient-to-r from-[#1A2B49] to-[#264790] rounded-3xl p-6 sm:p-10 text-white shadow-xl flex flex-col sm:flex-row gap-6 items-center justify-between relative overflow-hidden border border-[#44A6D9]/20">
+            <!-- decorative background -->
+            <div class="absolute -right-20 -top-20 opacity-10 pointer-events-none">
+              <Calendar :size="200" />
+            </div>
+
+            <div class="flex flex-col gap-2 relative z-10 w-full sm:w-auto">
+              <span class="bg-amber-500 text-amber-950 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest self-start shadow-sm flex items-center gap-1.5">
+                <span v-if="!course.is_event_finished" class="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                {{ course.is_event_finished ? 'Acara Selesai' : 'Sesi Live Class' }}
+              </span>
+              <h2 class="text-xl sm:text-2xl font-extrabold mt-1">{{ course.title }}</h2>
+              
+              <div v-if="course.start_date" class="flex flex-col gap-1.5 mt-2 opacity-90 font-medium text-sm">
+                <div class="flex items-center gap-2">
+                  <Calendar :size="16" class="text-[#44A6D9]" /> 
+                  <span>Mulai: {{ formatDate(course.start_date) }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <Clock :size="16" class="text-[#44A6D9]" /> 
+                  <span>Selesai: {{ formatDate(course.end_date) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="relative z-10 shrink-0 w-full sm:w-auto flex flex-col items-center sm:items-end gap-3">
+              <template v-if="course.is_event_finished">
+                <a 
+                  v-if="course.recording_url"
+                  :href="course.recording_url" 
+                  target="_blank"
+                  class="w-full sm:w-auto px-6 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-extrabold text-sm transition-all shadow-lg flex items-center justify-center gap-2"
+                >
+                  <Play :size="18" fill="currentColor" /> Watch Recording
+                </a>
+                <span v-else class="text-xs text-white/60 italic">Rekaman belum tersedia</span>
+              </template>
+              
+              <template v-else>
+                <div v-if="timeRemaining > 0" class="flex flex-col items-center sm:items-end gap-2">
+                  <span class="text-[10px] uppercase tracking-widest font-bold text-[#44A6D9]">Dimulai dalam</span>
+                  <div class="flex items-center gap-2">
+                    <div class="bg-white/10 border border-white/20 rounded-xl px-3 py-2 flex flex-col items-center justify-center min-w-[50px] backdrop-blur-sm">
+                      <span class="text-xl font-black leading-none mb-1">{{ countdown.days }}</span>
+                      <span class="text-[8px] uppercase tracking-wider opacity-75">Hari</span>
+                    </div>
+                    <div class="text-xl font-black opacity-50">:</div>
+                    <div class="bg-white/10 border border-white/20 rounded-xl px-3 py-2 flex flex-col items-center justify-center min-w-[50px] backdrop-blur-sm">
+                      <span class="text-xl font-black leading-none mb-1">{{ countdown.hours }}</span>
+                      <span class="text-[8px] uppercase tracking-wider opacity-75">Jam</span>
+                    </div>
+                    <div class="text-xl font-black opacity-50">:</div>
+                    <div class="bg-white/10 border border-white/20 rounded-xl px-3 py-2 flex flex-col items-center justify-center min-w-[50px] backdrop-blur-sm">
+                      <span class="text-xl font-black leading-none mb-1">{{ countdown.minutes }}</span>
+                      <span class="text-[8px] uppercase tracking-wider opacity-75">Mnt</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <a 
+                  v-else-if="timeRemaining <= 0 && timeEndRemaining > 0"
+                  :href="course.meeting_url || '#'" 
+                  target="_blank"
+                  class="w-full sm:w-auto px-8 py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-extrabold text-sm transition-all shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 animate-pulse"
+                >
+                  <Presentation :size="18" /> Join Live Session
+                </a>
+
+                <span v-else-if="timeEndRemaining <= 0" class="px-6 py-3 bg-white/10 text-white/80 rounded-2xl font-extrabold text-sm border border-white/20">
+                  Sesi Telah Berakhir
+                </span>
+              </template>
+            </div>
+          </div>
+
           <!-- A. LESSON COMPONENT PLAYER -->
-          <div v-if="activeLesson" class="flex flex-col gap-6">
+          <div v-if="activeLesson && (course.course_type !== 'live_class' || !course.start_date || timeRemaining <= 0)" class="flex flex-col gap-6">
             <!-- Canva / Google Slides Player Frame -->
             <div v-if="activeLessonType === 'slides'" class="w-full">
               <div v-if="getEmbedUrl" class="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-slate-50 relative">
@@ -742,6 +991,13 @@ const Logo = () => {
               <div v-else class="text-slate-500 font-medium text-xs sm:text-sm leading-relaxed whitespace-pre-line">
                 {{ activeLessonType === 'ppt' ? (activeLesson?.content && activeLesson?.content.startsWith('{') ? JSON.parse(activeLesson.content).summary : activeLesson?.content) : activeLesson?.content || 'Materi video panduan untuk mempersiapkan tools pemrograman yang mendukung pembelajaran secara terstruktur.' }}
               </div>
+
+              <!-- QnA Discussion Section -->
+              <MaterialDiscussion 
+                v-if="activeLesson"
+                :course-id="course.id"
+                :lesson-id="activeLesson.id"
+              />
 
             </div>
           </div>

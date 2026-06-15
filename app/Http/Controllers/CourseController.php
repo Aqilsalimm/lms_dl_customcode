@@ -176,24 +176,27 @@ class CourseController extends Controller
         } else {
             // Add lesson ID
             $completedLessons[] = $lessonIdInt;
+
+            // Log completion in student_learning_logs
+            \App\Models\StudentLearningLog::create([
+                'user_id' => $user->id,
+                'course_id' => $course->id,
+                'lesson_id' => $lessonIdInt,
+                'activity_type' => 'lesson_complete',
+                'watch_seconds' => 0,
+                'topic_name' => $course->category->name ?? $course->title
+            ]);
         }
 
         $enrollment->completed_lessons = $completedLessons;
 
-        // Auto Complete Course Setting evaluation
-        $autoComplete = filter_var(
-            \App\Models\Setting::where('key', 'auto_complete_course')->value('value'),
-            FILTER_VALIDATE_BOOLEAN
-        );
+        // Check if all lessons AND quizzes of the course are completed
+        $totalLessonsCount = $course->lessons()->count();
+        $totalQuizzesCount = \App\Models\Quiz::whereIn('module_id', $course->modules()->pluck('id'))->count();
+        $completedQuizzes = $enrollment->completed_quizzes ?? [];
 
-        if ($autoComplete) {
-            // Check if all lessons of the course are completed
-            $totalLessonsCount = $course->lessons()->count();
-            if (count($completedLessons) >= $totalLessonsCount) {
-                $enrollment->completed_at = now();
-            } else {
-                $enrollment->completed_at = null;
-            }
+        if (count($completedLessons) >= $totalLessonsCount && count($completedQuizzes) >= $totalQuizzesCount) {
+            $enrollment->completed_at = now();
         } else {
             $enrollment->completed_at = null;
         }
@@ -205,6 +208,84 @@ class CourseController extends Controller
             'completedAt' => $enrollment->completed_at,
         ]);
     }
+
+    /**
+     * Mark a quiz as passed/completed for the current user.
+     */
+    public function toggleQuizComplete(Request $request, string $slug, string $quizId)
+    {
+        if (!auth()->check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $course = Course::where('slug', $slug)->firstOrFail();
+        $user = auth()->user();
+
+        // Get the user's enrollment
+        $enrollment = \App\Models\Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->firstOrFail();
+
+        $completedQuizzes = $enrollment->completed_quizzes ?? [];
+        
+        $quizIdInt = (int) $quizId;
+        if (!in_array($quizIdInt, $completedQuizzes)) {
+            $completedQuizzes[] = $quizIdInt;
+        }
+
+        $enrollment->completed_quizzes = $completedQuizzes;
+
+        // Check if all lessons AND quizzes are completed
+        $totalLessonsCount = $course->lessons()->count();
+        $totalQuizzesCount = \App\Models\Quiz::whereIn('module_id', $course->modules()->pluck('id'))->count();
+        $completedLessons = $enrollment->completed_lessons ?? [];
+
+        if (count($completedLessons) >= $totalLessonsCount && count($completedQuizzes) >= $totalQuizzesCount) {
+            $enrollment->completed_at = now();
+        } else {
+            $enrollment->completed_at = null;
+        }
+
+        $enrollment->save();
+
+        return response()->json([
+            'completedQuizzes' => $completedQuizzes,
+            'completedAt' => $enrollment->completed_at,
+        ]);
+    }
+
+    /**
+     * Log student learning progress (video play duration or lesson viewing)
+     */
+    public function logProgress(Request $request, string $slug, string $lessonId)
+    {
+        if (!auth()->check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $course = Course::where('slug', $slug)->firstOrFail();
+        $user = auth()->user();
+        
+        $request->validate([
+            'watch_seconds' => 'required|integer',
+            'activity_type' => 'required|string'
+        ]);
+
+        $lesson = \App\Models\Lesson::findOrFail($lessonId);
+
+        // Store log
+        $log = \App\Models\StudentLearningLog::create([
+            'user_id' => $user->id,
+            'course_id' => $course->id,
+            'lesson_id' => $lesson->id,
+            'activity_type' => $request->activity_type,
+            'watch_seconds' => $request->watch_seconds,
+            'topic_name' => $course->category->name ?? $course->title
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
 
     /**
      * View/Print course certificate
@@ -228,9 +309,14 @@ class CourseController extends Controller
             ->where('course_id', $course->id)
             ->first();
 
-        // Safe fallback: completed if explicitly marked or completed lessons count >= total course lessons
+        $totalLessonsCount = $course->lessons()->count();
+        $totalQuizzesCount = \App\Models\Quiz::whereIn('module_id', $course->modules()->pluck('id'))->count();
+
+        // Safe fallback: completed if explicitly marked or completed lessons + quizzes are fully completed
         $isCompleted = ($enrollment && $enrollment->completed_at !== null) || 
-                       ($enrollment && count($enrollment->completed_lessons ?? []) >= $course->lessons()->count());
+                       ($enrollment && 
+                        count($enrollment->completed_lessons ?? []) >= $totalLessonsCount && 
+                        count($enrollment->completed_quizzes ?? []) >= $totalQuizzesCount);
 
         // Admins and instructors can always preview
         $canAccess = $user->isAdmin() || $isAuthor || $isCompleted;

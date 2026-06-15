@@ -6,12 +6,7 @@ import {
 } from 'lucide-vue-next';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 
-// Leaflet.js setup
-import 'leaflet/dist/leaflet.css';
-import { LMap, LTileLayer, LMarker, LPopup } from '@vue-leaflet/vue-leaflet';
-
-const zoom = ref(15);
-const center = ref([-7.4008, 112.7592]);
+// Leaflet is removed in favor of Google Maps Embed
 
 const props = defineProps({
   courses: Array
@@ -19,6 +14,8 @@ const props = defineProps({
 
 // State for active search query
 const searchQuery = ref('');
+const courseTypeFilter = ref('Semua Mode');
+const showCourseTypeDropdown = ref(false);
 
 // Computed activeFilter dynamically listening to Ziggy query parameters
 const activeFilter = computed({
@@ -88,6 +85,13 @@ const filteredCourses = computed(() => {
     result = result.filter(course => course.level === activeFilter.value);
   }
 
+  if (courseTypeFilter.value !== 'Semua Mode') {
+    result = result.filter(course => {
+      const isLive = courseTypeFilter.value === 'Kelas Kursus / Live Class';
+      return (isLive && course.course_type === 'live_class') || (!isLive && course.course_type !== 'live_class');
+    });
+  }
+
   if (searchQuery.value) {
     result = result.filter(course => course.title.toLowerCase().includes(searchQuery.value.toLowerCase()));
   }
@@ -130,12 +134,22 @@ const gridColsClass = computed(() => {
           <ChevronDown :size="18" class="text-slate-400" />
         </div>
 
-        <div class="w-full md:w-56 bg-white rounded-full px-5 py-3.5 flex items-center justify-between shadow-[0_4px_15px_rgb(0,0,0,0.02)] border border-slate-100/50 cursor-pointer">
-          <div class="flex items-center gap-3">
-            <Globe :size="20" class="text-[#1A2B49]" />
-            <span class="text-[#1A2B49] font-bold text-sm">Mode Belajar</span>
+        <div class="relative w-full md:w-56">
+          <div 
+            @click="showCourseTypeDropdown = !showCourseTypeDropdown"
+            class="bg-white rounded-full px-5 py-3.5 flex items-center justify-between shadow-[0_4px_15px_rgb(0,0,0,0.02)] border border-slate-100/50 cursor-pointer"
+          >
+            <div class="flex items-center gap-3">
+              <Globe :size="20" class="text-[#1A2B49]" />
+              <span class="text-[#1A2B49] font-bold text-sm line-clamp-1">{{ courseTypeFilter }}</span>
+            </div>
+            <ChevronDown :size="18" class="text-slate-400" />
           </div>
-          <ChevronDown :size="18" class="text-slate-400" />
+          
+          <div v-if="showCourseTypeDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50">
+            <div @click="courseTypeFilter = 'Semua Mode'; showCourseTypeDropdown = false" class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49]">Semua Mode</div>
+            <div @click="courseTypeFilter = 'Kelas Kursus / Live Class'; showCourseTypeDropdown = false" class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49]">Kelas Kursus / Live Class</div>
+          </div>
         </div>
 
         <button class="bg-[#264790] hover:bg-[#1a2b49] text-white font-extrabold py-3.5 px-8 rounded-full shadow-md transition-colors text-sm whitespace-nowrap">
@@ -209,7 +223,7 @@ const gridColsClass = computed(() => {
                 </li>
                 <li class="flex items-center gap-3 text-slate-500 text-sm font-medium">
                   <Clock :size="16" class="text-slate-400" />
-                  <span>{{ course.duration || '1 Hour for 1 Session' }}</span>
+                  <span>{{ course.access_duration_months ? course.access_duration_months + ' Bulan' : (course.duration || '1 Hour for 1 Session') }}</span>
                 </li>
                 <li class="flex items-center gap-3 text-slate-500 text-sm font-medium">
                   <MapPin :size="16" class="text-slate-400" />
@@ -225,7 +239,7 @@ const gridColsClass = computed(() => {
                 <span class="text-[#1A2B49] font-extrabold text-xl">
                   {{ formatPrice(course.price) }}
                 </span>
-                <span class="text-slate-400 font-medium text-xs">{{ course.period || '/ Bulan' }}</span>
+                <span v-if="course.payment_type !== 'one-time'" class="text-slate-400 font-medium text-xs">/ Bulan</span>
               </div>
             </div>
           </Link>
@@ -250,31 +264,19 @@ const gridColsClass = computed(() => {
 
         </div>
 
-        <!-- Google Maps Location Frame Sidebar (using Leaflet.js) -->
-        <div class="w-full lg:w-[40%] xl:w-[35%] lg:sticky lg:top-28 h-[500px] bg-slate-200 rounded-[2rem] overflow-hidden shadow-sm border border-slate-100 relative z-0">
+        <!-- Google Maps Location Frame Sidebar -->
+        <div class="w-full lg:w-[40%] xl:w-[35%] lg:sticky lg:top-28 h-[500px] rounded-2xl overflow-hidden shadow-md relative z-0">
            
-           <l-map ref="map" v-model:zoom="zoom" :center="center" :use-global-leaflet="false" style="height: 100%; width: 100%;">
-             <l-tile-layer
-               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-               layer-type="base"
-               name="OpenStreetMap"
-             ></l-tile-layer>
-             
-             <l-marker :lat-lng="center">
-               <l-popup>
-                 <div class="text-center font-montserrat">
-                   <h4 class="font-extrabold text-[#1A2B49] text-sm">Drastha Learning</h4>
-                   <p class="text-xs text-slate-500 mt-1 font-semibold">Pusat Kelas Offline</p>
-                 </div>
-               </l-popup>
-             </l-marker>
-           </l-map>
+           <iframe 
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15826.115904033626!2d112.75402035!3d-7.40082715!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2dd7e42d764b8a21%3A0xc3f8373b8cb4005b!2sPerum%20Citra%20Surya%20Mas%20Sidoarjo!5e0!3m2!1sen!2sid!4v1718451151608!5m2!1sen!2sid" 
+            width="100%" 
+            height="100%" 
+            style="border:0;" 
+            allowfullscreen="" 
+            loading="lazy" 
+            referrerpolicy="no-referrer-when-downgrade">
+           </iframe>
            
-           <div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-6 py-3 rounded-full flex items-center gap-2 shadow-lg z-[1000] pointer-events-none">
-             <MapPin class="text-[#FF4D4F]" :size="18" />
-             <span class="font-bold text-[#1A2B49] text-sm">Lokasi Kelas Offline</span>
-           </div>
-
         </div>
 
       </div>

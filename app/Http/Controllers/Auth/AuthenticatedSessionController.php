@@ -47,6 +47,6 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect('/')->with('logout_message', 'Anda telah berhasil keluar dari akun Anda. Silakan masuk kembali dengan menggunakan akun terdaftar sebelumnya untuk melanjutkan aktivitas belajar Anda.');
     }
 }

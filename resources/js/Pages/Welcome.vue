@@ -464,7 +464,7 @@ const rightFeatures = ref([
                   <span class="text-[#1A2B49] font-extrabold text-xl">
                     {{ formatPrice(course.price) }}
                   </span>
-                  <span class="text-slate-400 font-medium text-xs">{{ course.period || '/ Bulan' }}</span>
+                  <span v-if="course.payment_type !== 'one-time'" class="text-slate-400 font-medium text-xs">/ Bulan</span>
                 </div>
 
               </div>

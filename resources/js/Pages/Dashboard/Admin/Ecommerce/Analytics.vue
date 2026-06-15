@@ -104,46 +104,6 @@ const hoveredPoint = ref(null);
         </div>
       </div>
 
-      <!-- SUB NAVIGATION -->
-      <div class="flex border-b border-slate-200 overflow-x-auto pb-px gap-6 mb-2">
-        <Link 
-          :href="route('dashboard.ecommerce.analytics')"
-          :class="[
-            route().current('dashboard.ecommerce.analytics')
-              ? 'border-[#264790] text-[#264790] font-extrabold' 
-              : 'border-transparent text-slate-500 hover:text-[#264790] font-semibold'
-          ]"
-          class="flex items-center gap-2 py-4 px-1 border-b-2 text-sm whitespace-nowrap transition-all duration-200 cursor-pointer"
-        >
-          <BarChart3 :size="16" />
-          Analytics Dashboard
-        </Link>
-        <Link 
-          :href="route('dashboard.ecommerce.coupons')"
-          :class="[
-            route().current('dashboard.ecommerce.coupons')
-              ? 'border-[#264790] text-[#264790] font-extrabold' 
-              : 'border-transparent text-slate-500 hover:text-[#264790] font-semibold'
-          ]"
-          class="flex items-center gap-2 py-4 px-1 border-b-2 text-sm whitespace-nowrap transition-all duration-200 cursor-pointer"
-        >
-          <Tag :size="16" />
-          Coupon & Discount
-        </Link>
-        <Link 
-          :href="route('dashboard.ecommerce.settings')"
-          :class="[
-            route().current('dashboard.ecommerce.settings')
-              ? 'border-[#264790] text-[#264790] font-extrabold' 
-              : 'border-transparent text-slate-500 hover:text-[#264790] font-semibold'
-          ]"
-          class="flex items-center gap-2 py-4 px-1 border-b-2 text-sm whitespace-nowrap transition-all duration-200 cursor-pointer"
-        >
-          <Settings :size="16" />
-          Abandoned Cart Recovery
-        </Link>
-      </div>
-
       <!-- METRICS GRID -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         

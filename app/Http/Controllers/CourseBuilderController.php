@@ -57,6 +57,10 @@ class CourseBuilderController extends Controller
             'category_id' => 'nullable|exists:categories,id',
             'price' => 'required|numeric|min:0',
             'level' => 'required|string|in:SD,SMP,SMA,Umum',
+            'course_type' => 'required|string|in:async,live_class',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'meeting_url' => 'nullable|string',
         ]);
 
         $course = Course::create([
@@ -65,6 +69,10 @@ class CourseBuilderController extends Controller
             'title' => $request->title,
             'price' => $request->price,
             'level' => $request->level,
+            'course_type' => $request->course_type,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'meeting_url' => $request->meeting_url,
             'status' => 'draft',
             'icon_type' => 'code',
             'bg_color' => '#44A6D9',
@@ -125,6 +133,7 @@ class CourseBuilderController extends Controller
             'title' => 'required|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
             'price' => 'required|numeric|min:0',
+            'payment_type' => 'nullable|string|in:one-time,monthly',
             'access_duration_months' => 'nullable|integer|min:0',
             'level' => 'required|string|in:SD,SMP,SMA,Umum',
             'capacity' => 'nullable|integer|min:1',
@@ -134,12 +143,27 @@ class CourseBuilderController extends Controller
             'thumbnail' => 'nullable',
             'bg_color' => 'nullable|string',
             'icon_type' => 'nullable|string',
+            'course_type' => 'nullable|string|in:async,live_class',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'timezone' => 'nullable|string',
+            'meeting_url' => 'nullable|string',
+            'recording_url' => 'nullable|string',
+            'max_participants' => 'nullable|integer|min:1',
+            'is_event_finished' => 'nullable|boolean',
+            'tools' => 'nullable|array',
         ]);
 
         $data = $request->only([
-            'title', 'category_id', 'price', 'access_duration_months', 'level', 'capacity', 'status',
-            'description', 'about', 'bg_color', 'icon_type'
+            'title', 'category_id', 'price', 'payment_type', 'access_duration_months', 'level', 'capacity', 'status',
+            'description', 'about', 'bg_color', 'icon_type', 'course_type', 'start_date', 'end_date',
+            'timezone', 'meeting_url', 'recording_url', 'max_participants', 'is_event_finished', 'tools'
         ]);
+
+        // Convert string representations of true/false to boolean
+        if (isset($data['is_event_finished'])) {
+            $data['is_event_finished'] = filter_var($data['is_event_finished'], FILTER_VALIDATE_BOOLEAN);
+        }
 
         if ($request->hasFile('thumbnail')) {
             $path = $request->file('thumbnail')->store('courses/thumbnails', 'public');
@@ -147,11 +171,16 @@ class CourseBuilderController extends Controller
         } elseif ($request->has('thumbnail')) {
             $data['thumbnail'] = $request->thumbnail;
         }
+        if (!$request->has('tools')) {
+            $data['tools'] = [];
+        }
 
         $course->update($data);
 
         if ($request->has('tags')) {
             $course->tags()->sync($request->tags);
+        } else {
+            $course->tags()->sync([]);
         }
 
         return response()->json([
@@ -234,8 +263,8 @@ class CourseBuilderController extends Controller
 
     public function addLesson(Request $request, Module $module)
     {
-        $contentObj = json_decode($request->content, true);
-        if ($contentObj && isset($contentObj['type']) && $contentObj['type'] === 'ppt') {
+        $slideContentObj = is_array($request->slide_content) ? $request->slide_content : json_decode($request->slide_content, true);
+        if ($slideContentObj && isset($slideContentObj['type']) && $slideContentObj['type'] === 'ppt') {
             $settings = \App\Models\Setting::pluck('value', 'key')->toArray();
             $enableNativePpt = !isset($settings['enable_native_ppt']) || ($settings['enable_native_ppt'] !== 'false' && $settings['enable_native_ppt'] !== false && $settings['enable_native_ppt'] !== '0' && $settings['enable_native_ppt'] !== 0);
             if (!$enableNativePpt) {
@@ -263,6 +292,7 @@ class CourseBuilderController extends Controller
                     }
                 }
             ],
+            'slide_content' => 'nullable',
             'duration_minutes' => 'required|integer|min:0',
         ]);
 
@@ -279,6 +309,7 @@ class CourseBuilderController extends Controller
             'content' => $request->content,
             'video_url' => $request->video_url,
             'slide_url' => $slideUrl,
+            'slide_content' => $request->slide_content,
             'duration_minutes' => $request->duration_minutes,
             'sort_order' => $sortOrder
         ]);
@@ -291,8 +322,8 @@ class CourseBuilderController extends Controller
 
     public function updateLesson(Request $request, Lesson $lesson)
     {
-        $contentObj = json_decode($request->content, true);
-        if ($contentObj && isset($contentObj['type']) && $contentObj['type'] === 'ppt') {
+        $slideContentObj = is_array($request->slide_content) ? $request->slide_content : json_decode($request->slide_content, true);
+        if ($slideContentObj && isset($slideContentObj['type']) && $slideContentObj['type'] === 'ppt') {
             $settings = \App\Models\Setting::pluck('value', 'key')->toArray();
             $enableNativePpt = !isset($settings['enable_native_ppt']) || ($settings['enable_native_ppt'] !== 'false' && $settings['enable_native_ppt'] !== false && $settings['enable_native_ppt'] !== '0' && $settings['enable_native_ppt'] !== 0);
             if (!$enableNativePpt) {
@@ -320,6 +351,7 @@ class CourseBuilderController extends Controller
                     }
                 }
             ],
+            'slide_content' => 'nullable',
             'duration_minutes' => 'required|integer|min:0',
         ]);
 
@@ -333,6 +365,7 @@ class CourseBuilderController extends Controller
             'content' => $request->content,
             'video_url' => $request->video_url,
             'slide_url' => $slideUrl,
+            'slide_content' => $request->slide_content,
             'duration_minutes' => $request->duration_minutes,
         ]);
 

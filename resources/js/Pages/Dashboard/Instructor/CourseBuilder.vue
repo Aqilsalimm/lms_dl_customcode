@@ -41,8 +41,17 @@ const currentStep = ref(1);
 const form = ref({
   title: props.course.title,
   price: parseFloat(props.course.price),
+  payment_type: props.course.payment_type || 'monthly',
   level: props.course.level,
   status: props.course.status,
+  course_type: props.course.course_type || 'async',
+  start_date: props.course.start_date ? (props.course.start_date.includes('T') ? props.course.start_date.substring(0, 16) : props.course.start_date.split(' ')[0] + 'T' + (props.course.start_date.split(' ')[1] || '00:00').substring(0, 5)) : '',
+  end_date: props.course.end_date ? (props.course.end_date.includes('T') ? props.course.end_date.substring(0, 16) : props.course.end_date.split(' ')[0] + 'T' + (props.course.end_date.split(' ')[1] || '00:00').substring(0, 5)) : '',
+  timezone: props.course.timezone || 'Asia/Jakarta',
+  meeting_url: props.course.meeting_url || '',
+  recording_url: props.course.recording_url || '',
+  max_participants: props.course.max_participants || 100,
+  is_event_finished: props.course.is_event_finished || false,
   description: props.course.description || '',
   about: props.course.about || '',
   bg_color: props.course.bg_color || '#44A6D9',
@@ -50,7 +59,8 @@ const form = ref({
   category_id: props.course.category_id || '',
   capacity: props.course.capacity || 20,
   access_duration_months: props.course.access_duration_months || 0,
-  tags: props.course.tags ? props.course.tags.map(t => t.id) : []
+  tags: props.course.tags ? props.course.tags.map(t => t.id) : [],
+  tools: props.course.tools || []
 });
 
 // Step 1 - Local Mock / Layout States to match UI requirements exactly
@@ -442,8 +452,14 @@ const generateMeetingLink = () => {
   showMeetingModal.value = false;
 };
 
-// Save & Next Step
-const handleUpdate = () => {
+// Save & Next Step or Draft
+const saveAsDraft = () => {
+  form.value.status = 'draft';
+  isVisibilityPublic.value = false;
+  handleUpdate(true);
+};
+
+const handleUpdate = (stayOnPage = false) => {
   // Sync step 3 configurations into form.about
   form.value.about = JSON.stringify(additionalForm.value);
 
@@ -452,6 +468,7 @@ const handleUpdate = () => {
   formData.append('_method', 'PUT');
   formData.append('title', form.value.title);
   formData.append('price', form.value.price);
+  formData.append('payment_type', form.value.payment_type);
   formData.append('level', form.value.level);
   formData.append('status', form.value.status);
   formData.append('description', form.value.description);
@@ -460,6 +477,14 @@ const handleUpdate = () => {
   formData.append('icon_type', form.value.icon_type);
   formData.append('capacity', form.value.capacity);
   formData.append('access_duration_months', form.value.access_duration_months || 0);
+  formData.append('course_type', form.value.course_type);
+  formData.append('start_date', form.value.start_date || '');
+  formData.append('end_date', form.value.end_date || '');
+  formData.append('timezone', form.value.timezone || '');
+  formData.append('meeting_url', form.value.meeting_url || '');
+  formData.append('recording_url', form.value.recording_url || '');
+  formData.append('max_participants', form.value.max_participants || '');
+  formData.append('is_event_finished', form.value.is_event_finished ? 1 : 0);
   if (form.value.category_id) {
     formData.append('category_id', form.value.category_id);
   }
@@ -469,6 +494,11 @@ const handleUpdate = () => {
   form.value.tags.forEach(t => {
     formData.append('tags[]', t);
   });
+  if (form.value.tools && form.value.tools.length > 0) {
+    form.value.tools.forEach((tool, index) => {
+      formData.append(`tools[${index}]`, tool);
+    });
+  }
 
   axios.post(`/course-builder/courses/${props.course.id}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
@@ -478,7 +508,7 @@ const handleUpdate = () => {
       form.value.status = res.data.course.status;
       isVisibilityPublic.value = res.data.course.status === 'published';
     }
-    if (currentStep.value < 3) {
+    if (!stayOnPage && currentStep.value < 3) {
       currentStep.value++;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
@@ -567,7 +597,16 @@ const openLessonModal = (module, lesson = null) => {
     let parsedExerciseFiles = [];
     let parsedIsPreview = false;
 
-    if (parsedContent.startsWith('{') && parsedContent.endsWith('}')) {
+    if (lesson.slide_content) {
+      try {
+        const slideContentObj = typeof lesson.slide_content === 'string' ? JSON.parse(lesson.slide_content) : lesson.slide_content;
+        if (slideContentObj && slideContentObj.type === 'ppt') {
+          parsedType = 'ppt';
+          parsedPptSlides = slideContentObj.slides || [];
+        }
+      } catch (e) {}
+    } else if (parsedContent.startsWith('{') && parsedContent.endsWith('}')) {
+      // Legacy fallback for old data
       try {
         const obj = JSON.parse(parsedContent);
         parsedType = obj.type || 'video';
@@ -587,10 +626,10 @@ const openLessonModal = (module, lesson = null) => {
         parsedContent = lesson.content || '';
       }
     } else {
-      if (lesson.video_url) {
+      if (lesson.slide_url) {
+        parsedType = 'slides';
+      } else if (lesson.video_url) {
         parsedType = 'video';
-      } else {
-        parsedType = 'ppt';
       }
       parsedPlaybackTime = { hour: Math.floor(lesson.duration_minutes / 60), min: lesson.duration_minutes % 60, sec: 0 };
     }
@@ -674,6 +713,7 @@ const saveLesson = () => {
     content: JSON.stringify(finalContentObj),
     video_url: finalVideoUrl,
     slide_url: lessonForm.value.lesson_type === 'slides' ? lessonForm.value.slides_url : '',
+    slide_content: lessonForm.value.lesson_type === 'ppt' ? { type: 'ppt', slides: lessonForm.value.ppt_slides } : null,
     duration_minutes: calcDuration
   };
 
@@ -1314,7 +1354,13 @@ const startQuizImport = () => {
             Preview <ExternalLink :size="12" />
           </a>
           <button 
-            @click="handleUpdate"
+            @click="saveAsDraft"
+            class="px-5 py-2.5 rounded-full border-2 border-amber-200 hover:border-amber-300 bg-amber-50 font-bold text-xs text-amber-700 hover:text-amber-800 transition-all flex items-center gap-1.5"
+          >
+            <Save :size="12" /> Simpan Draft
+          </button>
+          <button 
+            @click="handleUpdate(false)"
             class="px-6 py-2.5 rounded-full bg-[#264790] hover:bg-[#44A6D9] text-white font-bold text-xs transition-all flex items-center gap-1.5 shadow-sm"
           >
             {{ currentStep === 3 ? 'Finish & Save' : 'Update' }} <ChevronRight :size="14" />
@@ -1357,8 +1403,8 @@ const startQuizImport = () => {
                 />
               </div>
 
-              <!-- Session Info & Duration Selects -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <!-- Session Info & Duration Selects (Async) -->
+              <div v-if="form.course_type === 'async'" class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label class="block text-slate-400 text-xs font-bold mb-2 uppercase tracking-wide">Session Info</label>
                   <select 
@@ -1388,6 +1434,79 @@ const startQuizImport = () => {
                 </div>
               </div>
 
+              <!-- Live Class Scheduling -->
+              <div v-if="form.course_type === 'live_class'" class="flex flex-col gap-5 border border-amber-200 bg-amber-50/50 p-5 rounded-2xl">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-sm font-extrabold text-[#1A2B49] flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                    Live Class Settings
+                  </h4>
+                  <div class="flex items-center gap-2">
+                    <label class="text-xs font-bold text-slate-600">Acara Selesai (Event Finished)</label>
+                    <button 
+                      type="button"
+                      @click="form.is_event_finished = !form.is_event_finished"
+                      :class="form.is_event_finished ? 'bg-[#264790]' : 'bg-slate-300'"
+                      class="w-10 h-5 rounded-full p-1 transition-colors duration-300 relative focus:outline-none"
+                    >
+                      <span 
+                        :class="form.is_event_finished ? 'translate-x-5' : 'translate-x-0'"
+                        class="block w-3 h-3 rounded-full bg-white shadow-md transform transition-transform duration-300"
+                      ></span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-wide">Tanggal Mulai</label>
+                    <input 
+                      v-model="form.start_date" 
+                      type="datetime-local" 
+                      class="w-full bg-white border border-slate-200 focus:border-[#264790] rounded-xl px-4 py-2 outline-none text-[#1A2B49] font-medium text-sm transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-wide">Tanggal Selesai</label>
+                    <input 
+                      v-model="form.end_date" 
+                      type="datetime-local" 
+                      class="w-full bg-white border border-slate-200 focus:border-[#264790] rounded-xl px-4 py-2 outline-none text-[#1A2B49] font-medium text-sm transition-colors"
+                    />
+                  </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div v-if="!form.is_event_finished">
+                    <label class="block text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-wide">Link Meeting (Zoom/GMeet)</label>
+                    <input 
+                      v-model="form.meeting_url" 
+                      type="url" 
+                      placeholder="https://zoom.us/..."
+                      class="w-full bg-white border border-slate-200 focus:border-[#264790] rounded-xl px-4 py-2 outline-none text-[#1A2B49] font-medium text-sm transition-colors"
+                    />
+                  </div>
+                  <div v-if="form.is_event_finished">
+                    <label class="block text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-wide">Link Recording (Youtube/Drive)</label>
+                    <input 
+                      v-model="form.recording_url" 
+                      type="url" 
+                      placeholder="https://youtu.be/..."
+                      class="w-full bg-white border border-slate-200 focus:border-emerald-500 rounded-xl px-4 py-2 outline-none text-[#1A2B49] font-medium text-sm transition-colors ring-2 ring-emerald-500/20"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-wide">Batas Kuota Maksimal</label>
+                    <input 
+                      v-model.number="form.max_participants" 
+                      type="number" 
+                      placeholder="Kosongkan jika tak terbatas"
+                      class="w-full bg-white border border-slate-200 focus:border-[#264790] rounded-xl px-4 py-2 outline-none text-[#1A2B49] font-medium text-sm transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
+
             </div>
 
             <!-- Extra Details Grid -->
@@ -1408,12 +1527,11 @@ const startQuizImport = () => {
               <div>
                 <label class="block text-slate-400 text-xs font-bold mb-2 uppercase tracking-wide">Tipe Satuan Produk</label>
                 <select 
-                  v-model="productUnitType" 
+                  v-model="form.payment_type" 
                   class="w-full bg-white border border-slate-200 hover:border-slate-300 focus:border-[#264790] rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium cursor-pointer transition-all shadow-[0_8px_30px_rgb(0,0,0,0.01)]"
                 >
-                  <option>Tipe Satuan Produk</option>
-                  <option>Sekali Bayar</option>
-                  <option>Langganan Bulanan</option>
+                  <option value="one-time">Sekali Bayar</option>
+                  <option value="monthly">Langganan Bulanan</option>
                 </select>
               </div>
 
@@ -1457,6 +1575,7 @@ const startQuizImport = () => {
                     <Settings :size="14" /> General
                   </button>
                   <button 
+                    v-if="form.course_type === 'async'"
                     @click="activeOptionsTab = 'drip'"
                     :class="activeOptionsTab === 'drip' ? 'bg-[#F4F7F9] text-[#264790]' : 'text-slate-500 hover:bg-slate-50'"
                     class="w-full text-left px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2"
@@ -1469,6 +1588,14 @@ const startQuizImport = () => {
                     class="w-full text-left px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2"
                   >
                     <RefreshCw :size="14" /> Enrollment
+                  </button>
+                  <button 
+                    v-if="form.course_type === 'live_class'"
+                    @click="activeOptionsTab = 'preparation'"
+                    :class="activeOptionsTab === 'preparation' ? 'bg-[#F4F7F9] text-[#264790]' : 'text-slate-500 hover:bg-slate-50'"
+                    class="w-full text-left px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2"
+                  >
+                    <BookOpen :size="14" /> Preparation
                   </button>
                 </div>
 
@@ -1507,7 +1634,7 @@ const startQuizImport = () => {
                     </div>
                   </div>
 
-                  <div v-if="activeOptionsTab === 'drip'" class="flex flex-col gap-4">
+                  <div v-if="activeOptionsTab === 'drip' && form.course_type === 'async'" class="flex flex-col gap-4">
                     <div>
                       <h4 class="text-base font-extrabold text-[#1A2B49] mb-1">Content Drip Type</h4>
                       <p class="text-xs text-slate-400 mb-5 leading-relaxed">
@@ -1573,6 +1700,19 @@ const startQuizImport = () => {
                         <input type="checkbox" id="limitEnroll" class="w-4 h-4 text-[#264790]" />
                         <label for="limitEnroll" class="text-xs font-bold text-slate-500">Batasi Akses Kelas (120 Hari)</label>
                       </div>
+                    </div>
+                  </div>
+
+                  <div v-if="activeOptionsTab === 'preparation' && form.course_type === 'live_class'" class="flex flex-col gap-4">
+                    <div>
+                      <h4 class="text-base font-extrabold text-[#1A2B49] mb-1">Persiapan & Prasyarat Acara</h4>
+                      <p class="text-xs text-slate-400 mb-5 leading-relaxed">
+                        Tambahkan daftar software, link repository, atau materi persiapan lainnya sebelum acara dimulai.
+                      </p>
+                      <RichTextEditor 
+                        v-model="additionalForm.requirements"
+                        placeholder="Contoh: Silakan install VSCode dan Node.js sebelum sesi dimulai..."
+                      />
                     </div>
                   </div>
 
@@ -1803,6 +1943,41 @@ const startQuizImport = () => {
                 >
                   {{ t.name }}
                 </button>
+              </div>
+            </div>
+
+            <!-- Tools Kelas Card -->
+            <div class="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex flex-col gap-3">
+              <h3 class="text-sm font-bold text-[#1A2B49] uppercase tracking-wide">Tools Kelas</h3>
+              
+              <div class="relative flex items-center">
+                <span class="absolute left-3.5 text-slate-400"><PlusCircle :size="14" /></span>
+                <input 
+                  type="text" 
+                  placeholder="Ketik lalu Enter..." 
+                  class="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-[#264790] focus:bg-white rounded-xl pl-9 pr-3 py-2 outline-none text-xs text-[#1A2B49] font-medium"
+                  @keydown.enter.prevent="
+                    if ($event.target.value.trim() && !form.tools.includes($event.target.value.trim())) {
+                      form.tools.push($event.target.value.trim());
+                      $event.target.value = '';
+                    }
+                  "
+                />
+              </div>
+
+              <!-- Tools list -->
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                <div 
+                  v-for="(tool, index) in form.tools" 
+                  :key="index"
+                  class="group flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-extrabold rounded-lg border bg-[#264790]/10 text-[#264790] border-[#264790]/25 transition-all"
+                >
+                  {{ tool }}
+                  <X :size="10" class="cursor-pointer hover:text-red-500" @click="form.tools.splice(index, 1)" />
+                </div>
+                <div v-if="!form.tools || form.tools.length === 0" class="text-xs text-slate-400 font-medium">
+                  Belum ada tools ditambahkan.
+                </div>
               </div>
             </div>
 
@@ -2557,31 +2732,10 @@ const startQuizImport = () => {
               <div>
                 <label class="block text-slate-700 text-sm font-medium mb-2">Content</label>
                 <div class="border border-slate-200 rounded-md bg-white flex flex-col">
-                  <!-- Toolbar -->
-                  <div class="flex flex-wrap items-center gap-1 p-2 border-b border-slate-200">
-                    <button class="px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded text-xs font-semibold flex items-center gap-1">
-                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> Add media
-                    </button>
-                    <div class="flex-1"></div>
-                    <div class="flex bg-slate-100 rounded overflow-hidden">
-                      <button class="px-3 py-1 bg-white text-slate-700 text-xs shadow-sm border border-slate-200">Visual</button>
-                      <button class="px-3 py-1 text-slate-500 text-xs">Code</button>
-                    </div>
-                  </div>
-                  <!-- Editor Icons -->
-                  <div class="flex flex-wrap items-center gap-2 p-2 border-b border-slate-200 bg-slate-50/50">
-                    <select class="text-xs border border-slate-200 rounded px-2 py-1 bg-white outline-none"><option>Paragraph</option></select>
-                    <div class="h-4 w-px bg-slate-300"></div>
-                    <button class="p-1 hover:bg-slate-200 rounded text-slate-700 font-bold">B</button>
-                    <button class="p-1 hover:bg-slate-200 rounded text-slate-700 italic font-serif">I</button>
-                    <button class="p-1 hover:bg-slate-200 rounded text-slate-700 underline">U</button>
-                    <div class="h-4 w-px bg-slate-300"></div>
-                    <button class="p-1 hover:bg-slate-200 rounded text-slate-600"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
-                  </div>
-                  <!-- Editor Area -->
-                  <textarea v-model="lessonForm.content" rows="12" class="w-full p-4 outline-none resize-y min-h-[250px] text-sm text-slate-700"></textarea>
-                  <!-- Resize Handle -->
-                  <div class="h-2 bg-slate-50 border-t border-slate-200 cursor-ns-resize flex justify-end px-1"><svg class="w-3 h-3 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 9h4M10 15h4M15 4l-3-3-3 3M15 20l-3 3-3-3"></path></svg></div>
+                  <RichTextEditor 
+                    v-model="lessonForm.content"
+                    placeholder="Enter lesson content here..."
+                  />
                 </div>
               </div>
             </div>
@@ -2875,31 +3029,10 @@ const startQuizImport = () => {
               <!-- Content (Rich Text) -->
               <div>
                 <label class="block text-slate-700 text-sm font-medium mb-2">Content</label>
-                <div class="border border-slate-200 rounded-md bg-white flex flex-col">
-                  <!-- Toolbar -->
-                  <div class="flex flex-wrap items-center gap-1 p-2 border-b border-slate-200">
-                    <button class="px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded text-xs font-semibold flex items-center gap-1">
-                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> Add media
-                    </button>
-                    <div class="flex-1"></div>
-                    <div class="flex bg-slate-100 rounded overflow-hidden">
-                      <button class="px-3 py-1 bg-white text-slate-700 text-xs shadow-sm border border-slate-200">Visual</button>
-                      <button class="px-3 py-1 text-slate-500 text-xs">Code</button>
-                    </div>
-                  </div>
-                  <!-- Editor Icons -->
-                  <div class="flex flex-wrap items-center gap-2 p-2 border-b border-slate-200 bg-slate-50/50">
-                    <select class="text-xs border border-slate-200 rounded px-2 py-1 bg-white outline-none"><option>Paragraph</option></select>
-                    <div class="h-4 w-px bg-slate-300"></div>
-                    <button class="p-1 hover:bg-slate-200 rounded text-slate-700 font-bold">B</button>
-                    <button class="p-1 hover:bg-slate-200 rounded text-slate-700 italic font-serif">I</button>
-                    <button class="p-1 hover:bg-slate-200 rounded text-slate-700 underline">U</button>
-                  </div>
-                  <!-- Editor Area -->
-                  <textarea v-model="assignmentForm.content" rows="12" class="w-full p-4 outline-none resize-y min-h-[250px] text-sm text-slate-700"></textarea>
-                  <!-- Resize Handle -->
-                  <div class="h-2 bg-slate-50 border-t border-slate-200 flex justify-end px-1"><svg class="w-3 h-3 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 9h4M10 15h4M15 4l-3-3-3 3M15 20l-3 3-3-3"></path></svg></div>
-                </div>
+                  <RichTextEditor 
+                    v-model="assignmentForm.content"
+                    placeholder="Enter assignment instructions here..."
+                  />
               </div>
             </div>
 

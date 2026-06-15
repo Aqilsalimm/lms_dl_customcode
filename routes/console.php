@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('app:send-abandoned-cart-reminders')->everyMinute();
 Schedule::command('app:check-expired-enrollments')->everyMinute();
+Schedule::command('billing:process-monthly')->dailyAt('00:00');

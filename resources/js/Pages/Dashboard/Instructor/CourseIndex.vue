@@ -15,6 +15,7 @@ const isModalOpen = ref(false);
 const newCourseTitle = ref('');
 const newCourseLevel = ref('Umum');
 const newCoursePrice = ref(0);
+const newCourseType = ref('async');
 const isSubmitting = ref(false);
 
 const fileInput = ref(null);
@@ -29,6 +30,7 @@ const closeCreateModal = () => {
   newCourseTitle.value = '';
   newCourseLevel.value = 'Umum';
   newCoursePrice.value = 0;
+  newCourseType.value = 'async';
 };
 
 const triggerFileInput = () => {
@@ -72,6 +74,7 @@ const createCourse = () => {
     title: newCourseTitle.value,
     level: newCourseLevel.value,
     price: newCoursePrice.value,
+    course_type: newCourseType.value,
   }, {
     onSuccess: (page) => {
       closeCreateModal();
@@ -221,6 +224,36 @@ const deleteCourse = (courseId) => {
         <h3 class="text-xl font-extrabold text-[#1A2B49] mb-6">Tambah Kelas Baru</h3>
 
         <div class="flex flex-col gap-5">
+          <div class="grid grid-cols-2 gap-4">
+            <button 
+              @click="newCourseType = 'async'"
+              :class="newCourseType === 'async' ? 'border-[#264790] bg-blue-50/50' : 'border-slate-200 bg-slate-50 hover:border-slate-300'"
+              class="border-2 rounded-2xl p-4 text-left transition-colors flex flex-col gap-2"
+            >
+              <div class="flex items-center gap-2">
+                <div :class="newCourseType === 'async' ? 'bg-[#264790] text-white' : 'bg-white text-slate-400'" class="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border border-slate-200">
+                  <Check v-if="newCourseType === 'async'" :size="12" />
+                </div>
+                <span class="font-bold text-[#1A2B49] text-sm">Kelas Asinkron</span>
+              </div>
+              <span class="text-xs text-slate-500 font-medium">Materi mandiri berupa video, teks, & kuis.</span>
+            </button>
+            
+            <button 
+              @click="newCourseType = 'live_class'"
+              :class="newCourseType === 'live_class' ? 'border-[#264790] bg-blue-50/50' : 'border-slate-200 bg-slate-50 hover:border-slate-300'"
+              class="border-2 rounded-2xl p-4 text-left transition-colors flex flex-col gap-2"
+            >
+              <div class="flex items-center gap-2">
+                <div :class="newCourseType === 'live_class' ? 'bg-[#264790] text-white' : 'bg-white text-slate-400'" class="w-6 h-6 rounded-full flex items-center justify-center shrink-0 border border-slate-200">
+                  <Check v-if="newCourseType === 'live_class'" :size="12" />
+                </div>
+                <span class="font-bold text-[#1A2B49] text-sm">Live Class / Workshop</span>
+              </div>
+              <span class="text-xs text-slate-500 font-medium">Sesi interaktif live dengan kuota & jadwal.</span>
+            </button>
+          </div>
+
           <div>
             <label class="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Judul Kelas</label>
             <input 

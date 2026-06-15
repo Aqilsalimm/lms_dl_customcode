@@ -355,29 +355,7 @@ const triggerTestNotification = (eventType, role) => {
   <Head title="LMS Settings" />
 
   <DashboardWrapper>
-    <div class="flex flex-col md:flex-row gap-8">
-      
-      <!-- Settings Sidebar -->
-      <div class="w-full md:w-64 shrink-0">
-        <h2 class="text-3xl font-extrabold text-slate-800 mb-6 pl-2">Settings</h2>
-        <div class="bg-slate-50/50 p-3 rounded-2xl border border-slate-100 flex flex-col gap-1.5 shadow-sm">
-          <button 
-            v-for="tab in tabs" 
-            :key="tab.id"
-            @click="activeTab = tab.id"
-            :class="[
-              activeTab === tab.id 
-                ? 'bg-white text-blue-600 shadow-sm border border-slate-150' 
-                : 'text-slate-500 hover:bg-slate-100/70 hover:text-slate-700 border border-transparent'
-            ]"
-            class="flex items-center gap-3.5 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-300 text-left"
-          >
-            <component :is="tab.icon" :size="18" :class="activeTab === tab.id ? 'text-blue-500' : 'text-slate-400'" />
-            {{ tab.label }}
-          </button>
-        </div>
-      </div>
-
+    <div class="flex flex-col">
       <!-- Settings Content Area -->
       <div class="flex-1 bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
         

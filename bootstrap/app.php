@@ -12,6 +12,13 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        
+        $middleware->redirectGuestsTo(function (\Illuminate\Http\Request $request) {
+            if ($request->is('api/*') || $request->wantsJson()) {
+                return null;
+            }
+            return '/?auth_timeout=1';
+        });
 
         $middleware->web(append: [
             \App\Http\Middleware\CheckMaintenanceMode::class,
@@ -24,6 +31,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'payment/notification',
             'payment/*',
+        ]);
+
+        $middleware->alias([
+            'active.subscription' => \App\Http\Middleware\EnsureActiveSubscription::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

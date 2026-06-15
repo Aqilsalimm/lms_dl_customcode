@@ -13,6 +13,7 @@ class Lesson extends Model
         'content',
         'video_url',
         'slide_url',
+        'slide_content',
         'duration_minutes',
         'sort_order'
     ];
@@ -20,5 +21,10 @@ class Lesson extends Model
     public function module(): BelongsTo
     {
         return $this->belongsTo(Module::class);
+    }
+
+    public function discussions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Discussion::class, 'material_id');
     }
 }

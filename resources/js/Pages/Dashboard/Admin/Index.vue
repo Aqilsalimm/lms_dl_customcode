@@ -150,14 +150,14 @@ const changeUserRole = (userId, newRole) => {
           
           <div class="flex flex-col gap-4">
             <div v-for="user in recentUsers" :key="user.id" class="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
-              <div>
-                <div class="font-bold text-sm text-[#1A2B49]">{{ user.name }}</div>
-                <div class="text-slate-400 text-xs mb-2">{{ user.email }}</div>
+              <div class="min-w-0 pr-3">
+                <div class="font-bold text-sm text-[#1A2B49] truncate">{{ user.name }}</div>
+                <div class="text-slate-400 text-xs mb-2 truncate">{{ user.email }}</div>
                 <span class="px-2.5 py-1 bg-white border border-slate-200 text-slate-500 font-extrabold text-[10px] rounded-lg uppercase tracking-wider shadow-sm">
                   {{ user.role }}
                 </span>
               </div>
-              <div>
+              <div class="shrink-0">
                 <select 
                   @change="changeUserRole(user.id, $event.target.value)"
                   :disabled="isUpdatingRole"

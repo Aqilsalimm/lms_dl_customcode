@@ -4,15 +4,39 @@ import {
   LayoutDashboard, User, BookOpen, Star, HelpCircle, 
   Heart, ShoppingCart, MessageCircle, Megaphone, 
   Wallet, MonitorPlay, Video, Settings, LogOut,
-  Bell, Plus, ShieldCheck, Check, Trash2
+  Bell, Plus, ShieldCheck, Check, Trash2, Activity, ChevronDown, ChevronUp
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import Swal from 'sweetalert2';
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const role = computed(() => user.value?.role || 'student');
 const notifications = computed(() => page.props.auth.notifications || []);
 const showNotifications = ref(false);
+
+const handleLogout = () => {
+  Swal.fire({
+    title: 'Konfirmasi Keluar',
+    text: 'Apakah Anda yakin ingin keluar dari akun Anda?',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Keluar',
+    cancelButtonText: 'Batal',
+    buttonsStyling: false,
+    customClass: {
+      popup: 'rounded-[2rem] p-8 border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white text-slate-800 font-sans select-none',
+      title: 'text-xl font-extrabold text-[#1A2B49] mb-2',
+      htmlContainer: 'text-sm font-semibold text-slate-500 leading-relaxed my-4',
+      confirmButton: 'bg-[#EF4444] hover:bg-red-700 text-white font-black px-8 py-3 rounded-full text-xs shadow-md transition-all outline-none focus:ring-4 focus:ring-red-200 active:scale-95 cursor-pointer mr-3',
+      cancelButton: 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-black px-8 py-3 rounded-full text-xs shadow-sm transition-all outline-none focus:ring-4 focus:ring-slate-100 active:scale-95 cursor-pointer'
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      router.post(route('logout'));
+    }
+  });
+};
 
 const markAsRead = (id) => {
   router.post(route('notifications.read', id), {}, {
@@ -30,6 +54,7 @@ const sidebarMenu = [
   { label: 'Dashboard', icon: LayoutDashboard, route: 'dashboard' },
   { label: 'My Profile', icon: User, route: 'profile.edit' },
   { label: 'Enrolled Courses', icon: BookOpen, route: 'dashboard.enrolled-courses' },
+  { label: 'Learning Progress', icon: Activity, route: 'dashboard.learning-progress' },
   { label: 'Reviews', icon: Star, route: 'dashboard.reviews' },
   { label: 'My Quiz Attempts', icon: HelpCircle, route: 'dashboard.quiz-attempts' },
   { label: 'Wishlist', icon: Heart, route: 'dashboard.wishlist' },
@@ -47,10 +72,45 @@ const instructorMenu = [
   { label: 'Zoom', icon: Video, route: 'dashboard.zoom' },
 ];
 
+const hasBlogAccess = computed(() => {
+  if (role.value === 'admin') return true;
+  if (role.value === 'instructor') {
+    const allowedJson = page.props.settings?.allowed_blog_instructors;
+    let allowed = [];
+    if (allowedJson) {
+      if (typeof allowedJson === 'string') {
+        try {
+          allowed = JSON.parse(allowedJson);
+        } catch (e) {
+          allowed = [];
+        }
+      } else if (Array.isArray(allowedJson)) {
+        allowed = allowedJson;
+      }
+    }
+    return allowed.some(id => String(id) === String(user.value?.id));
+  }
+  return false;
+});
+
+const filteredInstructorMenu = computed(() => {
+  return instructorMenu;
+});
+
 const getInitials = (name) => {
   if (!name) return 'A';
   return name.charAt(0).toUpperCase();
 };
+
+const getInitialAccordion = () => {
+  const current = route().current();
+  if (current === 'dashboard.settings') return 'lms';
+  if (current === 'dashboard.settings.course-builder') return 'course';
+  if (current?.startsWith('dashboard.ecommerce')) return 'ecommerce';
+  if (current === 'dashboard.settings.blog') return 'blog';
+  return '';
+};
+const activeAdminAccordion = ref(getInitialAccordion());
 </script>
 
 <template>
@@ -178,7 +238,7 @@ const getInitials = (name) => {
 
           <!-- Instructor Menu -->
           <template v-if="role === 'instructor' || role === 'admin'">
-            <template v-for="item in instructorMenu" :key="item.label">
+            <template v-for="item in filteredInstructorMenu" :key="item.label">
               <Link 
                 v-if="item.method !== 'post'"
                 :href="route(item.route)"
@@ -204,6 +264,32 @@ const getInitials = (name) => {
                 {{ item.label }}
               </Link>
             </template>
+
+            <!-- Blog Settings Accordion for Instructor -->
+            <div v-if="role === 'instructor' && hasBlogAccess" class="flex flex-col mb-1 mt-2">
+              <button 
+                @click="activeAdminAccordion = activeAdminAccordion === 'blog' ? '' : 'blog'"
+                :class="[
+                  activeAdminAccordion === 'blog' || route().current('dashboard.settings.blog')
+                    ? 'bg-slate-100 text-[#264790] shadow-sm'
+                    : 'text-slate-500 hover:bg-white hover:text-[#264790] hover:shadow-sm'
+                ]"
+                class="flex items-center justify-between px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-300 w-full"
+              >
+                <div class="flex items-center gap-3">
+                  <Settings :size="18" :stroke-width="route().current('dashboard.settings.blog') ? 2.5 : 2" />
+                  Blog Settings
+                </div>
+                <ChevronDown v-if="activeAdminAccordion !== 'blog'" :size="16" />
+                <ChevronUp v-else :size="16" />
+              </button>
+              
+              <div v-show="activeAdminAccordion === 'blog'" class="flex flex-col ml-11 mt-1 gap-1 border-l-2 border-slate-100 pl-3">
+                <Link :href="route('dashboard.settings.blog') + '?tab=articles'" :class="page.url.includes('tab=articles') || page.url === '/dashboard/settings/blog' ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Kelola Artikel</Link>
+                <Link :href="route('dashboard.settings.blog') + '?tab=categories_tags'" :class="page.url.includes('tab=categories_tags') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Kategori & Tag</Link>
+                <Link :href="route('dashboard.settings.blog') + '?tab=layout_authors'" :class="page.url.includes('tab=layout_authors') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Layout & Redaksi</Link>
+              </div>
+            </div>
           </template>
 
           <!-- Admin Section Header -->
@@ -213,42 +299,112 @@ const getInitials = (name) => {
 
           <!-- Admin Menu -->
           <template v-if="role === 'admin'">
-            <Link 
-              :href="route('dashboard.settings')"
-              :class="[
-                route().current('dashboard.settings')
-                  ? 'bg-slate-100 text-[#264790] shadow-sm'
-                  : 'text-slate-500 hover:bg-white hover:text-[#264790] hover:shadow-sm'
-              ]"
-              class="flex items-center gap-3 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-300"
-            >
-              <Settings :size="18" :stroke-width="route().current('dashboard.settings') ? 2.5 : 2" />
-              LMS Settings
-            </Link>
-            <Link 
-              :href="route('dashboard.settings.course-builder')"
-              :class="[
-                route().current('dashboard.settings.course-builder')
-                  ? 'bg-slate-100 text-[#264790] shadow-sm'
-                  : 'text-slate-500 hover:bg-white hover:text-[#264790] hover:shadow-sm'
-              ]"
-              class="flex items-center gap-3 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-300 mt-1"
-            >
-              <Settings :size="18" :stroke-width="route().current('dashboard.settings.course-builder') ? 2.5 : 2" />
-              Course Builder Settings
-            </Link>
-            <Link 
-              :href="route('dashboard.ecommerce.analytics')"
-              :class="[
-                route().current('dashboard.ecommerce.analytics')
-                  ? 'bg-slate-100 text-[#264790] shadow-sm'
-                  : 'text-slate-500 hover:bg-white hover:text-[#264790] hover:shadow-sm'
-              ]"
-              class="flex items-center gap-3 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-300 mt-1"
-            >
-              <ShoppingCart :size="18" :stroke-width="route().current('dashboard.ecommerce.analytics') ? 2.5 : 2" />
-              e-Commerce
-            </Link>
+            <!-- LMS Settings Dropdown -->
+            <div class="flex flex-col mb-1">
+              <button 
+                @click="activeAdminAccordion = activeAdminAccordion === 'lms' ? '' : 'lms'"
+                :class="[
+                  activeAdminAccordion === 'lms' || route().current('dashboard.settings')
+                    ? 'bg-slate-100 text-[#264790] shadow-sm'
+                    : 'text-slate-500 hover:bg-white hover:text-[#264790] hover:shadow-sm'
+                ]"
+                class="flex items-center justify-between px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-300 w-full"
+              >
+                <div class="flex items-center gap-3">
+                  <Settings :size="18" :stroke-width="route().current('dashboard.settings') ? 2.5 : 2" />
+                  LMS Settings
+                </div>
+                <ChevronDown v-if="activeAdminAccordion !== 'lms'" :size="16" />
+                <ChevronUp v-else :size="16" />
+              </button>
+              
+              <div v-show="activeAdminAccordion === 'lms'" class="flex flex-col ml-11 mt-1 gap-1 border-l-2 border-slate-100 pl-3">
+                <Link :href="route('dashboard.settings') + '?tab=general'" :class="page.url.includes('tab=general') || page.url === '/dashboard/settings' ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">General</Link>
+                <Link :href="route('dashboard.settings') + '?tab=course'" :class="page.url.includes('tab=course') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Course</Link>
+                <Link :href="route('dashboard.settings') + '?tab=monetization'" :class="page.url.includes('tab=monetization') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Monetization</Link>
+                <Link :href="route('dashboard.settings') + '?tab=design'" :class="page.url.includes('tab=design') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Design</Link>
+                <Link :href="route('dashboard.settings') + '?tab=advanced'" :class="page.url.includes('tab=advanced') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Advanced</Link>
+              </div>
+            </div>
+
+            <!-- Course Builder Settings Dropdown -->
+            <div class="flex flex-col mb-1">
+              <button 
+                @click="activeAdminAccordion = activeAdminAccordion === 'course' ? '' : 'course'"
+                :class="[
+                  activeAdminAccordion === 'course' || route().current('dashboard.settings.course-builder')
+                    ? 'bg-slate-100 text-[#264790] shadow-sm'
+                    : 'text-slate-500 hover:bg-white hover:text-[#264790] hover:shadow-sm'
+                ]"
+                class="flex items-center justify-between px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-300 w-full"
+              >
+                <div class="flex items-center gap-3">
+                  <Settings :size="18" :stroke-width="route().current('dashboard.settings.course-builder') ? 2.5 : 2" />
+                  Course Builder Settings
+                </div>
+                <ChevronDown v-if="activeAdminAccordion !== 'course'" :size="16" />
+                <ChevronUp v-else :size="16" />
+              </button>
+              
+              <div v-show="activeAdminAccordion === 'course'" class="flex flex-col ml-11 mt-1 gap-1 border-l-2 border-slate-100 pl-3">
+                <Link :href="route('dashboard.settings.course-builder') + '?tab=categories'" :class="page.url.includes('tab=categories') || page.url === '/dashboard/settings/course-builder' ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Kategori Kursus</Link>
+                <Link :href="route('dashboard.settings.course-builder') + '?tab=tags'" :class="page.url.includes('tab=tags') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Tag Kursus</Link>
+                <Link :href="route('dashboard.settings.course-builder') + '?tab=course-importer'" :class="page.url.includes('tab=course-importer') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Course Importer</Link>
+                <Link :href="route('dashboard.settings.course-builder') + '?tab=quiz-importer'" :class="page.url.includes('tab=quiz-importer') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Quiz Importer</Link>
+              </div>
+            </div>
+
+            <!-- e-Commerce Dropdown -->
+            <div class="flex flex-col mb-1">
+              <button 
+                @click="activeAdminAccordion = activeAdminAccordion === 'ecommerce' ? '' : 'ecommerce'"
+                :class="[
+                  activeAdminAccordion === 'ecommerce' || route().current()?.startsWith('dashboard.ecommerce')
+                    ? 'bg-slate-100 text-[#264790] shadow-sm'
+                    : 'text-slate-500 hover:bg-white hover:text-[#264790] hover:shadow-sm'
+                ]"
+                class="flex items-center justify-between px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-300 w-full"
+              >
+                <div class="flex items-center gap-3">
+                  <ShoppingCart :size="18" :stroke-width="route().current()?.startsWith('dashboard.ecommerce') ? 2.5 : 2" />
+                  e-Commerce
+                </div>
+                <ChevronDown v-if="activeAdminAccordion !== 'ecommerce'" :size="16" />
+                <ChevronUp v-else :size="16" />
+              </button>
+              
+              <div v-show="activeAdminAccordion === 'ecommerce'" class="flex flex-col ml-11 mt-1 gap-1 border-l-2 border-slate-100 pl-3">
+                <Link :href="route('dashboard.ecommerce.analytics')" :class="route().current('dashboard.ecommerce.analytics') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Analytics Dashboard</Link>
+                <Link :href="route('dashboard.ecommerce.coupons')" :class="route().current('dashboard.ecommerce.coupons') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Coupon & Discount</Link>
+                <Link :href="route('dashboard.ecommerce.settings')" :class="route().current('dashboard.ecommerce.settings') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Abandoned Cart</Link>
+              </div>
+            </div>
+
+            <!-- Blog Settings Dropdown -->
+            <div class="flex flex-col mb-1">
+              <button 
+                @click="activeAdminAccordion = activeAdminAccordion === 'blog' ? '' : 'blog'"
+                :class="[
+                  activeAdminAccordion === 'blog' || route().current('dashboard.settings.blog')
+                    ? 'bg-slate-100 text-[#264790] shadow-sm'
+                    : 'text-slate-500 hover:bg-white hover:text-[#264790] hover:shadow-sm'
+                ]"
+                class="flex items-center justify-between px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-300 w-full"
+              >
+                <div class="flex items-center gap-3">
+                  <Settings :size="18" :stroke-width="route().current('dashboard.settings.blog') ? 2.5 : 2" />
+                  Blog Settings
+                </div>
+                <ChevronDown v-if="activeAdminAccordion !== 'blog'" :size="16" />
+                <ChevronUp v-else :size="16" />
+              </button>
+              
+              <div v-show="activeAdminAccordion === 'blog'" class="flex flex-col ml-11 mt-1 gap-1 border-l-2 border-slate-100 pl-3">
+                <Link :href="route('dashboard.settings.blog') + '?tab=articles'" :class="page.url.includes('tab=articles') || page.url === '/dashboard/settings/blog' ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Kelola Artikel</Link>
+                <Link :href="route('dashboard.settings.blog') + '?tab=categories_tags'" :class="page.url.includes('tab=categories_tags') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Kategori & Tag</Link>
+                <Link :href="route('dashboard.settings.blog') + '?tab=layout_authors'" :class="page.url.includes('tab=layout_authors') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Layout & Redaksi</Link>
+              </div>
+            </div>
           </template>
 
           <div class="mt-6 pt-4 border-t border-slate-200 flex flex-col gap-1">
@@ -265,15 +421,13 @@ const getInitials = (name) => {
               Settings
             </Link>
             
-            <Link 
-              :href="route('logout')"
-              method="post"
-              as="button"
-              class="w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-300 text-slate-500 hover:bg-[#1A2B49] hover:text-white shadow-sm mt-1"
+            <button 
+              @click="handleLogout"
+              class="w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-300 text-slate-500 hover:bg-[#1A2B49] hover:text-white shadow-sm mt-1 text-left"
             >
               <LogOut :size="18" :stroke-width="2" />
               Logout
-            </Link>
+            </button>
           </div>
         </div>
       </aside>

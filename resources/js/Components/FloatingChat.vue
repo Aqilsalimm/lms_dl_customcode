@@ -172,7 +172,7 @@ const toggleCs = () => {
     <!-- Floating Chat Trigger Button (Teal Green Oval/Round matching Picture 1) -->
     <button 
       @click="toggleOpen"
-      class="fixed bottom-24 md:bottom-8 right-6 z-[999] bg-[#2D7D62] hover:bg-[#205C47] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 outline-none"
+      class="fixed bottom-24 md:bottom-8 right-6 z-[999] bg-[#1A2B49] hover:bg-[#264790] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 outline-none"
     >
       <Sparkles v-if="!isOpen" :size="24" class="text-white" />
       <X v-else :size="24" class="text-white" />
@@ -197,7 +197,7 @@ const toggleCs = () => {
         <div v-if="currentScreen === 'selection'" class="flex flex-col h-full">
           <!-- Header -->
           <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <div class="flex items-center gap-2 text-[#2D7D62]">
+            <div class="flex items-center gap-2 text-[#1A2B49]">
               <Sparkles :size="20" />
               <span class="font-extrabold text-sm text-[#1A2B49] tracking-tight">Pilih Layanan Support</span>
             </div>
@@ -269,7 +269,7 @@ const toggleCs = () => {
                   <div class="flex flex-col sm:flex-row gap-2.5 mt-2">
                     <!-- WhatsApp support button -->
                     <a 
-                      href="https://wa.me/6281234567890?text=Halo%20Customer%20Service%20Drastha%20Learning" 
+                      href="https://wa.me/6281234859768?text=Halo%20Customer%20Service%20Drastha%20Learning" 
                       target="_blank"
                       class="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
                     >

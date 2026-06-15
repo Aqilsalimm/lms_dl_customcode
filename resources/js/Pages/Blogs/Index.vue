@@ -3,9 +3,11 @@ import { ref, computed } from 'vue';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import { 
   Search, Calendar, User as UserIcon, Plus, X, 
-  ChevronLeft, ChevronRight, PenTool, BookOpen, AlertCircle
+  ChevronLeft, ChevronRight, PenTool, BookOpen, AlertCircle,
+  Instagram, Twitter, Facebook, Linkedin
 } from 'lucide-vue-next';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
+import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 
 const props = defineProps({
   blogs: Object, // Laravel Paginated Object
@@ -352,42 +354,79 @@ const Logo = () => {
       </div>
     </div>
 
-    <!-- CLEAN FOOTER -->
-    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 mt-16 border-t border-slate-100">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <!-- Inline SVG Logo -->
-          <div class="flex items-center gap-2 mb-4" v-html="Logo()"></div>
-          <p class="text-slate-500 font-medium text-xs max-w-sm">
-            Platform Learning Management System (LMS) yang dirancang untuk mendukung pembelajaran modern, interaktif, dan berkelanjutan.
-          </p>
-        </div>
+    <!-- FOOTER SECTION -->
+    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32 md:pb-12 mt-16 select-none">
+      
+      <div class="bg-[#FFFFFF] rounded-[2.5rem] p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-slate-50">
+        
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-8 mb-12 text-left">
+          
+          <div class="md:col-span-5 flex flex-col gap-6">
+            
+            <div class="flex items-center gap-2">
+              <ApplicationLogo />
+            </div>
 
-        <div class="flex flex-wrap gap-x-12 gap-y-6">
-          <div>
-            <h4 class="font-bold text-xs text-[#1A2B49] uppercase tracking-wider mb-3">Tautan Cepat</h4>
-            <div class="flex flex-col gap-2 text-xs font-semibold text-slate-400">
-              <Link href="/" class="hover:text-[#44A6D9] transition-colors">Home</Link>
-              <Link href="/courses" class="hover:text-[#44A6D9] transition-colors">Kelas Kami</Link>
-              <Link href="/blogs" class="hover:text-[#44A6D9] transition-colors">Blog Berita</Link>
+            <p class="text-[#264790] text-sm md:text-base font-medium leading-relaxed max-w-md">
+              Platform Learning Management System (LMS) yang dirancang untuk mendukung pembelajaran modern, interaktif, dan berkelanjutan.
+            </p>
+
+            <div class="flex items-center gap-4">
+              <a href="#" class="text-[#264790] hover:text-[#44A6D9] transition-colors p-1 border-[1.5px] border-[#264790] hover:border-[#44A6D9] rounded-lg">
+                <Instagram :size="20" :stroke-width="2.5" />
+              </a>
+              <a href="#" class="text-[#264790] hover:text-[#44A6D9] transition-colors p-1 border-[1.5px] border-[#264790] hover:border-[#44A6D9] rounded-lg">
+                <Twitter :size="20" :stroke-width="2.5" />
+              </a>
+              <a href="#" class="text-[#264790] hover:text-[#44A6D9] transition-colors p-1 border-[1.5px] border-[#264790] hover:border-[#44A6D9] rounded-lg">
+                <Facebook :size="20" :stroke-width="2.5" />
+              </a>
+              <a href="#" class="text-[#264790] hover:text-[#44A6D9] transition-colors p-1 border-[1.5px] border-[#264790] hover:border-[#44A6D9] rounded-lg">
+                <Linkedin :size="20" :stroke-width="2.5" />
+              </a>
             </div>
           </div>
-          <div>
-            <h4 class="font-bold text-xs text-[#1A2B49] uppercase tracking-wider mb-3">Kontak</h4>
-            <p class="text-xs font-semibold text-slate-400 mb-1">PT. DRASTHA BERKAH SENTOSA</p>
-            <p class="text-xs font-semibold text-slate-400">Jl. Budi Luhur B/2, Wagir, Kwangsan, Sedati</p>
+
+          <div class="md:col-span-3 flex flex-col gap-5">
+            <h4 class="font-extrabold text-[#1A2B49] text-lg">Tautan Cepat</h4>
+            <ul class="flex flex-col gap-3">
+              <li><Link href="/" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Home</Link></li>
+              <li><Link href="/courses" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Kelas Kami</Link></li>
+              <li><Link href="/contact" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Hubungi Kami</Link></li>
+              <li><Link href="/about" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Tentang Kami</Link></li>
+              <li><Link href="/clients" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Klien Kami</Link></li>
+              <li><Link href="/blog" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Blog Kami</Link></li>
+            </ul>
+          </div>
+
+          <div class="md:col-span-4 flex flex-col gap-5">
+            <h4 class="font-extrabold text-[#1A2B49] text-lg">Kontak</h4>
+            <ul class="flex flex-col gap-3 text-[#264790] text-sm md:text-base font-medium leading-relaxed">
+              <li class="font-bold text-[#264790] uppercase tracking-wide">
+                PT. DRASTHA BERKAH SENTOSA
+              </li>
+              <li>031-9960-5068 (Pulsa)</li>
+              <li>0812-3485-9768 (WhatsApp)</li>
+              <li class="max-w-xs">
+                Jl Budi Luhur B/2 Wagir Indah Kwangsan, Sedati Sidoarjo Jawa Timur 61253
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+        <div class="w-full h-px bg-slate-300/50 mb-6"></div>
+
+        <div class="flex flex-col-reverse md:flex-row justify-between items-center gap-4 text-[#264790] text-xs md:text-sm font-semibold">
+          <p>&copy; 2026 Drastha Learning, All Rights Reserved</p>
+          
+          <div class="flex flex-wrap justify-center gap-4 md:gap-8">
+            <Link href="#" class="hover:text-[#44A6D9] transition-colors border-b border-transparent hover:border-[#44A6D9] pb-0.5">Privacy Policy</Link>
+            <Link href="#" class="hover:text-[#44A6D9] transition-colors border-b border-transparent hover:border-[#44A6D9] pb-0.5">Terms of Service</Link>
+            <Link href="#" class="hover:text-[#44A6D9] transition-colors border-b border-transparent hover:border-[#44A6D9] pb-0.5">Cookies Settings</Link>
           </div>
         </div>
-      </div>
 
-      <div class="h-px bg-slate-100 my-8"></div>
-
-      <div class="flex flex-col sm:flex-row justify-between items-center text-[10px] font-bold text-slate-400 gap-4">
-        <span>&copy; 2026 Drastha Learning. All Rights Reserved</span>
-        <div class="flex gap-6">
-          <a href="#" class="hover:text-[#44A6D9] transition-colors">Privacy Policy</a>
-          <a href="#" class="hover:text-[#44A6D9] transition-colors">Terms of Service</a>
-        </div>
       </div>
     </footer>
   </GuestLayout>

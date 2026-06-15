@@ -6,6 +6,7 @@ import {
   GraduationCap, Home, Newspaper, X, Eye, EyeOff
 } from 'lucide-vue-next';
 import FloatingChat from '@/Components/FloatingChat.vue';
+import Swal from 'sweetalert2';
 
 const props = defineProps({
   spotlightMode: {
@@ -36,6 +37,24 @@ onMounted(() => {
       isLoginModalOpen.value = true;
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
+    } else if (params.get('auth_timeout') === '1') {
+      isLoginModalOpen.value = true;
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      
+      Swal.fire({
+        title: 'Sesi Berakhir',
+        text: 'Sistem telah keluar secara otomatis karena tidak adanya aktivitas. Silakan login kembali.',
+        icon: 'warning',
+        confirmButtonText: 'OK',
+        buttonsStyling: false,
+        customClass: {
+          popup: 'rounded-[2rem] p-8 border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white text-slate-800 font-sans select-none',
+          title: 'text-xl font-extrabold text-[#1A2B49] mb-2',
+          htmlContainer: 'text-sm font-semibold text-slate-500 leading-relaxed my-4',
+          confirmButton: 'bg-[#F9CC6B] hover:bg-[#e5bc62] text-[#1A2B49] font-black px-8 py-3 rounded-full text-xs shadow-md transition-all outline-none focus:ring-4 focus:ring-[#F9CC6B]/20 active:scale-95 cursor-pointer',
+        }
+      });
     }
   }
 });
@@ -85,6 +104,28 @@ watch(
           }
         }, 400); // 400ms delay to let the DOM settle
       }
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => usePage().props.flash?.logout_message,
+  (msg) => {
+    if (msg) {
+      Swal.fire({
+        title: 'Sudah Keluar',
+        text: msg,
+        icon: 'success',
+        confirmButtonText: 'OK',
+        buttonsStyling: false,
+        customClass: {
+          popup: 'rounded-[2rem] p-8 border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white text-slate-800 font-sans select-none',
+          title: 'text-xl font-extrabold text-[#1A2B49] mb-2',
+          htmlContainer: 'text-sm font-semibold text-slate-500 leading-relaxed my-4',
+          confirmButton: 'bg-[#264790] hover:bg-[#1A2B49] text-white font-black px-8 py-3 rounded-full text-xs shadow-md transition-all outline-none focus:ring-4 focus:ring-[#264790]/20 active:scale-95 cursor-pointer',
+        }
+      });
     }
   },
   { immediate: true }

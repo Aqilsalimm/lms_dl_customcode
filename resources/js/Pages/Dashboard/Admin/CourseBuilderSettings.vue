@@ -14,7 +14,7 @@ const props = defineProps({
 });
 
 // Tab management
-const activeTab = ref('categories');
+const activeTab = ref(typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('tab') || 'categories') : 'categories');
 const tabs = [
   { id: 'categories', label: 'Kategori Kursus', icon: Folder },
   { id: 'tags', label: 'Tag Kursus', icon: Tag },
@@ -357,30 +357,6 @@ const startQuizImport = () => {
             <Plus :size="14" /> Tambah Tag
           </button>
         </div>
-      </div>
-
-      <!-- TABS NAVIGATION -->
-      <div class="flex border-b border-slate-200 overflow-x-auto pb-px gap-6">
-        <button 
-          v-for="tab in tabs" 
-          :key="tab.id"
-          @click="activeTab = tab.id"
-          :class="[
-            activeTab === tab.id 
-              ? 'border-[#264790] text-[#264790] font-extrabold' 
-              : 'border-transparent text-slate-500 hover:text-[#264790] font-semibold'
-          ]"
-          class="flex items-center gap-2 py-4 px-1 border-b-2 text-sm whitespace-nowrap transition-all duration-200 cursor-pointer"
-        >
-          <component :is="tab.icon" :size="16" />
-          {{ tab.label }}
-          <span 
-            v-if="tab.comingSoon" 
-            class="bg-blue-50 text-[#44A6D9] text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-blue-100"
-          >
-            Soon
-          </span>
-        </button>
       </div>
 
       <!-- TAB CONTENTS -->

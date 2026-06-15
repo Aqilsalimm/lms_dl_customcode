@@ -5,10 +5,34 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import FloatingChat from '@/Components/FloatingChat.vue';
+import Swal from 'sweetalert2';
 
 const showingNavigationDropdown = ref(false);
+
+const handleLogout = () => {
+  Swal.fire({
+    title: 'Konfirmasi Keluar',
+    text: 'Apakah Anda yakin ingin keluar dari akun Anda?',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Ya, Keluar',
+    cancelButtonText: 'Batal',
+    buttonsStyling: false,
+    customClass: {
+      popup: 'rounded-[2rem] p-8 border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white text-slate-800 font-sans select-none',
+      title: 'text-xl font-extrabold text-[#1A2B49] mb-2',
+      htmlContainer: 'text-sm font-semibold text-slate-500 leading-relaxed my-4',
+      confirmButton: 'bg-[#EF4444] hover:bg-red-700 text-white font-black px-8 py-3 rounded-full text-xs shadow-md transition-all outline-none focus:ring-4 focus:ring-red-200 active:scale-95 cursor-pointer mr-3',
+      cancelButton: 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-black px-8 py-3 rounded-full text-xs shadow-sm transition-all outline-none focus:ring-4 focus:ring-slate-100 active:scale-95 cursor-pointer'
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      router.post(route('logout'));
+    }
+  });
+};
 </script>
 
 <template>
@@ -90,13 +114,13 @@ const showingNavigationDropdown = ref(false);
                                         >
                                             Profile
                                         </DropdownLink>
-                                        <DropdownLink
-                                            :href="route('logout')"
-                                            method="post"
-                                            as="button"
+                                        <button
+                                            type="button"
+                                            @click="handleLogout"
+                                            class="block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 transition duration-150 ease-in-out hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                                         >
                                             Log Out
-                                        </DropdownLink>
+                                        </button>
                                     </template>
                                 </Dropdown>
                             </div>
@@ -194,13 +218,13 @@ const showingNavigationDropdown = ref(false);
                             <ResponsiveNavLink :href="route('profile.edit')">
                                 Profile
                             </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                :href="route('logout')"
-                                method="post"
-                                as="button"
+                            <button
+                                type="button"
+                                @click="handleLogout"
+                                class="block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:text-gray-800 focus:bg-gray-50 focus:border-gray-300 transition duration-150 ease-in-out"
                             >
                                 Log Out
-                            </ResponsiveNavLink>
+                            </button>
                         </div>
                     </div>
                 </div>

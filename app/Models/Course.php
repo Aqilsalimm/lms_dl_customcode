@@ -23,15 +23,29 @@ class Course extends Model
         'bg_color',
         'icon_type',
         'price',
+        'payment_type',
         'access_duration_months',
         'level',
         'capacity',
-        'status'
+        'status',
+        'course_type',
+        'start_date',
+        'end_date',
+        'timezone',
+        'meeting_url',
+        'max_participants',
+        'recording_url',
+        'is_event_finished',
+        'tools'
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'access_duration_months' => 'integer',
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
+        'is_event_finished' => 'boolean',
+        'tools' => 'array',
     ];
 
     protected $appends = [

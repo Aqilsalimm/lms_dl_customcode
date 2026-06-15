@@ -69,6 +69,11 @@ class User extends Authenticatable
         return $this->hasMany(QuizAttempt::class);
     }
 
+    public function discussions(): HasMany
+    {
+        return $this->hasMany(Discussion::class);
+    }
+
     // Check enrollment helper
     public function hasEnrolled(int $courseId): bool
     {
