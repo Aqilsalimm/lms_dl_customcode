@@ -71,26 +71,28 @@ const getModuleDuration = (mod) => {
 };
 
 // Computed Meta Values for Right Sidebar matching revised mockup
+// Computed Meta Values for Right Sidebar matching revised mockup
 const levelLabel = computed(() => {
   const map = {
-    'SD': 'Beginner',
-    'SMP': 'Intermediate',
-    'SMA': 'Advanced',
-    'Umum': 'Intermediate'
+    'SD': usePage().props.translations['level_beginner'] || 'Beginner',
+    'SMP': usePage().props.translations['level_intermediate'] || 'Intermediate',
+    'SMA': usePage().props.translations['level_advanced'] || 'Advanced',
+    'Umum': usePage().props.translations['level_intermediate'] || 'Intermediate'
   };
   return map[props.course.level] || 'Intermediate';
 });
 
 const enrolledCountLabel = computed(() => {
-  return `${props.course.enrollments_count || 0} Total Enrolled`;
+  const text = usePage().props.translations['total_enrolled'] || 'Total Terdaftar';
+  return `${props.course.enrollments_count || 0} ${text}`;
 });
 
 const ageLabel = computed(() => {
   const map = {
-    'SD': 'Umur 7 - 12 Tahun',
-    'SMP': 'Umur 12 - 15 Tahun',
-    'SMA': 'Umur 15 - 18 Tahun',
-    'Umum': 'Semua Umur'
+    'SD': usePage().props.translations['age_sd'] || 'Umur 7 - 12 Tahun',
+    'SMP': usePage().props.translations['age_smp'] || 'Umur 12 - 15 Tahun',
+    'SMA': usePage().props.translations['age_sma'] || 'Umur 15 - 18 Tahun',
+    'Umum': usePage().props.translations['age_umum'] || 'Semua Umur'
   };
   return map[props.course.level] || 'Semua Umur';
 });
@@ -106,21 +108,23 @@ const durationLabel = computed(() => {
       }
     });
   }
+  const t = (key, fallback) => usePage().props.translations[key] || fallback;
   if (totalMinutes === 0) {
-    return '5 hours 30 minutes Duration';
+    return `5 ${t('hours', 'jam')} 30 ${t('minutes', 'menit')} ${t('duration', 'Durasi')}`;
   }
   const hrs = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
   let parts = [];
-  if (hrs > 0) parts.push(`${hrs} hours`);
-  if (mins > 0) parts.push(`${mins} minutes`);
-  return parts.join(' ') + ' Duration';
+  if (hrs > 0) parts.push(`${hrs} ${t('hours', 'jam')}`);
+  if (mins > 0) parts.push(`${mins} ${t('minutes', 'menit')}`);
+  return parts.join(' ') + ' ' + t('duration', 'Durasi');
 });
 
 const lastUpdatedLabel = computed(() => {
   const date = new Date(props.course.updated_at || props.course.created_at);
-  const formatted = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  return `${formatted} Last Updated`;
+  const formatted = date.toLocaleDateString(usePage().props.locale === 'id' ? 'id-ID' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const text = usePage().props.translations['last_updated'] || 'Terakhir Diperbarui';
+  return `${formatted} ${text}`;
 });
 
 const instructorListLayout = computed(() => {
@@ -143,7 +147,7 @@ onMounted(() => {
 // Checkout action (Add to cart and go to Cart page)
 const handleRegister = () => {
   if (!usePage().props.auth.user) {
-    alert('Silakan login terlebih dahulu untuk mendaftar kelas.');
+    alert(usePage().props.translations['alert_login_register'] || 'Silakan login terlebih dahulu untuk mendaftar kelas.');
     router.get('/login');
     return;
   }
@@ -158,19 +162,19 @@ const handleRegister = () => {
     },
     onError: () => {
       isProcessing.value = false;
-      alert('Gagal menambahkan kelas ke keranjang belanja.');
+      alert(usePage().props.translations['alert_failed_cart'] || 'Gagal menambahkan kelas ke keranjang belanja.');
     }
   });
 };
 
 const handleAccessLesson = (lesson) => {
   if (!usePage().props.auth.user) {
-    alert('Silakan login terlebih dahulu untuk mengakses kelas.');
+    alert(usePage().props.translations['alert_login_access'] || 'Silakan login terlebih dahulu untuk mengakses kelas.');
     router.get('/login');
     return;
   }
   if (!props.isEnrolled) {
-    alert('Anda belum terdaftar di kelas ini. Silakan daftar terlebih dahulu.');
+    alert(usePage().props.translations['alert_not_enrolled'] || 'Anda belum terdaftar di kelas ini. Silakan daftar terlebih dahulu.');
     return;
   }
   router.get(`/courses/${props.course.slug}/learn`);
@@ -178,7 +182,7 @@ const handleAccessLesson = (lesson) => {
 
 const handleShare = () => {
   navigator.clipboard.writeText(window.location.href);
-  alert('Link rincian kelas berhasil disalin ke clipboard!');
+  alert(usePage().props.translations['alert_share_success'] || 'Link rincian kelas berhasil disalin ke clipboard!');
 };
 
 // Logo Helper
@@ -223,7 +227,7 @@ import { usePage } from '@inertiajs/vue3';
           href="/courses" 
           class="inline-flex items-center gap-2 text-slate-400 hover:text-[#44A6D9] font-semibold text-sm transition-colors"
         >
-          &lsaquo; Kembali ke Daftar Kelas
+          &lsaquo; {{ $t('back_to_courses') || 'Kembali ke Daftar Kelas' }}
         </Link>
       </div>
 
@@ -238,7 +242,7 @@ import { usePage } from '@inertiajs/vue3';
               {{ course.category?.name || 'Coding IT Class' }}
             </span>
             <span class="bg-[#1A2B49] text-white rounded-md px-3 py-1.5 text-xs font-bold uppercase tracking-wider">
-              Open Registration
+              {{ $t('open_registration') || 'Pendaftaran Dibuka' }}
             </span>
           </div>
 
@@ -251,15 +255,15 @@ import { usePage } from '@inertiajs/vue3';
           <div class="flex flex-wrap items-center gap-6 text-sm text-slate-500 font-semibold mb-8">
             <div class="flex items-center gap-2">
               <Calendar :size="16" class="text-slate-400" />
-              <span>{{ course.sessions || 'Two Session per Week' }}</span>
+              <span>{{ course.sessions || $t('two_sessions_week') || 'Two Session per Week' }}</span>
             </div>
             <div class="flex items-center gap-2">
               <Clock :size="16" class="text-slate-400" />
-              <span>{{ course.duration || '1 Hour for 1 Session' }}</span>
+              <span>{{ course.duration || $t('one_hour_session') || '1 Hour for 1 Session' }}</span>
             </div>
             <div class="flex items-center gap-2">
               <MapPin :size="16" class="text-slate-400" />
-              <span>{{ course.type || 'Offline Class' }}</span>
+              <span>{{ course.type || $t('offline_class') || 'Offline Class' }}</span>
             </div>
           </div>
 
@@ -273,14 +277,14 @@ import { usePage } from '@inertiajs/vue3';
                 :class="activeMediaTab === 'image' ? 'bg-white text-[#1A2B49] shadow-sm' : 'text-slate-500 hover:text-[#1A2B49]'"
                 class="flex-1 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 outline-none cursor-pointer"
               >
-                <ImageIcon :size="16" /> Sampul Kursus
+                <ImageIcon :size="16" /> {{ $t('course_cover') || 'Sampul Kursus' }}
               </button>
               <button 
                 @click="activeMediaTab = 'video'"
                 :class="activeMediaTab === 'video' ? 'bg-white text-[#1A2B49] shadow-sm' : 'text-slate-500 hover:text-[#1A2B49]'"
                 class="flex-1 py-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 outline-none cursor-pointer"
               >
-                <Play :size="16" fill="currentColor" /> Intro Video
+                <Play :size="16" fill="currentColor" /> {{ $t('intro_video') || 'Intro Video' }}
               </button>
             </div>
 
@@ -332,9 +336,9 @@ import { usePage } from '@inertiajs/vue3';
                   <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4 text-slate-400">
                     <Play :size="24" class="text-slate-400 ml-0.5" />
                   </div>
-                  <h4 class="font-extrabold text-base text-[#1A2B49] mb-1">Tidak ada Video intro</h4>
+                  <h4 class="font-extrabold text-base text-[#1A2B49] mb-1">{{ $t('no_intro_video') || 'Tidak ada Video intro' }}</h4>
                   <p class="text-slate-400 font-semibold text-xs sm:text-sm max-w-xs leading-relaxed">
-                    Kelas ini belum memiliki video cuplikan atau pengenalan. Anda tetap bisa langsung mendaftar kelas ini.
+                    {{ $t('no_intro_video_desc') || 'Kelas ini belum memiliki video cuplikan atau pengenalan. Anda tetap bisa langsung mendaftar kelas ini.' }}
                   </p>
                 </div>
               </template>
@@ -343,27 +347,27 @@ import { usePage } from '@inertiajs/vue3';
 
           <!-- Section: Tentang Kelas -->
           <div class="mb-10">
-            <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">Tentang Kelas</h3>
+            <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">{{ $t('about_class') || 'Tentang Kelas' }}</h3>
             
             <div class="flex flex-col gap-6 text-[#1A2B49] leading-relaxed">
               <div>
-                <h4 class="font-extrabold text-base mb-1.5">Deskripsi :</h4>
+                <h4 class="font-extrabold text-base mb-1.5">{{ $t('description_label') || 'Deskripsi' }} :</h4>
                 <p class="text-slate-500 font-medium text-sm sm:text-base">
-                  {{ course.description || 'Materi kelas yang mengajarkan tentang pemrograman dasar secara asyik, interaktif, dan menyenangkan.' }}
+                  {{ course.description || $t('course_desc_fallback') || 'Materi kelas yang mengajarkan tentang pemrograman dasar secara asyik, interaktif, dan menyenangkan.' }}
                 </p>
               </div>
 
               <div>
-                <h4 class="font-extrabold text-base mb-1.5">Usia :</h4>
+                <h4 class="font-extrabold text-base mb-1.5">{{ $t('age_label') || 'Usia' }} :</h4>
                 <p class="text-slate-500 font-medium text-sm sm:text-base">
                   {{ ageLabel }}
                 </p>
               </div>
 
               <div>
-                <h4 class="font-extrabold text-base mb-1.5">Benefit :</h4>
+                <h4 class="font-extrabold text-base mb-1.5">{{ $t('benefit_label') || 'Benefit' }} :</h4>
                 <p class="text-slate-500 font-medium text-sm sm:text-base">
-                  {{ course.about || 'Modul Lengkap, E-Certificate, Dokumentasi Belajar, Report Study Berkala' }}
+                  {{ course.about || $t('course_benefit_fallback') || 'Modul Lengkap, E-Certificate, Dokumentasi Belajar, Report Study Berkala' }}
                 </p>
               </div>
             </div>
@@ -371,7 +375,7 @@ import { usePage } from '@inertiajs/vue3';
 
           <!-- Section: Lokasi -->
           <div class="mb-10">
-            <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">Lokasi</h3>
+            <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">{{ $t('location_label') || 'Lokasi' }}</h3>
             
             <!-- Map Card Wrapper (Leaflet.js) -->
             <div class="rounded-3xl overflow-hidden border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.02)] mb-5 h-[320px] relative z-0">
@@ -386,7 +390,7 @@ import { usePage } from '@inertiajs/vue3';
                   <l-popup>
                     <div class="text-center font-montserrat">
                       <h4 class="font-extrabold text-[#1A2B49] text-sm">Drastha Learning</h4>
-                      <p class="text-xs text-slate-500 mt-1 font-semibold">Pusat Kelas Offline</p>
+                      <p class="text-xs text-slate-500 mt-1 font-semibold">{{ $t('offline_class_center') || 'Pusat Kelas Offline' }}</p>
                     </div>
                   </l-popup>
                 </l-marker>
@@ -396,14 +400,14 @@ import { usePage } from '@inertiajs/vue3';
             <div class="flex items-start gap-3">
               <MapPin :size="20" class="text-[#FF4D4F] shrink-0 mt-0.5" />
               <p class="text-slate-500 font-semibold text-xs sm:text-sm leading-relaxed">
-                Drastha Learning, Jl. Budi Luhur Wagir Indah No.B-2, Wagir, Kwangsan, Kec. Sedati, Kabupaten Sidoarjo, Jawa Timur 61253
+                {{ $t('drastha_address') || 'Drastha Learning, Jl. Budi Luhur Wagir Indah No.B-2, Wagir, Kwangsan, Kec. Sedati, Kabupaten Sidoarjo, Jawa Timur 61253' }}
               </p>
             </div>
           </div>
 
           <!-- Section: Kurikulum Kelas Accordion collapsible -->
           <div v-if="showContentSummary" class="mb-10">
-            <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">Kurikulum Kelas :</h3>
+            <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">{{ $t('course_curriculum') || 'Kurikulum Kelas' }} :</h3>
             
             <div class="flex flex-col gap-4">
               <div 
@@ -419,7 +423,7 @@ import { usePage } from '@inertiajs/vue3';
                   <div>
                     <h4 class="font-extrabold text-base text-[#1A2B49] mb-1">{{ mod.title }}</h4>
                     <span class="text-xs text-slate-400 font-bold">
-                      {{ mod.lessons?.length || 0 }} Video ({{ getModuleDuration(mod) }} Menit)
+                      {{ mod.lessons?.length || 0 }} {{ $t('video_label') || 'Video' }} ({{ getModuleDuration(mod) }} {{ $t('minutes_label') || 'Menit' }})
                     </span>
                   </div>
                   <ChevronDown 
@@ -456,12 +460,12 @@ import { usePage } from '@inertiajs/vue3';
                       :class="lesIdx === 0 ? 'text-white/80' : 'text-slate-400'"
                       class="text-xs font-bold shrink-0"
                     >
-                      {{ les.duration_minutes }} Menit
+                      {{ les.duration_minutes }} {{ $t('minutes_label') || 'Menit' }}
                     </span>
                   </div>
 
                   <div v-if="!mod.lessons || mod.lessons.length === 0" class="text-center py-4 text-xs font-bold text-slate-400">
-                    Belum ada materi pelajaran dalam bab ini.
+                    {{ $t('no_lessons_module') || 'Belum ada materi pelajaran dalam bab ini.' }}
                   </div>
                 </div>
               </div>
@@ -470,7 +474,7 @@ import { usePage } from '@inertiajs/vue3';
 
           <!-- Section: Instruktur Kelas -->
           <div v-if="course.instructor" class="mb-10">
-            <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">Instruktur Kelas</h3>
+            <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">{{ $t('course_instructor') || 'Instruktur Kelas' }}</h3>
             
             <!-- 1. Layout PORTRAIT -->
             <div v-if="instructorListLayout === 'portrait'" class="bg-white rounded-3xl p-6 border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] flex flex-col items-center text-center max-w-sm">
@@ -478,9 +482,9 @@ import { usePage } from '@inertiajs/vue3';
                 <img :src="course.instructor.avatar || '/images/avatars/default.png'" class="w-full h-full object-cover" :alt="course.instructor.name" />
               </div>
               <h4 class="font-extrabold text-lg text-[#1A2B49] mb-1">{{ course.instructor.name }}</h4>
-              <span class="text-xs font-bold text-[#264790] uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full mb-3">Instruktur Utama</span>
+              <span class="text-xs font-bold text-[#264790] uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full mb-3">{{ $t('main_instructor') || 'Instruktur Utama' }}</span>
               <p class="text-slate-400 font-medium text-xs leading-relaxed">
-                {{ course.instructor.bio || 'Pengajar profesional di bidangnya dengan pengalaman bertahun-tahun membimbing siswa untuk mencapai impian mereka.' }}
+                {{ course.instructor.bio || $t('instructor_bio_fallback') || 'Pengajar profesional di bidangnya dengan pengalaman bertahun-tahun membimbing siswa untuk mencapai impian mereka.' }}
               </p>
             </div>
 
@@ -492,9 +496,9 @@ import { usePage } from '@inertiajs/vue3';
                   <img :src="course.instructor.avatar || '/images/avatars/default.png'" class="w-full h-full object-cover" :alt="course.instructor.name" />
                 </div>
                 <h4 class="font-extrabold text-lg text-[#1A2B49] mb-1">{{ course.instructor.name }}</h4>
-                <span class="text-xs font-bold text-[#264790] uppercase tracking-wider mb-2">Instruktur Utama</span>
+                <span class="text-xs font-bold text-[#264790] uppercase tracking-wider mb-2">{{ $t('main_instructor') || 'Instruktur Utama' }}</span>
                 <p class="text-slate-400 font-medium text-xs leading-relaxed">
-                  {{ course.instructor.bio || 'Pengajar profesional di bidangnya dengan pengalaman bertahun-tahun membimbing siswa.' }}
+                  {{ course.instructor.bio || $t('instructor_bio_fallback_short') || 'Pengajar profesional di bidangnya dengan pengalaman bertahun-tahun membimbing siswa.' }}
                 </p>
               </div>
             </div>
@@ -505,7 +509,7 @@ import { usePage } from '@inertiajs/vue3';
                 <img :src="course.instructor.avatar || '/images/avatars/default.png'" class="w-full h-full object-cover" :alt="course.instructor.name" />
               </div>
               <h4 class="font-extrabold text-base text-[#1A2B49] mb-0.5">{{ course.instructor.name }}</h4>
-              <span class="text-[11px] font-bold text-slate-400">Instruktur</span>
+              <span class="text-[11px] font-bold text-slate-400">{{ $t('instructor') || 'Instruktur' }}</span>
             </div>
 
             <!-- 4. Layout PORTRAIT_HORIZONTAL -->
@@ -514,10 +518,10 @@ import { usePage } from '@inertiajs/vue3';
                 <img :src="course.instructor.avatar || '/images/avatars/default.png'" class="w-full h-full object-cover" :alt="course.instructor.name" />
               </div>
               <div class="flex-1">
-                <span class="text-[10px] font-bold text-[#264790] uppercase tracking-wider mb-1 block">Instruktur Utama</span>
+                <span class="text-[10px] font-bold text-[#264790] uppercase tracking-wider mb-1 block">{{ $t('main_instructor') || 'Instruktur Utama' }}</span>
                 <h4 class="font-extrabold text-lg text-[#1A2B49] mb-1.5">{{ course.instructor.name }}</h4>
                 <p class="text-slate-400 font-medium text-xs sm:text-sm leading-relaxed">
-                  {{ course.instructor.bio || 'Pengajar profesional di bidangnya dengan pengalaman bertahun-tahun membimbing siswa untuk mencapai impian mereka.' }}
+                  {{ course.instructor.bio || $t('instructor_bio_fallback') || 'Pengajar profesional di bidangnya dengan pengalaman bertahun-tahun membimbing siswa untuk mencapai impian mereka.' }}
                 </p>
               </div>
             </div>
@@ -529,7 +533,7 @@ import { usePage } from '@inertiajs/vue3';
               </div>
               <div>
                 <h4 class="font-extrabold text-sm text-[#1A2B49]">{{ course.instructor.name }}</h4>
-                <span class="text-[10px] font-bold text-slate-400">Instruktur</span>
+                <span class="text-[10px] font-bold text-slate-400">{{ $t('instructor') || 'Instruktur' }}</span>
               </div>
             </div>
 
@@ -544,10 +548,10 @@ import { usePage } from '@inertiajs/vue3';
           <div class="bg-white rounded-3xl p-8 border border-slate-50 shadow-[0_12px_40px_rgba(0,0,0,0.03)] flex flex-col gap-6">
             
             <div>
-              <span class="text-slate-400 text-xs font-bold uppercase tracking-wider block mb-1">BIAYA PENDAFTARAN</span>
+              <span class="text-slate-400 text-xs font-bold uppercase tracking-wider block mb-1">{{ $t('registration_fee') || 'BIAYA PENDAFTARAN' }}</span>
               <div class="flex items-baseline gap-1">
                 <span class="text-3xl font-extrabold text-[#1A2B49]">Rp{{ formatPrice(course.price) }}</span>
-                <span v-if="course.payment_type !== 'one-time'" class="text-slate-400 font-bold text-xs">/ Bulan</span>
+                <span v-if="course.payment_type !== 'one-time'" class="text-slate-400 font-bold text-xs">/ {{ $t('month_label') || 'Bulan' }}</span>
               </div>
             </div>
 
@@ -559,7 +563,7 @@ import { usePage } from '@inertiajs/vue3';
                 href="/dashboard"
                 class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-bold text-sm shadow-md transition-colors text-center flex items-center justify-center gap-1.5"
               >
-                <Play :size="16" /> Mulai Belajar
+                <Play :size="16" /> {{ $t('start_learning') || 'Mulai Belajar' }}
               </Link>
               
               <!-- Otherwise, show dynamic Register button -->
@@ -569,14 +573,14 @@ import { usePage } from '@inertiajs/vue3';
                 :disabled="isProcessing"
                 class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-4 rounded-2xl font-bold text-sm shadow-md transition-colors flex items-center justify-center gap-1.5"
               >
-                <CreditCard :size="16" /> Daftar Sekarang
+                <CreditCard :size="16" /> {{ $t('register_now') || 'Daftar Sekarang' }}
               </button>
 
               <button 
                 @click="handleShare"
                 class="w-full bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-100 py-4 rounded-2xl font-bold text-sm transition-colors flex items-center justify-center gap-1.5"
               >
-                <Share2 :size="16" /> Bagikan
+                <Share2 :size="16" /> {{ $t('share_label') || 'Bagikan' }}
               </button>
             </div>
 
@@ -594,7 +598,7 @@ import { usePage } from '@inertiajs/vue3';
               </div>
               <div class="flex items-center gap-3">
                 <User :size="18" class="text-slate-400 shrink-0" />
-                <span>Kapasitas: {{ course.capacity || 20 }} Siswa / Kelas</span>
+                <span>{{ $t('capacity_label') || 'Kapasitas' }}: {{ course.capacity || 20 }} {{ $t('students_class') || 'Siswa / Kelas' }}</span>
               </div>
               <div class="flex items-center gap-3">
                 <Clock :size="18" class="text-slate-400 shrink-0" />
@@ -606,7 +610,7 @@ import { usePage } from '@inertiajs/vue3';
               </div>
               <div class="flex items-center gap-3">
                 <Award :size="18" class="text-slate-400 shrink-0" />
-                <span>Certificate of completion</span>
+                <span>{{ $t('certificate_completion') || 'Certificate of completion' }}</span>
               </div>
             </div>
 
@@ -632,7 +636,7 @@ import { usePage } from '@inertiajs/vue3';
             </div>
 
             <p class="text-[#264790] text-sm md:text-base font-medium leading-relaxed max-w-md">
-              Platform Learning Management System (LMS) yang dirancang untuk mendukung pembelajaran modern, interaktif, dan berkelanjutan.
+              {{ $t('hero_subtitle') }}
             </p>
 
             <div class="flex items-center gap-4">
@@ -652,19 +656,19 @@ import { usePage } from '@inertiajs/vue3';
           </div>
 
           <div class="md:col-span-3 flex flex-col gap-5">
-            <h4 class="font-extrabold text-[#1A2B49] text-lg">Tautan Cepat</h4>
+            <h4 class="font-extrabold text-[#1A2B49] text-lg">{{ $t('quick_links') || 'Tautan Cepat' }}</h4>
             <ul class="flex flex-col gap-3">
-              <li><Link href="/" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Home</Link></li>
-              <li><Link href="/courses" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Kelas Kami</Link></li>
-              <li><Link href="/#hubungi-kami" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Hubungi Kami</Link></li>
-              <li><Link href="/about" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Tentang Kami</Link></li>
-              <li><Link href="/clients" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Klien Kami</Link></li>
-              <li><Link href="/blog" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Blog Kami</Link></li>
+              <li><Link href="/" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('home') || 'Home' }}</Link></li>
+              <li><Link href="/courses" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('sub_class') || 'Kelas Kami' }}</Link></li>
+              <li><Link href="/contact" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('contact_us_title') || 'Hubungi Kami' }}</Link></li>
+              <li><Link href="/about" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('about_us') || 'Tentang Kami' }}</Link></li>
+              <li><Link href="/clients" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('client_our') || 'Klien Kami' }}</Link></li>
+              <li><Link href="/blogs" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('blog') || 'Blog Kami' }}</Link></li>
             </ul>
           </div>
 
           <div class="md:col-span-4 flex flex-col gap-5">
-            <h4 class="font-extrabold text-[#1A2B49] text-lg">Kontak</h4>
+            <h4 class="font-extrabold text-[#1A2B49] text-lg">{{ $t('contact_label') || 'Kontak' }}</h4>
             <ul class="flex flex-col gap-3 text-[#264790] text-sm md:text-base font-medium leading-relaxed">
               <li class="font-bold text-[#264790] uppercase tracking-wide">
                 PT. DRASTHA BERKAH SENTOSA
@@ -682,7 +686,7 @@ import { usePage } from '@inertiajs/vue3';
         <div class="w-full h-px bg-slate-300/50 mb-6"></div>
 
         <div class="flex flex-col-reverse md:flex-row justify-between items-center gap-4 text-[#264790] text-xs md:text-sm font-semibold">
-          <p>&copy; 2026 Drastha Learning, All Rights Reserved</p>
+          <p>&copy; 2026 Drastha Learning. {{ $t('all_rights_reserved') || 'All Rights Reserved' }}</p>
           
           <div class="flex flex-wrap justify-center gap-4 md:gap-8">
             <Link href="#" class="hover:text-[#44A6D9] transition-colors border-b border-transparent hover:border-[#44A6D9] pb-0.5">Privacy Policy</Link>
@@ -705,16 +709,16 @@ import { usePage } from '@inertiajs/vue3';
           <CheckCircle2 :size="36" />
         </div>
 
-        <h3 class="text-xl font-extrabold text-[#1A2B49] mb-2">Pendaftaran Berhasil!</h3>
+        <h3 class="text-xl font-extrabold text-[#1A2B49] mb-2">{{ $t('registration_success') || 'Pendaftaran Berhasil!' }}</h3>
         <p class="text-slate-400 text-sm font-semibold mb-6">
-          Selamat! Anda telah resmi terdaftar di kelas <b class="text-[#1A2B49]">{{ course.title }}</b>. Silakan masuk ke Dashboard Siswa Anda untuk memulai pelajaran.
+          {{ $t('registration_success_desc_1') || 'Selamat! Anda telah resmi terdaftar di kelas' }} <b class="text-[#1A2B49]">{{ course.title }}</b>. {{ $t('registration_success_desc_2') || 'Silakan masuk ke Dashboard Siswa Anda untuk memulai pelajaran.' }}
         </p>
 
         <Link 
           href="/dashboard"
           class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3 rounded-2xl font-bold text-sm shadow-md transition-colors"
         >
-          Masuk ke Dashboard
+          {{ $t('go_to_dashboard') || 'Masuk ke Dashboard' }}
         </Link>
       </div>
     </div>

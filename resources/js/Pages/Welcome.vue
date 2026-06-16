@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { 
@@ -29,6 +29,51 @@ const formatPrice = (price) => {
   const num = parseFloat(price);
   if (isNaN(num)) return price;
   return 'Rp ' + Math.round(num).toLocaleString('id-ID');
+};
+
+const translateMetadata = (value) => {
+  if (!value) return '';
+  const isEn = usePage().props.locale === 'en';
+  if (!isEn) return value;
+
+  let str = value;
+  // Replace patterns
+  str = str.replace(/Sesi/g, 'Sessions');
+  str = str.replace(/per Minggu/g, 'per Week');
+  str = str.replace(/Jam/g, 'Hours');
+  str = str.replace(/untuk/g, 'for');
+  str = str.replace(/Menit/g, 'Minutes');
+  str = str.replace(/Kelas Luring/g, 'Offline Class');
+  str = str.replace(/Kelas Daring/g, 'Online Class');
+  str = str.replace(/Kelas Offline/g, 'Offline Class');
+  str = str.replace(/Kelas Online/g, 'Online Class');
+  return str;
+};
+
+const formatDate = (dateRaw) => {
+  if (!dateRaw) return '';
+  const date = new Date(dateRaw);
+  const locale = usePage().props.locale || 'id';
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(date);
+};
+
+const translateCategory = (category) => {
+  if (!category) return '';
+  const isEn = usePage().props.locale === 'en';
+  if (!isEn) return category;
+  
+  const mapping = {
+    'Sertifikasi': 'Certification',
+    'Seminar': 'Seminar',
+    'Workshop': 'Workshop',
+    'Coding IT Class': 'Coding IT Class',
+    'Design Class': 'Design Class'
+  };
+  return mapping[category] || category;
 };
 
 // Mendefinisikan Props untuk menangkap data dari Controller Laravel (Inertia)
@@ -186,17 +231,17 @@ const blogPostsRaw = [
 
 const sortedBlogPosts = blogPostsRaw.sort((a, b) => new Date(b.date_raw) - new Date(a.date_raw));
 
-// Data Info Kontak
-const contactInfo = [
+// Data Info Kontak (reactive using computed)
+const contactInfo = computed(() => [
   { 
     id: 1, 
-    title: 'Telepon', 
+    title: usePage().props.translations?.phone_title || 'Telepon', 
     icon: Phone, 
     lines: ['031-9960-5068', '0812-3485-9768'] 
   },
   { 
     id: 2, 
-    title: 'Alamat', 
+    title: usePage().props.translations?.address_title || 'Alamat', 
     icon: MapPin, 
     lines: [
       'PT. Drastha Berkah Sentosa, Jl Budi Luhur B/2', 
@@ -206,41 +251,41 @@ const contactInfo = [
   },
   { 
     id: 3, 
-    title: 'Email', 
+    title: usePage().props.translations?.email_title || 'Email', 
     icon: Mail, 
     lines: ['admin@drasthabest.com', 'admin@drasthalearning.com'] 
   },
   { 
     id: 4, 
-    title: 'Website', 
+    title: usePage().props.translations?.website_title || 'Website', 
     icon: Globe, 
     lines: ['www.drasthalearning.com'] 
   },
-];
+]);
 
-// Data untuk kolom fitur kiri
-const leftFeatures = ref([
+// Data untuk kolom fitur kiri (reactive using computed)
+const leftFeatures = computed(() => [
   {
-    title: 'Harga Kompetitif',
-    description: 'Harga terjangkau dan kompetitif untuk menghemat biaya anda.',
+    title: usePage().props.translations?.feature_1_title || 'Harga Kompetitif',
+    description: usePage().props.translations?.feature_1_desc || 'Harga terjangkau dan kompetitif untuk menghemat biaya anda.',
     icon: '/images/logo/HargaKompetitifIcon.svg'
   },
   {
-    title: 'Gratis Konsultasi',
-    description: 'Konsultasi gratis untuk pemilihan Peta jalan yang tepat.',
+    title: usePage().props.translations?.feature_2_title || 'Gratis Konsultasi',
+    description: usePage().props.translations?.feature_2_desc || 'Konsultasi gratis untuk pemilihan Peta jalan yang tepat.',
     icon: '/images/logo/GratisKonsultasiIkon.svg'
   }
 ]);
 
-const rightFeatures = ref([
+const rightFeatures = computed(() => [
   {
-    title: 'Pembayaran Fleksibel',
-    description: 'Sistem pembayaran yang fleksibel and bisa bertahap dengan DP 70%',
+    title: usePage().props.translations?.feature_3_title || 'Pembayaran Fleksibel',
+    description: usePage().props.translations?.feature_3_desc || 'Sistem pembayaran yang fleksibel and bisa bertahap dengan DP 70%',
     icon: '/images/logo/FlexiblePaymenticon.svg'
   },
   {
-    title: 'Produk yang Disesuaikan',
-    description: 'Susunan materi yang disesuaikan dengan kebutuhan profesi anda.',
+    title: usePage().props.translations?.feature_4_title || 'Produk yang Disesuaikan',
+    description: usePage().props.translations?.feature_4_desc || 'Susunan materi yang disesuaikan dengan kebutuhan profesi anda.',
     icon: '/images/logo/CustomizableProductIcon.svg'
   }
 ]);
@@ -311,17 +356,17 @@ const rightFeatures = ref([
         <!-- 3. TENTANG DRASTHA LEARNING SECTION -->
         <section id="tentang-kami" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 text-center scroll-mt-24">
           <h2 class="text-3xl md:text-4xl font-extrabold text-[#1A2B49] mb-4">
-            Tentang <span class="text-[#264790]">Drastha Learning</span>
+            {{ $t('about_title') }} <span class="text-[#264790]">Drastha Learning</span>
           </h2>
           <p class="text-[#264790] leading-relaxed text-base md:text-lg mb-10 md:mb-14 font-medium px-2">
-            <span class="font-bold text-[#1A2B49]">Drastha Learning</span> adalah platform edukasi yang berfokus pada pengembangan keterampilan dan pengetahuan melalui technology dan pembelajaran digital. Menawarkan kursus online and offline, pelatihan, serta sertifikasi di bidang seperti akuntansi, keuangan, manajemen, perpajakan, hukum, dan digital.
+            <span class="font-bold text-[#1A2B49]">Drastha Learning</span> {{ $t('about_subtitle') }}
           </p>
           <div class="bg-[#FFFFFF] rounded-[2rem] p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/50 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-shadow duration-300">
             <h3 class="text-2xl md:text-3xl font-bold text-[#1A2B49] mb-4">
-              Komitmen Kami
+              {{ $t('commitment_title') }}
             </h3>
             <p class="text-[#264790] leading-relaxed text-sm md:text-base font-medium">
-              <span class="font-bold text-[#1A2B49]">Drastha Learning</span> berkomitmen untuk meningkatkan kompetensi mahasiswa, karyawan, dan masyarakat umum. Dengan pendekatan fleksibel dan berbasis teknologi, platform ini tidak hanya menyediakan kursus dasar tetapi juga mendukung pengembangan keterampilan jangka panjang untuk menghadapi perubahan di dunia kerja dan teknologi.
+              <span class="font-bold text-[#1A2B49]">Drastha Learning</span> {{ $t('commitment_desc') }}
             </p>
           </div>
         </section>
@@ -331,10 +376,10 @@ const rightFeatures = ref([
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             
             <h2 class="text-4xl md:text-5xl font-extrabold text-[#1A2B49] mb-6 leading-tight">
-              Why Choose <span class="text-[#264790]">Us?</span>
+              {{ $t('why_choose_us_title') }} <span class="text-[#264790]">{{ $t('why_choose_us_span') }}</span>
             </h2>
             <p class="text-[#264790] max-w-3xl mx-auto mb-20 text-base md:text-lg leading-relaxed font-medium">
-              Kami berkomitmen memberikan layanan terbaik dengan berbagai keunggulan untuk mendukung peningkatan <span class="italic text-gray-700">skill</span> Anda.
+              {{ $t('why_choose_us_subtitle') }}
             </p>
  
             <div class="flex flex-col lg:flex-row items-center justify-center lg:gap-24 gap-12">
@@ -378,7 +423,7 @@ const rightFeatures = ref([
  
             <div class="mt-20 flex justify-center">
               <button class="bg-[#fbc02d] hover:bg-[#f9a825] text-[#1A2B49] font-bold py-3.5 px-8 rounded-full transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
-                Get a Free Demo 
+                {{ $t('get_free_demo') }}
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
                 </svg>
@@ -394,15 +439,15 @@ const rightFeatures = ref([
           <div class="flex flex-col items-center text-center mb-12 md:mb-16">
             <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full border-[1.5px] border-[#1A2B49] bg-transparent mb-6">
               <GraduationCap :size="18" class="text-[#1A2B49]" />
-              <span class="text-[#1A2B49] font-bold text-sm">Program Kami</span>
+              <span class="text-[#1A2B49] font-bold text-sm">{{ $t('our_program') }}</span>
             </div>
  
             <h2 class="text-3xl md:text-[2.5rem] font-extrabold text-[#1A2B49] mb-4">
-              Pilihan Berbagai <span class="text-[#264790]">Kelas</span>
+              {{ $t('course_choice_title') }} <span class="text-[#264790]">{{ $t('course_choice_span') }}</span>
             </h2>
  
             <p class="text-[#264790] text-base md:text-lg font-medium max-w-2xl mx-auto">
-              Kami memiliki berbagai macam kelas yang fokus kepada profesi-profesi dalam spesialisasi tertentu.
+              {{ $t('course_choice_desc') }}
             </p>
           </div>
  
@@ -455,15 +500,15 @@ const rightFeatures = ref([
                 <ul class="space-y-3 mb-6">
                   <li class="flex items-center gap-3 text-slate-500 text-sm font-medium">
                      <Calendar :size="16" class="text-slate-400" />
-                    <span>{{ course.sessions || 'Two Session per Week' }}</span>
+                    <span>{{ translateMetadata(course.sessions || 'Two Session per Week') }}</span>
                   </li>
                   <li class="flex items-center gap-3 text-slate-500 text-sm font-medium">
                     <Clock :size="16" class="text-slate-400" />
-                    <span>{{ course.duration || '1 Hour for 1 Session' }}</span>
+                    <span>{{ translateMetadata(course.duration || '1 Hour for 1 Session') }}</span>
                   </li>
                   <li class="flex items-center gap-3 text-slate-500 text-sm font-medium">
                     <MapPin :size="16" class="text-slate-400" />
-                    <span>{{ course.type || 'Offline Class' }}</span>
+                    <span>{{ translateMetadata(course.type || 'Offline Class') }}</span>
                   </li>
                 </ul>
  
@@ -475,7 +520,7 @@ const rightFeatures = ref([
                   <span class="text-[#1A2B49] font-extrabold text-xl">
                     {{ formatPrice(course.price) }}
                   </span>
-                  <span v-if="course.payment_type !== 'one-time'" class="text-slate-400 font-medium text-xs">/ Bulan</span>
+                  <span v-if="course.payment_type !== 'one-time'" class="text-slate-400 font-medium text-xs">{{ $t('price_per_month') }}</span>
                 </div>
  
               </div>
@@ -488,7 +533,7 @@ const rightFeatures = ref([
               href="/courses" 
               class="bg-[#44A6D9] hover:bg-[#3b8fc2] text-[#1A2B49] font-bold py-3.5 px-8 rounded-full shadow-md transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >
-              Search All Course 
+              {{ $t('search_all_courses') }} 
               <Search :size="18" :stroke-width="2.5" />
             </Link>
           </div>
@@ -551,23 +596,23 @@ const rightFeatures = ref([
 
         <!-- BLOG AKTIVITAS SECTION -->
         <section id="blog-aktivitas" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20 scroll-mt-24">
-
+ 
           <!-- Header Section -->
           <div class="flex flex-col items-center text-center mb-12">
             <!-- Badge -->
             <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full border-[1.5px] border-[#1A2B49] bg-transparent mb-6">
               <ImageIcon :size="18" class="text-[#1A2B49]" />
-              <span class="text-[#1A2B49] font-bold text-sm">Kegiatan Kami</span>
+              <span class="text-[#1A2B49] font-bold text-sm">{{ $t('our_activities') }}</span>
             </div>
-
+ 
             <!-- Judul -->
             <h2 class="text-3xl md:text-[2.5rem] font-extrabold text-[#1A2B49] mb-4">
-              Blog <span class="text-[#264790]">Aktivitas</span>
+              {{ $t('blog_activities_title') }} <span class="text-[#264790]">{{ $t('blog_activities_span') }}</span>
             </h2>
-
+ 
             <!-- Sub-judul -->
             <p class="text-[#264790] text-base md:text-lg font-medium">
-              Beberapa kegiatan yang sedang dilakukan oleh Drastha Learning
+              {{ $t('blog_activities_desc') }}
             </p>
           </div>
 
@@ -597,10 +642,10 @@ const rightFeatures = ref([
                 <!-- Meta: Category & Date -->
                 <div class="flex justify-between items-center mb-4">
                   <span class="bg-[#F9CC6B] text-[#1A2B49] text-[11px] font-extrabold px-3 py-1.5 rounded-full uppercase tracking-wide">
-                    {{ post.category }}
+                    {{ translateCategory(post.category) }}
                   </span>
                   <span class="text-[#1A2B49]/60 text-xs font-semibold">
-                    {{ post.date }}
+                    {{ formatDate(post.date_raw) }}
                   </span>
                 </div>
 
@@ -625,7 +670,7 @@ const rightFeatures = ref([
           <!-- Tombol Lihat Semua -->
           <div class="mt-14 flex justify-center">
             <button class="bg-[#44A6D9] hover:bg-[#3b8fc2] text-[#1A2B49] font-bold py-3.5 px-8 rounded-full transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
-              Lihat Semua &raquo;
+              <span v-html="$t('see_all')"></span>
             </button>
           </div>
 
@@ -636,10 +681,10 @@ const rightFeatures = ref([
           
           <div class="flex flex-col items-center text-center mb-12 md:mb-16">
             <h2 class="text-3xl md:text-4xl font-extrabold text-[#1A2B49] mb-4">
-              Hubungi Kami
+              {{ $t('contact_us_title') }}
             </h2>
             <p class="text-[#264790] text-base md:text-lg font-medium max-w-3xl mx-auto leading-relaxed">
-              Kami siap membantu anda dengan trial class gratis untuk<br class="hidden md:block" /> menentukan pilihan anda dalam pemilihan profesi yang unggul
+              {{ $t('contact_us_desc') }}
             </p>
           </div>
 
@@ -675,23 +720,23 @@ const rightFeatures = ref([
               <div class="bg-[#F9CC6B] w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-md transition-transform duration-500 group-hover:scale-110">
                 <MessageCircle :size="40" :stroke-width="2.5" class="text-[#1A2B49]" />
               </div>
-
+ 
               <h3 class="text-[2rem] font-extrabold text-[#1A2B49] group-hover:text-[#FFFFFF] transition-colors duration-500 mb-4">
-                Siap Berkonsultasi?
+                {{ $t('ready_to_consult') }}
               </h3>
-
+ 
               <p class="text-[#1A2B49] group-hover:text-slate-200 transition-colors duration-500 text-sm md:text-base font-medium mb-10 max-w-sm leading-relaxed">
-                Tim kami siap membantu Anda memilih program yang tepat untuk kebutuhan pembelajaran anda. Konsultasi gratis tanpa komitmen!
+                {{ $t('consult_desc') }}
               </p>
-
+ 
               <div class="flex flex-col w-full max-w-sm gap-4">
                 
                 <button class="bg-[#264790] group-hover:bg-[#44A6D9] text-white font-bold py-3.5 px-6 rounded-full transition-colors duration-500 flex items-center justify-center gap-2 w-full shadow-md">
-                  <MessageCircle :size="20" /> Chat via WhatsApp
+                  <MessageCircle :size="20" /> {{ $t('chat_wa') }}
                 </button>
-
+ 
                 <button class="bg-[#F9CC6B] hover:brightness-95 text-[#1A2B49] font-bold py-3.5 px-6 rounded-full transition-all flex items-center justify-center gap-2 w-full shadow-md">
-                  <Mail :size="20" /> Kirim Email
+                  <Mail :size="20" /> {{ $t('send_email') }}
                 </button>
                 
               </div>
@@ -715,7 +760,7 @@ const rightFeatures = ref([
                 </div>
 
                 <p class="text-[#264790] text-sm md:text-base font-medium leading-relaxed max-w-md">
-                  Platform Learning Management System (LMS) yang dirancang untuk mendukung pembelajaran modern, interaktif, dan berkelanjutan.
+                  {{ $t('hero_subtitle') }}
                 </p>
 
                 <div class="flex items-center gap-4">
@@ -735,19 +780,19 @@ const rightFeatures = ref([
               </div>
 
               <div class="md:col-span-3 flex flex-col gap-5">
-                <h4 class="font-extrabold text-[#1A2B49] text-lg">Tautan Cepat</h4>
+                <h4 class="font-extrabold text-[#1A2B49] text-lg">{{ $t('quick_links') || 'Tautan Cepat' }}</h4>
                 <ul class="flex flex-col gap-3">
-                  <li><Link href="/" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Home</Link></li>
-                  <li><Link href="/courses" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Kelas Kami</Link></li>
-                  <li><Link href="/contact" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Hubungi Kami</Link></li>
-                  <li><Link href="/about" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Tentang Kami</Link></li>
-                  <li><Link href="/clients" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Klien Kami</Link></li>
-                  <li><Link href="/blog" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Blog Kami</Link></li>
+                  <li><Link href="/" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('home') || 'Home' }}</Link></li>
+                  <li><Link href="/courses" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('sub_class') || 'Kelas Kami' }}</Link></li>
+                  <li><Link href="/contact" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('contact_us_title') || 'Hubungi Kami' }}</Link></li>
+                  <li><Link href="/about" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('about_us') || 'Tentang Kami' }}</Link></li>
+                  <li><Link href="/clients" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('client_our') || 'Klien Kami' }}</Link></li>
+                  <li><Link href="/blog" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('blog') || 'Blog Kami' }}</Link></li>
                 </ul>
               </div>
 
               <div class="md:col-span-4 flex flex-col gap-5">
-                <h4 class="font-extrabold text-[#1A2B49] text-lg">Kontak</h4>
+                <h4 class="font-extrabold text-[#1A2B49] text-lg">{{ $t('contact_label') || 'Kontak' }}</h4>
                 <ul class="flex flex-col gap-3 text-[#264790] text-sm md:text-base font-medium leading-relaxed">
                   <li class="font-bold text-[#264790] uppercase tracking-wide">
                     PT. DRASTHA BERKAH SENTOSA
@@ -765,7 +810,7 @@ const rightFeatures = ref([
             <div class="w-full h-px bg-slate-300/50 mb-6"></div>
 
             <div class="flex flex-col-reverse md:flex-row justify-between items-center gap-4 text-[#264790] text-xs md:text-sm font-semibold">
-              <p>&copy; 2026 Drastha Learning, All Rights Reserved</p>
+              <p>&copy; 2026 Drastha Learning. {{ $t('all_rights_reserved') || 'All Rights Reserved' }}</p>
               
               <div class="flex flex-wrap justify-center gap-4 md:gap-8">
                 <Link href="#" class="hover:text-[#44A6D9] transition-colors border-b border-transparent hover:border-[#44A6D9] pb-0.5">Privacy Policy</Link>

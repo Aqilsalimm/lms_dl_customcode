@@ -3,7 +3,8 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { 
   ShoppingCart, User, Globe, ChevronDown, 
-  GraduationCap, Home, Newspaper, X, Eye, EyeOff
+  GraduationCap, Home, Newspaper, X, Eye, EyeOff,
+  LogOut, LayoutDashboard, LogIn, Check
 } from 'lucide-vue-next';
 import FloatingChat from '@/Components/FloatingChat.vue';
 import Swal from 'sweetalert2';
@@ -23,6 +24,7 @@ const showPassword = ref(false);
 
 const isScrolled = ref(false);
 const isLangOpen = ref(false);
+const isMobileProfileMenuOpen = ref(false);
 const page = usePage();
 const currentLocale = computed(() => page.props.locale || 'id');
 
@@ -142,13 +144,38 @@ const pageProps = usePage().props;
 const isLoggedIn = computed(() => !!pageProps.auth?.user);
 
 // --- DATA MEGA MENU LAYANAN ---
-const layananMenu = [
-  { id: 'semua', title: 'Semua Kursus', desc: 'Seluruh Layanan Course, baik Offline atau Online', filter: 'Semua Kursus' },
-  { id: 'smp', title: 'Kelas SMP', desc: 'Seluruh Layanan Course khusus untuk anak kelas SMP', filter: 'SMP' },
-  { id: 'sd', title: 'Kelas SD', desc: 'Seluruh Layanan Course khusus untuk anak kelas Sekolah Dasar', filter: 'SD' },
-  { id: 'sma', title: 'Kelas SMA', desc: 'Seluruh Layanan Course khusus untuk anak kelas SMA', filter: 'SMA' },
-  { id: 'umum', title: 'Kelas Umum', desc: 'Seluruh Layanan Course khusus untuk Profesi atau Seminar Umum', filter: 'Umum' },
-];
+const layananMenu = computed(() => [
+  { 
+    id: 'semua', 
+    title: usePage().props.translations?.menu_all || 'Semua Kursus', 
+    desc: usePage().props.translations?.menu_all_desc || 'Seluruh Layanan Course, baik Offline atau Online', 
+    filter: 'Semua Kursus' 
+  },
+  { 
+    id: 'smp', 
+    title: usePage().props.translations?.menu_smp || 'Kelas SMP', 
+    desc: usePage().props.translations?.menu_smp_desc || 'Seluruh Layanan Course khusus untuk anak kelas SMP', 
+    filter: 'SMP' 
+  },
+  { 
+    id: 'sd', 
+    title: usePage().props.translations?.menu_sd || 'Kelas SD', 
+    desc: usePage().props.translations?.menu_sd_desc || 'Seluruh Layanan Course khusus untuk anak kelas Sekolah Dasar', 
+    filter: 'SD' 
+  },
+  { 
+    id: 'sma', 
+    title: usePage().props.translations?.menu_sma || 'Kelas SMA', 
+    desc: usePage().props.translations?.menu_sma_desc || 'Seluruh Layanan Course khusus untuk anak kelas SMA', 
+    filter: 'SMA' 
+  },
+  { 
+    id: 'umum', 
+    title: usePage().props.translations?.menu_umum || 'Kelas Umum', 
+    desc: usePage().props.translations?.menu_umum_desc || 'Seluruh Layanan Course khusus untuk Profesi atau Seminar Umum', 
+    filter: 'Umum' 
+  },
+]);
 
 const handleLayananClick = (filterValue) => {
   isLayananOpen.value = false;
@@ -333,8 +360,8 @@ const Logo = () => {
                     @click.prevent="navigateAndScroll('tentang-kami')" 
                     class="group flex flex-col items-start text-left text-[#1A2B49] hover:bg-slate-50 p-3 -m-3 rounded-2xl transition-all w-full"
                   >
-                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">Tentang</span>
-                    <span class="text-slate-500 text-xs font-medium leading-relaxed">Pelajari lebih lanjut tentang Drastha Learning</span>
+                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">{{ $t('sub_about') }}</span>
+                    <span class="text-slate-500 text-xs font-medium leading-relaxed">{{ $t('sub_about_desc') }}</span>
                   </a>
 
                   <a 
@@ -342,8 +369,8 @@ const Logo = () => {
                     @click.prevent="navigateAndScroll('blog-aktivitas')" 
                     class="group flex flex-col items-start text-left text-[#1A2B49] hover:bg-slate-50 p-3 -m-3 rounded-2xl transition-all w-full"
                   >
-                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">Blog</span>
-                    <span class="text-slate-500 text-xs font-medium leading-relaxed">Artikel Berita, Wawasan, dan Rekomendasi terbaru dari kami</span>
+                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">{{ $t('sub_blog') }}</span>
+                    <span class="text-slate-500 text-xs font-medium leading-relaxed">{{ $t('sub_blog_desc') }}</span>
                   </a>
 
                   <a 
@@ -351,8 +378,8 @@ const Logo = () => {
                     @click.prevent="navigateAndScroll('tim-kami')" 
                     class="group flex flex-col items-start text-left text-[#1A2B49] hover:bg-slate-50 p-3 -m-3 rounded-2xl transition-all w-full"
                   >
-                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">Tim</span>
-                    <span class="text-slate-500 text-xs font-medium leading-relaxed">Seluruh Tim yang ada di dalam struktural Drastha Learning</span>
+                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">{{ $t('sub_team') }}</span>
+                    <span class="text-slate-500 text-xs font-medium leading-relaxed">{{ $t('sub_team_desc') }}</span>
                   </a>
 
                   <a 
@@ -360,8 +387,8 @@ const Logo = () => {
                     @click.prevent="navigateAndScroll('pilihan-kelas')" 
                     class="group flex flex-col items-start text-left text-[#1A2B49] hover:bg-slate-50 p-3 -m-3 rounded-2xl transition-all w-full"
                   >
-                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">Kelas</span>
-                    <span class="text-slate-500 text-xs font-medium leading-relaxed">Seluruh Layanan Course khusus untuk Online/Offline Course</span>
+                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">{{ $t('sub_class') }}</span>
+                    <span class="text-slate-500 text-xs font-medium leading-relaxed">{{ $t('sub_class_desc') }}</span>
                   </a>
 
                   <a 
@@ -369,8 +396,8 @@ const Logo = () => {
                     @click.prevent="navigateAndScroll('hubungi-kami')" 
                     class="group flex flex-col items-start text-left text-[#1A2B49] hover:bg-slate-50 p-3 -m-3 rounded-2xl transition-all w-full"
                   >
-                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">Kontak</span>
-                    <span class="text-slate-500 text-xs font-medium leading-relaxed">Customer Service yang menyediakan layanan di Drastha Learning</span>
+                    <span class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">{{ $t('sub_contact') }}</span>
+                    <span class="text-slate-500 text-xs font-medium leading-relaxed">{{ $t('sub_contact_desc') }}</span>
                   </a>
                 </div>
               </div>
@@ -425,27 +452,139 @@ const Logo = () => {
         </div>
 
         <!-- Header Mobile -->
-        <div class="flex md:hidden justify-between items-center w-full px-2 gap-3">
-          <div class="flex items-center gap-3">
+        <div class="flex md:hidden justify-between items-center w-full px-2 gap-3 relative">
+          
+          <!-- 1. Left Section (Cart) -->
+          <div class="flex items-center gap-3 w-10">
             <Link href="/cart" class="text-[#1A2B49] hover:text-[#44A6D9] transition-colors" aria-label="Keranjang Belanja">
               <ShoppingCart :size="22" />
             </Link>
-            <Link 
-              :href="'/language/' + (currentLocale === 'en' ? 'id' : 'en')" 
-              class="text-[#1A2B49] hover:text-[#44A6D9] transition-colors outline-none"
-              aria-label="Ubah Bahasa / Switch Language"
-            >
-              <Globe :size="22" />
-            </Link>
           </div>
+
+          <!-- 2. Middle Section: Brand Logo (Decluttered) -->
           <div class="flex-grow flex justify-center">
             <Link href="/">
               <div v-html="Logo()"></div>
             </Link>
           </div>
-          <button @click="handleUserIconClick" class="text-[#1A2B49] hover:text-[#44A6D9] transition-colors outline-none" aria-label="Akun Pengguna atau Login">
-            <User :size="22" />
-          </button>
+
+          <!-- 3. Right Section: User Profile & Popover -->
+          <div class="relative w-10 flex justify-end">
+            
+            <!-- Trigger Button -->
+            <button 
+              @click="isMobileProfileMenuOpen = !isMobileProfileMenuOpen" 
+              class="flex items-center justify-center w-9 h-9 rounded-full bg-slate-50 border border-slate-100 text-[#1A2B49] hover:text-[#44A6D9] active:scale-95 transition-all outline-none"
+              aria-label="Menu profil dan pengaturan"
+            >
+              <User :size="20" stroke-width="2" />
+            </button>
+
+            <!-- Transparent Overlay Mask for "Click Outside" to close popover -->
+            <div 
+              v-if="isMobileProfileMenuOpen" 
+              class="fixed inset-0 z-40 bg-transparent cursor-default" 
+              @click="isMobileProfileMenuOpen = false"
+            ></div>
+
+            <!-- Popover Menu with Smooth Enter/Leave Animations -->
+            <Transition
+              enter-active-class="transition ease-out duration-200 transform"
+              enter-from-class="opacity-0 translate-y-2 scale-95"
+              enter-to-class="opacity-100 translate-y-0 scale-100"
+              leave-active-class="transition ease-in duration-150 transform"
+              leave-from-class="opacity-100 translate-y-0 scale-100"
+              leave-to-class="opacity-0 translate-y-2 scale-95"
+            >
+              <div 
+                v-if="isMobileProfileMenuOpen" 
+                class="absolute right-0 mt-12 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50 origin-top-right text-left"
+              >
+                <!-- AUTHENTICATION STATE RENDERING -->
+                
+                <!-- Case A: Authenticated User -->
+                <div v-if="isLoggedIn" class="p-4 flex flex-col gap-3">
+                  <div class="pb-2">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Welcome back</p>
+                    <h4 class="font-extrabold text-sm text-[#1A2B49] truncate mt-0.5">
+                      Hi, {{ pageProps.auth.user.name }}
+                    </h4>
+                  </div>
+                  
+                  <Link 
+                    href="/dashboard" 
+                    @click="isMobileProfileMenuOpen = false"
+                    class="flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold text-slate-700 hover:text-[#264790] hover:bg-slate-50 rounded-xl transition-all"
+                  >
+                    <LayoutDashboard :size="16" class="text-slate-400" />
+                    <span>My Dashboard</span>
+                  </Link>
+
+                  <Link 
+                    href="/logout" 
+                    method="post" 
+                    as="button" 
+                    class="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-bold text-red-600 hover:bg-red-50/50 rounded-xl transition-all text-left"
+                  >
+                    <LogOut :size="16" />
+                    <span>Logout</span>
+                  </Link>
+                </div>
+
+                <!-- Case B: Guest User -->
+                <div v-else class="p-4 flex flex-col gap-2">
+                  <div class="pb-1">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Account Access</p>
+                  </div>
+                  
+                  <button 
+                    @click="isLoginModalOpen = true; isMobileProfileMenuOpen = false"
+                    class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3 rounded-xl font-extrabold text-xs shadow-md transition-all flex items-center justify-center gap-2"
+                  >
+                    <LogIn :size="16" />
+                    <span>Sign In / Register</span>
+                  </button>
+                </div>
+
+                <!-- VISUALLY SEPARATED LANGUAGE SECTION (Always Visible) -->
+                <div class="border-t border-gray-100 bg-slate-50/40 p-4">
+                  <span class="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-3">
+                    <Globe :size="12" />
+                    Language / Bahasa
+                  </span>
+                  
+                  <div class="grid grid-cols-2 gap-2 bg-slate-100/60 p-1 rounded-xl">
+                    <!-- Switch to English -->
+                    <Link 
+                      href="/language/en" 
+                      @click="isMobileProfileMenuOpen = false"
+                      class="flex items-center justify-center gap-1.5 py-2 text-[11px] font-extrabold rounded-lg transition-all"
+                      :class="currentLocale === 'en' 
+                        ? 'bg-white text-[#264790] shadow-sm' 
+                        : 'text-slate-500 hover:text-slate-800'"
+                    >
+                      <span>EN</span>
+                      <Check v-if="currentLocale === 'en'" :size="10" stroke-width="3" />
+                    </Link>
+                    
+                    <!-- Switch to Indonesian -->
+                    <Link 
+                      href="/language/id" 
+                      @click="isMobileProfileMenuOpen = false"
+                      class="flex items-center justify-center gap-1.5 py-2 text-[11px] font-extrabold rounded-lg transition-all"
+                      :class="currentLocale === 'id' 
+                        ? 'bg-white text-[#264790] shadow-sm' 
+                        : 'text-slate-500 hover:text-slate-800'"
+                    >
+                      <span>ID</span>
+                      <Check v-if="currentLocale === 'id'" :size="10" stroke-width="3" />
+                    </Link>
+                  </div>
+                </div>
+
+              </div>
+            </Transition>
+          </div>
         </div>
 
       </header>
@@ -484,12 +623,12 @@ const Logo = () => {
         <!-- RIGHT PANEL: Form (58% width on Desktop) -->
         <div class="w-full md:w-[58%] p-8 sm:p-12 md:p-16 flex flex-col justify-center">
           
-          <h2 class="text-3xl font-extrabold text-[#1A2B49] tracking-tight mb-8">Sign In</h2>
+          <h2 class="text-3xl font-extrabold text-[#1A2B49] tracking-tight mb-8">{{ $t('login') || 'Sign In' }}</h2>
 
           <form @submit.prevent="handleSignIn" class="flex flex-col gap-5">
             <!-- Email Field -->
             <div class="flex flex-col gap-2">
-              <label class="text-xs sm:text-sm font-extrabold text-[#264790]">Email Address</label>
+              <label class="text-xs sm:text-sm font-extrabold text-[#264790]">{{ $t('email_title') || 'Email Address' }}</label>
               <input 
                 type="email" 
                 v-model="loginForm.email"
@@ -501,7 +640,7 @@ const Logo = () => {
 
             <!-- Password Field -->
             <div class="flex flex-col gap-2 relative">
-              <label class="text-xs sm:text-sm font-extrabold text-[#264790]">Password</label>
+              <label class="text-xs sm:text-sm font-extrabold text-[#264790]">{{ $t('password') || 'Password' }}</label>
               <div class="relative">
                 <input 
                   :type="showPassword ? 'text' : 'password'" 
@@ -519,7 +658,7 @@ const Logo = () => {
                   <EyeOff v-else :size="16" />
                 </button>
               </div>
-              <a href="#" class="self-end text-xs font-bold text-slate-400 hover:text-[#264790] transition-colors mt-1">Lupa Password?</a>
+              <a href="#" class="self-end text-xs font-bold text-slate-400 hover:text-[#264790] transition-colors mt-1">{{ $t('forgot_password') || 'Lupa Password?' }}</a>
             </div>
 
             <!-- Sign In solid CTA button -->
@@ -528,7 +667,7 @@ const Logo = () => {
               :disabled="loginForm.processing"
               class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all text-center mt-3"
             >
-              Sign In
+              {{ $t('login') || 'Sign In' }}
             </button>
 
             <!-- Create New Account soft CTA button -->
@@ -537,7 +676,7 @@ const Logo = () => {
               @click="isLoginModalOpen = false"
               class="w-full bg-[#F4F7F9] hover:bg-slate-100 text-[#1A2B49] py-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-sm transition-all text-center border border-slate-100"
             >
-              Create New Account
+              {{ $t('create_new_account') || 'Create New Account' }}
             </Link>
           </form>
 
@@ -557,7 +696,7 @@ const Logo = () => {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
             </svg>
-            <span>Masuk / Daftar</span>
+            <span>{{ $t('login_register') || 'Masuk / Daftar' }}</span>
           </button>
 
         </div>
@@ -587,8 +726,8 @@ const Logo = () => {
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
             </svg>
           </div>
-          <h3 class="text-[#1A2B49] font-extrabold text-base">Pilih Akun Google Anda</h3>
-          <p class="text-[11px] text-slate-400 font-semibold leading-relaxed">Untuk melanjutkan ke Drastha Learning Platform</p>
+          <h3 class="text-[#1A2B49] font-extrabold text-base">{{ $t('choose_google_account') || 'Pilih Akun Google Anda' }}</h3>
+          <p class="text-[11px] text-slate-400 font-semibold leading-relaxed">{{ $t('google_continue') || 'Untuk melanjutkan ke Drastha Learning Platform' }}</p>
         </div>
 
         <div class="flex flex-col gap-3 mt-2">
@@ -601,7 +740,7 @@ const Logo = () => {
               <span class="font-extrabold text-xs text-[#1A2B49] group-hover:text-[#264790]">Student Drastha</span>
               <span class="text-[10px] text-slate-400 font-semibold">student@drastha.com</span>
             </div>
-            <span class="bg-emerald-100 text-emerald-700 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">Terdaftar</span>
+            <span class="bg-emerald-100 text-emerald-700 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">{{ $t('registered') || 'Terdaftar' }}</span>
           </button>
 
           <!-- Choice 2: Unregistered (Redirects to Pre-filled 3-step signup) -->
@@ -613,7 +752,7 @@ const Logo = () => {
               <span class="font-extrabold text-xs text-[#1A2B49] group-hover:text-[#264790]">New Student</span>
               <span class="text-[10px] text-slate-400 font-semibold">newstudent@gmail.com</span>
             </div>
-            <span class="bg-blue-100 text-blue-700 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">Baru</span>
+            <span class="bg-blue-100 text-blue-700 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">{{ $t('new') || 'Baru' }}</span>
           </button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import '../css/app.css';
 import './bootstrap';
 
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, usePage } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
@@ -52,10 +52,16 @@ createInertiaApp({
             .use(plugin)
             .use(ZiggyVue);
 
-        // Global translation helper
+        // Global translation helper dynamically fetching from active page props
         app.config.globalProperties.$t = (key) => {
-            const translations = props.initialPage.props.translations || {};
-            return translations[key] || key;
+            try {
+                const page = usePage();
+                const translations = page.props.translations || {};
+                return translations[key] !== undefined ? translations[key] : key;
+            } catch (e) {
+                const translations = props.initialPage.props.translations || {};
+                return translations[key] !== undefined ? translations[key] : key;
+            }
         };
 
         return app.mount(el);

@@ -151,9 +151,9 @@ const displayRelatedBlogs = computed(() => {
       
       <!-- BREADCRUMBS (Consistent) -->
       <nav class="flex items-center gap-2 text-xs font-semibold text-slate-400 mb-8 select-none">
-        <Link href="/" class="hover:text-[#44A6D9] transition-colors">Home</Link>
+        <Link href="/" class="hover:text-[#44A6D9] transition-colors">{{ $t('home') || 'Home' }}</Link>
         <span class="text-slate-300">/</span>
-        <Link href="/blogs" class="hover:text-[#44A6D9] transition-colors">Blog</Link>
+        <Link href="/blogs" class="hover:text-[#44A6D9] transition-colors">{{ $t('blog') || 'Blog' }}</Link>
         <span class="text-slate-300">/</span>
         <span class="text-slate-600 truncate max-w-[200px] sm:max-w-none">{{ blog.title }}</span>
       </nav>
@@ -174,12 +174,12 @@ const displayRelatedBlogs = computed(() => {
             <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-bold text-slate-400 mt-2 select-none">
               <div class="flex items-center gap-1.5">
                 <UserIcon :size="14" class="text-[#264790]" />
-                <span>Published by <span class="text-[#1A2B49]">{{ blog.author_name || blog.user?.name || 'Admin Drastha Learning' }}</span></span>
+                <span>{{ $t('published_by') || 'Published by' }} <span class="text-[#1A2B49]">{{ blog.author_name || blog.user?.name || 'Admin Drastha Learning' }}</span></span>
               </div>
               <span class="text-slate-200 hidden sm:inline">|</span>
               <div class="flex items-center gap-1.5">
                 <Calendar :size="14" class="text-[#264790]" />
-                <span>Updated on {{ new Date(blog.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}</span>
+                <span>{{ $t('updated_on') || 'Updated on' }} {{ new Date(blog.created_at).toLocaleDateString($page.props.locale === 'id' ? 'id-ID' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}</span>
               </div>
             </div>
           </div>
@@ -196,16 +196,16 @@ const displayRelatedBlogs = computed(() => {
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
           <aside class="lg:col-span-4 flex flex-col gap-8 lg:sticky lg:top-24 select-none">
             <div class="bg-white rounded-[2rem] p-8 border border-slate-100/80 shadow-[0_10px_35px_rgba(0,0,0,0.015)] flex flex-col gap-5">
-              <h3 class="font-extrabold text-lg text-[#1A2B49] leading-snug">Subscribe to the Drastha Learning Newsletter</h3>
-              <p class="text-xs font-semibold text-slate-400 leading-relaxed">Dapatkan pembaruan berita dan materi terbaru langsung di inbox Anda.</p>
+              <h3 class="font-extrabold text-lg text-[#1A2B49] leading-snug">{{ $t('subscribe_newsletter_title') || 'Subscribe to the Drastha Learning Newsletter' }}</h3>
+              <p class="text-xs font-semibold text-slate-400 leading-relaxed">{{ $t('subscribe_newsletter_desc') || 'Dapatkan pembaruan berita dan materi terbaru langsung di inbox Anda.' }}</p>
               <form @submit.prevent="handleSubscribe" class="flex flex-col gap-3">
-                <input type="email" v-model="subscribeEmail" placeholder="Email" required class="w-full bg-[#F4F7F9] border border-slate-100 rounded-2xl px-5 py-4 text-xs font-bold focus:outline-none focus:border-[#44A6D9]/50 focus:bg-white transition-all text-slate-700 placeholder-slate-400" />
-                <button type="submit" class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-4 rounded-2xl font-extrabold text-xs shadow-md transition-colors uppercase tracking-wider">Subscribe</button>
+                <input type="email" v-model="subscribeEmail" :placeholder="$t('email_placeholder') || 'Email'" required class="w-full bg-[#F4F7F9] border border-slate-100 rounded-2xl px-5 py-4 text-xs font-bold focus:outline-none focus:border-[#44A6D9]/50 focus:bg-white transition-all text-slate-700 placeholder-slate-400" />
+                <button type="submit" class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-4 rounded-2xl font-extrabold text-xs shadow-md transition-colors uppercase tracking-wider">{{ $t('subscribe_button') || 'Subscribe' }}</button>
               </form>
-              <transition name="fade"><p v-if="subscribeSuccess" class="text-xs font-bold text-emerald-600">Terima kasih! Anda berhasil mendaftar buletin.</p></transition>
+              <transition name="fade"><p v-if="subscribeSuccess" class="text-xs font-bold text-emerald-600">{{ $t('subscribe_success_msg') || 'Terima kasih! Anda berhasil mendaftar buletin.' }}</p></transition>
             </div>
             <div class="bg-white rounded-[2rem] p-8 border border-slate-100/80 shadow-[0_10px_35px_rgba(0,0,0,0.015)] flex flex-col gap-5">
-              <h3 class="font-extrabold text-lg text-[#1A2B49] border-b border-slate-50 pb-2">Daftar Isi</h3>
+              <h3 class="font-extrabold text-lg text-[#1A2B49] border-b border-slate-50 pb-2">{{ $t('table_of_contents') || 'Daftar Isi' }}</h3>
               <nav class="flex flex-col gap-3.5">
                 <a v-for="(item, idx) in toc" :key="item.id" :href="`#${item.id}`" @click.prevent="scrollToHeading(item.id)" class="text-xs font-bold text-slate-500 hover:text-[#44A6D9] flex gap-2.5 items-start transition-colors leading-relaxed group">
                   <span class="text-[#264790] shrink-0 font-extrabold group-hover:text-[#44A6D9]">{{ idx + 1 }}.</span>
@@ -234,9 +234,9 @@ const displayRelatedBlogs = computed(() => {
             {{ blog.title }}
           </h1>
           <div class="flex items-center gap-3 mt-6 text-xs font-bold text-slate-500">
-            <span class="bg-[#F9CC6B]/30 px-3 py-1 rounded text-[#1A2B49] font-serif italic">Oleh: {{ blog.author_name || blog.user?.name || 'Redaktur Drastha' }}</span>
+            <span class="bg-[#F9CC6B]/30 px-3 py-1 rounded text-[#1A2B49] font-serif italic">{{ $t('by_author') || 'Oleh' }}: {{ blog.author_name || blog.user?.name || 'Redaktur Drastha' }}</span>
             <span>•</span>
-            <span>{{ new Date(blog.created_at).toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'}) }}</span>
+            <span>{{ new Date(blog.created_at).toLocaleDateString($page.props.locale === 'id' ? 'id-ID' : 'en-US', {day: 'numeric', month: 'long', year: 'numeric'}) }}</span>
           </div>
         </div>
 
@@ -247,7 +247,7 @@ const displayRelatedBlogs = computed(() => {
               <img :src="blog.image || '/images/pages/login_or_signup/bg-login-signup.png'" class="w-full h-full object-cover" alt="Polaroid main cover" />
             </div>
             <div class="mt-6 text-center text-slate-400 font-handwriting text-base">
-              {{ blog.title }} - {{ new Date(blog.created_at).toLocaleDateString('id-ID', {year: 'numeric'}) }}
+              {{ blog.title }} - {{ new Date(blog.created_at).toLocaleDateString($page.props.locale === 'id' ? 'id-ID' : 'en-US', {year: 'numeric'}) }}
             </div>
           </div>
         </div>
@@ -264,18 +264,18 @@ const displayRelatedBlogs = computed(() => {
           <aside class="lg:col-span-4 flex flex-col gap-10 lg:sticky lg:top-24 select-none">
             <!-- Newsletter Tilted Warning/Warm Color -->
             <div class="bg-amber-400 p-8 rounded-3xl shadow-lg rotate-1 hover:-rotate-1 transition-transform duration-300 flex flex-col gap-5 border-4 border-black text-black">
-              <h3 class="font-serif font-black text-xl leading-snug">Langganan Buletin Drastha</h3>
-              <p class="text-xs font-semibold leading-relaxed text-black/80">Dapatkan tips belajar eksklusif, tutorial, dan update kelas terbaru dari kami langsung ke e-mail Anda.</p>
+              <h3 class="font-serif font-black text-xl leading-snug">{{ $t('subscribe_newsletter_title') || 'Langganan Buletin Drastha' }}</h3>
+              <p class="text-xs font-semibold leading-relaxed text-black/80">{{ $t('subscribe_newsletter_desc_creative') || 'Dapatkan tips belajar eksklusif, tutorial, dan update kelas terbaru dari kami langsung ke e-mail Anda.' }}</p>
               <form @submit.prevent="handleSubscribe" class="flex flex-col gap-3.5">
-                <input type="email" v-model="subscribeEmail" placeholder="Masukkan Email Anda" required class="w-full bg-white border-2 border-black rounded-xl px-4 py-3.5 text-xs font-bold focus:outline-none text-slate-800 placeholder-slate-400 shadow-[3px_3px_0px_0px_#000]" />
-                <button type="submit" class="w-full bg-[#1A2B49] text-white hover:bg-[#264790] py-3.5 rounded-xl font-black text-xs uppercase tracking-wider border-2 border-black shadow-[3px_3px_0px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 transition-all">Subscribe Now</button>
+                <input type="email" v-model="subscribeEmail" :placeholder="$t('enter_email_placeholder') || 'Masukkan Email Anda'" required class="w-full bg-white border-2 border-black rounded-xl px-4 py-3.5 text-xs font-bold focus:outline-none text-slate-800 placeholder-slate-400 shadow-[3px_3px_0px_0px_#000]" />
+                <button type="submit" class="w-full bg-[#1A2B49] text-white hover:bg-[#264790] py-3.5 rounded-xl font-black text-xs uppercase tracking-wider border-2 border-black shadow-[3px_3px_0px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 transition-all">{{ $t('subscribe_now') || 'Subscribe Now' }}</button>
               </form>
-              <transition name="fade"><p v-if="subscribeSuccess" class="text-xs font-black text-[#1A2B49]">Berhasil didaftarkan!</p></transition>
+              <transition name="fade"><p v-if="subscribeSuccess" class="text-xs font-black text-[#1A2B49]">{{ $t('subscribe_success_creative') || 'Berhasil didaftarkan!' }}</p></transition>
             </div>
 
             <!-- Table of Contents -->
             <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-5">
-              <h3 class="font-serif font-extrabold text-lg text-[#1A2B49] border-b border-dashed border-slate-200 pb-3">Navigasi Artikel</h3>
+              <h3 class="font-serif font-extrabold text-lg text-[#1A2B49] border-b border-dashed border-slate-200 pb-3">{{ $t('table_of_contents') || 'Navigasi Artikel' }}</h3>
               <nav class="flex flex-col gap-3">
                 <a v-for="(item, idx) in toc" :key="item.id" :href="`#${item.id}`" @click.prevent="scrollToHeading(item.id)" class="text-xs font-bold text-slate-500 hover:text-orange-500 flex gap-2 items-start transition-colors leading-relaxed">
                   <span class="text-orange-400 font-serif font-black italic">{{ idx + 1 }}.</span>
@@ -284,7 +284,6 @@ const displayRelatedBlogs = computed(() => {
               </nav>
             </div>
           </aside>
-
         </div>
       </div>
 
@@ -307,7 +306,7 @@ const displayRelatedBlogs = computed(() => {
           <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-bold text-yellow-400 mt-2 select-none font-mono">
             <span>BY // {{ (blog.author_name || blog.user?.name || 'SYSADMIN').toUpperCase() }}</span>
             <span>//</span>
-            <span>STAMP // {{ new Date(blog.created_at).toLocaleDateString('id-ID') }}</span>
+            <span>STAMP // {{ new Date(blog.created_at).toLocaleDateString($page.props.locale === 'id' ? 'id-ID' : 'en-US') }}</span>
           </div>
         </div>
 
@@ -334,19 +333,19 @@ const displayRelatedBlogs = computed(() => {
               <span class="absolute -top-3 left-4 bg-yellow-400 text-black border-2 border-black text-[9px] font-black px-2.5 py-1 uppercase tracking-widest shadow-sm">
                 TICKET TO KNOWLEDGE
               </span>
-              <h3 class="font-black text-lg mt-2 uppercase leading-snug">Subscribe Terminal</h3>
-              <p class="text-xs font-bold leading-relaxed text-black/85 mt-2">Dapatkan info bootcamp online, event webinar, dan modul gratis langsung dari PT. Drastha Berkah Sentosa.</p>
+              <h3 class="font-black text-lg mt-2 uppercase leading-snug">{{ $t('subscribe_terminal') || 'Subscribe Terminal' }}</h3>
+              <p class="text-xs font-bold leading-relaxed text-black/85 mt-2">{{ $t('subscribe_newsletter_desc_cyber') || 'Dapatkan info bootcamp online, event webinar, dan modul gratis langsung dari PT. Drastha Berkah Sentosa.' }}</p>
               <form @submit.prevent="handleSubscribe" class="flex flex-col gap-3 mt-4">
-                <input type="email" v-model="subscribeEmail" placeholder="Enter Email Address" required class="w-full bg-white border-2 border-black rounded-lg px-4 py-3 text-xs font-black focus:outline-none focus:bg-yellow-50 text-slate-800 placeholder-slate-500" />
-                <button type="submit" class="w-full bg-black text-yellow-400 hover:bg-yellow-400 hover:text-black py-3 rounded-lg font-black text-xs uppercase tracking-widest border-2 border-black transition-colors">INITIATE SUBSCRIPTION</button>
+                <input type="email" v-model="subscribeEmail" :placeholder="$t('enter_email_placeholder') || 'Enter Email Address'" required class="w-full bg-white border-2 border-black rounded-lg px-4 py-3 text-xs font-black focus:outline-none focus:bg-yellow-50 text-slate-800 placeholder-slate-500" />
+                <button type="submit" class="w-full bg-black text-yellow-400 hover:bg-yellow-400 hover:text-black py-3 rounded-lg font-black text-xs uppercase tracking-widest border-2 border-black transition-colors">{{ $t('initiate_subscription') || 'INITIATE SUBSCRIPTION' }}</button>
               </form>
-              <transition name="fade"><p v-if="subscribeSuccess" class="text-xs font-black mt-2 text-white bg-black px-2.5 py-1 rounded w-fit border border-yellow-400">STATUS: SUCCESS</p></transition>
+              <transition name="fade"><p v-if="subscribeSuccess" class="text-xs font-black mt-2 text-white bg-black px-2.5 py-1 rounded w-fit border border-yellow-400">STATUS: {{ $t('success_status') || 'SUCCESS' }}</p></transition>
             </div>
 
             <!-- Table of contents -->
             <div class="bg-white border-4 border-black p-8 rounded-3xl shadow-[6px_6px_0px_0px_#000] flex flex-col gap-5">
               <h3 class="font-black text-base text-black uppercase tracking-wider border-b-2 border-black pb-2 flex items-center gap-1.5">
-                <Zap :size="14" class="text-yellow-400 fill-yellow-400" /> FILE DIRECTORY
+                <Zap :size="14" class="text-yellow-400 fill-yellow-400" /> {{ $t('file_directory') || 'FILE DIRECTORY' }}
               </h3>
               <nav class="flex flex-col gap-3 font-mono">
                 <a v-for="(item, idx) in toc" :key="item.id" :href="`#${item.id}`" @click.prevent="scrollToHeading(item.id)" class="text-[11px] font-black text-slate-700 hover:text-blue-600 flex gap-2 items-start transition-colors leading-relaxed">
@@ -365,7 +364,7 @@ const displayRelatedBlogs = computed(() => {
       <!-- ========================================================= -->
       <div class="mt-24 border-t border-slate-100 pt-16">
         <h2 class="text-2xl sm:text-3xl font-black text-[#1A2B49] mb-10 tracking-tight" :class="blogTemplate === '2' ? 'font-serif' : (blogTemplate === '3' ? 'font-mono uppercase tracking-wider' : '')">
-          {{ blogTemplate === '3' ? 'Related Archives //' : 'Related Articles' }}
+          {{ blogTemplate === '3' ? $t('related_archives') || 'Related Archives //' : $t('related_articles') || 'Related Articles' }}
         </h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <div 
@@ -430,7 +429,7 @@ const displayRelatedBlogs = computed(() => {
                       : 'inline-block bg-[#264790] hover:bg-[#44A6D9] text-white px-5 py-3 rounded-xl text-xs font-extrabold transition-all w-max shadow-sm hover:shadow')
                 ]"
               >
-                {{ blogTemplate === '2' ? 'Baca Selengkapnya' : (blogTemplate === '3' ? 'READ_ARCHIVE.EXE' : 'Read More') }}
+                {{ blogTemplate === '2' ? $t('read_more') || 'Baca Selengkapnya' : (blogTemplate === '3' ? $t('read_archive_exe') || 'READ_ARCHIVE.EXE' : $t('read_more') || 'Read More') }}
               </Link>
             </div>
           </div>
@@ -457,7 +456,7 @@ const displayRelatedBlogs = computed(() => {
             'text-white mb-6 relative z-10 tracking-tight'
           ]"
         >
-          {{ blogTemplate === '3' ? 'CRITICAL_INIT: Level up your skills now!' : 'Ready to Level up your skills?' }}
+          {{ blogTemplate === '3' ? $t('critical_init_levelup') || 'CRITICAL_INIT: Level up your skills now!' : $t('ready_levelup') || 'Ready to Level up your skills?' }}
         </h2>
         
         <Link 
@@ -468,7 +467,7 @@ const displayRelatedBlogs = computed(() => {
               : 'inline-block bg-[#F9CC6B] hover:bg-[#1A2B49] text-[#1A2B49] hover:text-white font-extrabold text-xs sm:text-sm px-10 py-4.5 rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all relative z-10 uppercase tracking-wider'
           ]"
         >
-          Mulai Belajar Sekarang
+          {{ $t('start_learning_now') || 'Mulai Belajar Sekarang' }}
         </Link>
       </div>
 
@@ -486,7 +485,7 @@ const displayRelatedBlogs = computed(() => {
               <ApplicationLogo />
             </div>
             <p class="text-[#264790] text-sm md:text-base font-medium leading-relaxed max-w-md">
-              Platform Learning Management System (LMS) yang dirancang untuk mendukung pembelajaran modern, interaktif, dan berkelanjutan.
+              {{ $t('hero_subtitle') }}
             </p>
             <div class="flex items-center gap-4">
               <a href="#" class="text-[#264790] hover:text-[#44A6D9] transition-colors p-1 border-[1.5px] border-[#264790] hover:border-[#44A6D9] rounded-lg">
@@ -505,19 +504,19 @@ const displayRelatedBlogs = computed(() => {
           </div>
 
           <div class="md:col-span-3 flex flex-col gap-5">
-            <h4 class="font-extrabold text-[#1A2B49] text-lg">Tautan Cepat</h4>
+            <h4 class="font-extrabold text-[#1A2B49] text-lg">{{ $t('quick_links') || 'Tautan Cepat' }}</h4>
             <ul class="flex flex-col gap-3">
-              <li><Link href="/" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Home</Link></li>
-              <li><Link href="/courses" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Kelas Kami</Link></li>
-              <li><Link href="/contact" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Hubungi Kami</Link></li>
-              <li><Link href="/about" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Tentang Kami</Link></li>
-              <li><Link href="/clients" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Klien Kami</Link></li>
-              <li><Link href="/blogs" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Blog Kami</Link></li>
+              <li><Link href="/" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('home') || 'Home' }}</Link></li>
+              <li><Link href="/courses" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('sub_class') || 'Kelas Kami' }}</Link></li>
+              <li><Link href="/contact" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('contact_us_title') || 'Hubungi Kami' }}</Link></li>
+              <li><Link href="/about" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('about_us') || 'Tentang Kami' }}</Link></li>
+              <li><Link href="/clients" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('client_our') || 'Klien Kami' }}</Link></li>
+              <li><Link href="/blogs" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('blog') || 'Blog Kami' }}</Link></li>
             </ul>
           </div>
 
           <div class="md:col-span-4 flex flex-col gap-5">
-            <h4 class="font-extrabold text-[#1A2B49] text-lg">Kontak</h4>
+            <h4 class="font-extrabold text-[#1A2B49] text-lg">{{ $t('contact_label') || 'Kontak' }}</h4>
             <ul class="flex flex-col gap-3 text-[#264790] text-sm md:text-base font-medium leading-relaxed">
               <li class="font-bold text-[#264790] uppercase tracking-wide">PT. DRASTHA BERKAH SENTOSA</li>
               <li>031-9960-5068 (Pulsa)</li>
@@ -531,7 +530,7 @@ const displayRelatedBlogs = computed(() => {
         <div class="w-full h-px bg-slate-300/50 mb-6"></div>
 
         <div class="flex flex-col-reverse md:flex-row justify-between items-center gap-4 text-[#264790] text-xs md:text-sm font-semibold">
-          <p>&copy; 2026 Drastha Learning, All Rights Reserved</p>
+          <p>&copy; 2026 Drastha Learning. {{ $t('all_rights_reserved') || 'All Rights Reserved' }}</p>
           <div class="flex flex-wrap justify-center gap-4 md:gap-8">
             <Link href="#" class="hover:text-[#44A6D9] transition-colors border-b border-transparent hover:border-[#44A6D9] pb-0.5">Privacy Policy</Link>
             <Link href="#" class="hover:text-[#44A6D9] transition-colors border-b border-transparent hover:border-[#44A6D9] pb-0.5">Terms of Service</Link>

@@ -20,8 +20,8 @@ class SetLocale
         if (Session::has('locale')) {
             App::setLocale(Session::get('locale'));
         } else {
-            // Default to 'id' or config('app.locale')
-            App::setLocale(config('app.locale'));
+            // Default to Indonesian ('id')
+            App::setLocale('id');
         }
 
         return $next($request);

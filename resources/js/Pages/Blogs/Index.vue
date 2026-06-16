@@ -91,7 +91,7 @@ const Logo = () => {
 </script>
 
 <template>
-  <Head title="Berita & Artikel | Drastha Learning" />
+  <Head :title="($t('blog_page_title') || 'Berita & Artikel') + ' | Drastha Learning'" />
 
   <GuestLayout>
     <!-- HERO SECTION WITH CUSTOM GRADIENT & GRAPHICS -->
@@ -112,11 +112,11 @@ const Logo = () => {
           </div>
 
           <h1 class="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
-            Discover Insights.<br />
-            Fuel Your Curiosity
+            {{ $t('blog_hero_title') || 'Discover Insights.' }}<br />
+            {{ $t('blog_hero_subtitle') || 'Fuel Your Curiosity' }}
           </h1>
           <p class="text-white/85 text-xs sm:text-base font-semibold max-w-lg leading-relaxed">
-            Dive into a world of insightful articles, expert opinions, and inspiring stories.
+            {{ $t('blog_hero_desc') || 'Dive into a world of insightful articles, expert opinions, and inspiring stories.' }}
           </p>
 
           <!-- Search Input Box matching mockup exactly -->
@@ -125,7 +125,7 @@ const Logo = () => {
               type="text" 
               v-model="searchQuery"
               @keyup.enter="handleSearch"
-              placeholder="Search Article"
+              :placeholder="$t('search_article_placeholder') || 'Search Article'"
               class="w-full bg-transparent border-none text-slate-700 text-xs sm:text-sm font-semibold pl-5 focus:outline-none focus:ring-0 placeholder-slate-400 py-2.5"
             />
             <button 
@@ -146,10 +146,10 @@ const Logo = () => {
       <!-- Section Title and Subtitle -->
       <div class="text-center mb-16 flex flex-col items-center gap-3">
         <h2 class="text-3xl sm:text-4xl font-extrabold text-[#1A2B49] tracking-tight">
-          Blog <span class="text-[#264790]">News</span>
+          Blog <span class="text-[#264790]">{{ $t('blog_news') || 'News' }}</span>
         </h2>
         <p class="text-slate-400 text-xs sm:text-sm font-semibold max-w-sm">
-          Get Started today and take your reading experience wherever you go!
+          {{ $t('blog_news_desc') || 'Get Started today and take your reading experience wherever you go!' }}
         </p>
 
         <!-- Admin Add Article Button -->
@@ -158,7 +158,7 @@ const Logo = () => {
           @click="isCreateModalOpen = true"
           class="mt-6 inline-flex items-center gap-2 bg-[#264790] hover:bg-[#44A6D9] text-white px-6 py-3 rounded-2xl font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all"
         >
-          <Plus :size="16" /> Tambah Artikel Baru
+          <Plus :size="16" /> {{ $t('add_new_article') || 'Tambah Artikel Baru' }}
         </button>
       </div>
 
@@ -175,7 +175,7 @@ const Logo = () => {
             <img 
               :src="blog.image || '/images/pages/login_or_signup/bg-login-signup.png'" 
               class="w-full h-full object-cover" 
-              alt="Article Thumbnail" 
+              :alt="$t('article_thumbnail') || 'Article Thumbnail'" 
             />
             
             <!-- Category Badge (orange/yellow theme matching mockup) -->
@@ -189,7 +189,7 @@ const Logo = () => {
             <div>
               <!-- Date publication -->
               <span class="text-[10px] text-slate-400 font-bold block mb-2">
-                {{ new Date(blog.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) }}
+                {{ new Date(blog.created_at).toLocaleDateString(usePage().props.locale === 'id' ? 'id-ID' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' }) }}
               </span>
               
               <!-- Title links to detail -->
@@ -217,7 +217,7 @@ const Logo = () => {
                 v-if="isAdmin"
                 @click="deleteBlog(blog.id)"
                 class="text-rose-500 hover:text-rose-700 transition-colors p-1"
-                title="Hapus Artikel"
+                :title="$t('delete_article') || 'Hapus Artikel'"
               >
                 <X :size="14" />
               </button>
@@ -232,7 +232,7 @@ const Logo = () => {
       <!-- If Empty States -->
       <div v-if="blogs.data.length === 0" class="text-center py-20 bg-slate-50 rounded-3xl border border-slate-100 flex flex-col items-center gap-3">
         <AlertCircle :size="40" class="text-slate-400 animate-pulse" />
-        <p class="text-slate-500 font-semibold text-sm">Belum ada artikel berita yang diterbitkan.</p>
+        <p class="text-slate-500 font-semibold text-sm">{{ $t('no_articles') || 'Belum ada artikel berita yang diterbitkan.' }}</p>
       </div>
 
       <!-- PAGINATION NAVIGATION MATCHING MOCKUP: < Blog Berita > -->
@@ -249,7 +249,7 @@ const Logo = () => {
         </span>
 
         <span class="text-sm font-bold text-[#1A2B49] uppercase tracking-widest">
-          Blog <span class="text-[#264790]">Berita</span>
+          Blog <span class="text-[#264790]">{{ $t('blog_news') || 'Berita' }}</span>
         </span>
 
         <Link 
@@ -279,7 +279,7 @@ const Logo = () => {
             <div class="w-8 h-8 rounded-full bg-[#264790]/5 text-[#264790] flex items-center justify-center">
               <PenTool :size="16" />
             </div>
-            <h3 class="text-lg font-extrabold text-[#1A2B49]">Tulis Artikel Baru</h3>
+            <h3 class="text-lg font-extrabold text-[#1A2B49]">{{ $t('write_new_article') || 'Tulis Artikel Baru' }}</h3>
           </div>
           <button 
             @click="isCreateModalOpen = false" 
@@ -293,11 +293,11 @@ const Logo = () => {
         <form @submit.prevent="submitBlog" class="flex flex-col gap-5">
           <!-- Title Input -->
           <div class="flex flex-col gap-2">
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Judul Artikel</label>
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ $t('article_title') || 'Judul Artikel' }}</label>
             <input 
               type="text" 
               v-model="createForm.title"
-              placeholder="Masukkan judul artikel" 
+              :placeholder="$t('enter_article_title') || 'Masukkan judul artikel'" 
               required
               class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:border-[#44A6D9]/50 focus:bg-white transition-all placeholder-slate-400"
             />
@@ -305,7 +305,7 @@ const Logo = () => {
 
           <!-- Category Select -->
           <div class="flex flex-col gap-2">
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Kategori Kelas</label>
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ $t('class_category') || 'Kategori Kelas' }}</label>
             <select 
               v-model="createForm.category"
               class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-xs sm:text-sm text-slate-700 font-bold focus:outline-none cursor-pointer"
@@ -320,10 +320,10 @@ const Logo = () => {
 
           <!-- Excerpt Input -->
           <div class="flex flex-col gap-2">
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Ringkasan Singkat (Excerpt)</label>
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ $t('excerpt_label') || 'Ringkasan Singkat (Excerpt)' }}</label>
             <textarea 
               v-model="createForm.excerpt"
-              placeholder="Masukkan kutipan ringkasan artikel..." 
+              :placeholder="$t('enter_excerpt') || 'Masukkan kutipan ringkasan artikel...'" 
               rows="2"
               class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:border-[#44A6D9]/50 focus:bg-white transition-all placeholder-slate-400"
             ></textarea>
@@ -331,10 +331,10 @@ const Logo = () => {
 
           <!-- Content Body -->
           <div class="flex flex-col gap-2">
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Isi Lengkap Artikel</label>
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ $t('content_label') || 'Isi Lengkap Artikel' }}</label>
             <textarea 
               v-model="createForm.content"
-              placeholder="Tulis materi artikel berita Anda secara detail disini..." 
+              :placeholder="$t('enter_content') || 'Tulis materi artikel berita Anda secara detail disini...'" 
               rows="6"
               required
               class="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3.5 text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:border-[#44A6D9]/50 focus:bg-white transition-all placeholder-slate-400"
@@ -347,7 +347,7 @@ const Logo = () => {
             :disabled="createForm.processing"
             class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all text-center mt-2"
           >
-            Terbitkan Artikel
+            {{ $t('publish_article') || 'Terbitkan Artikel' }}
           </button>
         </form>
 
@@ -368,7 +368,7 @@ const Logo = () => {
             </div>
 
             <p class="text-[#264790] text-sm md:text-base font-medium leading-relaxed max-w-md">
-              Platform Learning Management System (LMS) yang dirancang untuk mendukung pembelajaran modern, interaktif, dan berkelanjutan.
+              {{ $t('hero_subtitle') }}
             </p>
 
             <div class="flex items-center gap-4">
@@ -388,19 +388,19 @@ const Logo = () => {
           </div>
 
           <div class="md:col-span-3 flex flex-col gap-5">
-            <h4 class="font-extrabold text-[#1A2B49] text-lg">Tautan Cepat</h4>
+            <h4 class="font-extrabold text-[#1A2B49] text-lg">{{ $t('quick_links') || 'Tautan Cepat' }}</h4>
             <ul class="flex flex-col gap-3">
-              <li><Link href="/" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Home</Link></li>
-              <li><Link href="/courses" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Kelas Kami</Link></li>
-              <li><Link href="/contact" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Hubungi Kami</Link></li>
-              <li><Link href="/about" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Tentang Kami</Link></li>
-              <li><Link href="/clients" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Klien Kami</Link></li>
-              <li><Link href="/blog" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Blog Kami</Link></li>
+              <li><Link href="/" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('home') }}</Link></li>
+              <li><Link href="/courses" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('courses') || 'Kelas Kami' }}</Link></li>
+              <li><Link href="/contact" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('contact_us_title') || 'Hubungi Kami' }}</Link></li>
+              <li><Link href="/about" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('about_us') || 'Tentang Kami' }}</Link></li>
+              <li><Link href="/clients" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('client_our') || 'Klien Kami' }}</Link></li>
+              <li><Link href="/blog" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">{{ $t('blog') }}</Link></li>
             </ul>
           </div>
 
           <div class="md:col-span-4 flex flex-col gap-5">
-            <h4 class="font-extrabold text-[#1A2B49] text-lg">Kontak</h4>
+            <h4 class="font-extrabold text-[#1A2B49] text-lg">{{ $t('contact_label') || 'Kontak' }}</h4>
             <ul class="flex flex-col gap-3 text-[#264790] text-sm md:text-base font-medium leading-relaxed">
               <li class="font-bold text-[#264790] uppercase tracking-wide">
                 PT. DRASTHA BERKAH SENTOSA

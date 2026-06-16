@@ -17,6 +17,16 @@ const searchQuery = ref('');
 const courseTypeFilter = ref('Semua Mode');
 const showCourseTypeDropdown = ref(false);
 
+const courseTypeFilterLabel = computed(() => {
+  if (courseTypeFilter.value === 'Semua Mode') {
+    return usePage().props.translations?.all_modes || 'Semua Mode';
+  }
+  if (courseTypeFilter.value === 'Kelas Kursus / Live Class') {
+    return usePage().props.translations?.live_class || 'Kelas Kursus / Live Class';
+  }
+  return courseTypeFilter.value;
+});
+
 // Computed activeFilter dynamically listening to Ziggy query parameters
 const activeFilter = computed({
   get() {
@@ -121,7 +131,7 @@ const gridColsClass = computed(() => {
           <input 
             v-model="searchQuery" 
             type="text" 
-            placeholder="Mau Belajar apa?" 
+            :placeholder="$t('search_placeholder') || 'Mau Belajar apa?'" 
             class="bg-transparent w-full outline-none text-[#1A2B49] placeholder-slate-400 font-semibold text-sm border-none focus:ring-0 py-0"
           >
         </div>
@@ -141,26 +151,26 @@ const gridColsClass = computed(() => {
           >
             <div class="flex items-center gap-3">
               <Globe :size="20" class="text-[#1A2B49]" />
-              <span class="text-[#1A2B49] font-bold text-sm line-clamp-1">{{ courseTypeFilter }}</span>
+              <span class="text-[#1A2B49] font-bold text-sm line-clamp-1">{{ courseTypeFilterLabel }}</span>
             </div>
             <ChevronDown :size="18" class="text-slate-400" />
           </div>
           
           <div v-if="showCourseTypeDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50">
-            <div @click="courseTypeFilter = 'Semua Mode'; showCourseTypeDropdown = false" class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49]">Semua Mode</div>
-            <div @click="courseTypeFilter = 'Kelas Kursus / Live Class'; showCourseTypeDropdown = false" class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49]">Kelas Kursus / Live Class</div>
+            <div @click="courseTypeFilter = 'Semua Mode'; showCourseTypeDropdown = false" class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49]">{{ $t('all_modes') || 'Semua Mode' }}</div>
+            <div @click="courseTypeFilter = 'Kelas Kursus / Live Class'; showCourseTypeDropdown = false" class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49]">{{ $t('live_class') || 'Kelas Kursus / Live Class' }}</div>
           </div>
         </div>
 
         <button class="bg-[#264790] hover:bg-[#1a2b49] text-white font-extrabold py-3.5 px-8 rounded-full shadow-md transition-colors text-sm whitespace-nowrap">
-          Find a Class
+          {{ $t('find_class') || 'Find a Class' }}
         </button>
       </div>
 
       <!-- Level Pill dynamic active tag -->
       <div v-if="activeFilter !== 'Semua Kursus'" class="mb-6 flex">
         <span class="bg-[#F9CC6B] text-[#1A2B49] text-xs font-extrabold px-4 py-2 rounded-full shadow-sm flex items-center gap-2">
-          Menampilkan Kategori: Kelas {{ activeFilter }}
+          {{ $t('showing_category') || 'Menampilkan Kategori:' }} Kelas {{ activeFilter }}
           <button @click="clearFilter" class="hover:text-red-500 font-black text-sm outline-none pl-1">&times;</button>
         </span>
       </div>
@@ -171,7 +181,7 @@ const gridColsClass = computed(() => {
         <div :class="['w-full lg:w-[60%] xl:w-[65%] grid gap-6', gridColsClass]">
           
           <div v-if="filteredCourses.length === 0" class="col-span-1 sm:col-span-2 text-center py-20 bg-white rounded-3xl border border-slate-100/50 text-slate-500 font-bold text-sm">
-            Tidak ada kelas yang ditemukan untuk filter ini.
+            {{ $t('no_courses_found') || 'Tidak ada kelas yang ditemukan untuk filter ini.' }}
           </div>
 
           <Link 
@@ -219,15 +229,15 @@ const gridColsClass = computed(() => {
               <ul class="space-y-3 mb-6">
                 <li class="flex items-center gap-3 text-slate-500 text-sm font-medium">
                   <Calendar :size="16" class="text-slate-400" />
-                  <span>{{ course.sessions || 'Two Session per Week' }}</span>
+                  <span>{{ course.sessions || ($t('two_sessions') || 'Two Session per Week') }}</span>
                 </li>
                 <li class="flex items-center gap-3 text-slate-500 text-sm font-medium">
                   <Clock :size="16" class="text-slate-400" />
-                  <span>{{ course.access_duration_months ? course.access_duration_months + ' Bulan' : (course.duration || '1 Hour for 1 Session') }}</span>
+                  <span>{{ course.access_duration_months ? course.access_duration_months + ' ' + ($t('months') || 'Bulan') : (course.duration || ($t('one_session_duration') || '1 Hour for 1 Session')) }}</span>
                 </li>
                 <li class="flex items-center gap-3 text-slate-500 text-sm font-medium">
                   <MapPin :size="16" class="text-slate-400" />
-                  <span>{{ course.type || 'Offline Class' }}</span>
+                  <span>{{ course.type || ($t('offline_class') || 'Offline Class') }}</span>
                 </li>
               </ul>
 
@@ -239,7 +249,7 @@ const gridColsClass = computed(() => {
                 <span class="text-[#1A2B49] font-extrabold text-xl">
                   {{ formatPrice(course.price) }}
                 </span>
-                <span v-if="course.payment_type !== 'one-time'" class="text-slate-400 font-medium text-xs">/ Bulan</span>
+                <span v-if="course.payment_type !== 'one-time'" class="text-slate-400 font-medium text-xs">{{ $t('price_per_month') }}</span>
               </div>
             </div>
           </Link>
