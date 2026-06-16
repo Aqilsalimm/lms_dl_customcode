@@ -11,8 +11,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['name', 'email', 'password', 'role', 'personal_goal', 'photo'])]
+#[Fillable(['name', 'email', 'password', 'role', 'status', 'personal_goal', 'photo'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -52,6 +53,11 @@ class User extends Authenticatable
     public function courses(): HasMany
     {
         return $this->hasMany(Course::class, 'instructor_id');
+    }
+
+    public function instructorProfile(): HasOne
+    {
+        return $this->hasOne(InstructorProfile::class);
     }
 
     public function enrollments(): HasMany

@@ -1,0 +1,23 @@
+{
+    "home": "Home",
+    "services": "Services",
+    "about_us": "About Us",
+    "blog": "Blog",
+    "login": "Login",
+    "courses": "Courses",
+    "welcome": "Welcome to Drastha Learning",
+    "logout": "Logout",
+    "profile": "My Profile",
+    "dashboard": "Dashboard",
+    "enrolled_courses": "Enrolled Courses",
+    "learning_progress": "Learning Progress",
+    "reviews": "Reviews",
+    "quiz_attempts": "My Quiz Attempts",
+    "wishlist": "Wishlist",
+    "order_history": "Order History",
+    "qa": "Question & Answer",
+    "hero_title": "Learn More Structured, Grow Much Faster",
+    "hero_subtitle": "Learning Management System (LMS) platform designed to support modern, interactive, and sustainable learning.",
+    "start_learning": "Start Learning Now >>",
+    "contact_admin": "Contact Admin"
+}

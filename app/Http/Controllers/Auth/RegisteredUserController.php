@@ -35,6 +35,7 @@ class RegisteredUserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'role' => 'required|string|in:student,instructor',
             'personal_goal' => 'nullable|string|max:255',
             'photo' => 'nullable|image|max:1024',
         ]);
@@ -48,6 +49,8 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role' => $request->role,
+            'status' => $request->role === 'instructor' ? 'pending' : 'active',
             'personal_goal' => $request->personal_goal,
             'photo' => $photoPath ? '/storage/' . $photoPath : null,
         ]);
@@ -55,6 +58,10 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
 
         Auth::login($user);
+
+        if ($user->role === 'instructor') {
+            return redirect()->route('instructor.profile.setup');
+        }
 
         return redirect(route('dashboard', absolute: false));
     }

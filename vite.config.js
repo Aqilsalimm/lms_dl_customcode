@@ -17,6 +17,27 @@ export default defineConfig({
             },
         }),
     ],
+    build: {
+        chunkSizeWarningLimit: 1000,
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (id.includes('node_modules')) {
+                        if (id.includes('leaflet')) {
+                            return 'vendor-leaflet';
+                        }
+                        if (id.includes('lucide') || id.includes('@lucide')) {
+                            return 'vendor-lucide';
+                        }
+                        if (id.includes('vue') || id.includes('@vue') || id.includes('@inertiajs')) {
+                            return 'vendor-core';
+                        }
+                        return 'vendor';
+                    }
+                }
+            }
+        }
+    },
     server: {
         port: 5174,
         watch: {

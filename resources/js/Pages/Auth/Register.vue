@@ -16,6 +16,7 @@ const form = useForm({
     password: '',
     password_confirmation: '', // Handled under-the-hood in Step 1 transition
     otp_code: '',
+    role: 'student',
     personal_goal: '',
     photo: null,
 });
@@ -222,6 +223,21 @@ const Logo = () => {
                 required
                 class="w-full bg-[#F4F7F9] border border-slate-100 rounded-2xl px-5 py-4 text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:border-[#44A6D9]/50 focus:bg-white transition-all placeholder-slate-400"
               />
+            </div>
+
+            <!-- Role Toggle Field -->
+            <div class="flex flex-col gap-2">
+              <label class="text-xs sm:text-sm font-extrabold text-[#264790]">Mendaftar Sebagai</label>
+              <div class="flex gap-4">
+                <label class="flex items-center gap-2 cursor-pointer bg-[#F4F7F9] px-4 py-3 rounded-xl border border-slate-100 hover:border-[#44A6D9] transition-all flex-1">
+                  <input type="radio" v-model="form.role" value="student" class="text-[#264790] focus:ring-[#44A6D9]" />
+                  <span class="text-xs sm:text-sm font-bold text-slate-700">Siswa (Student)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-[#F4F7F9] px-4 py-3 rounded-xl border border-slate-100 hover:border-[#44A6D9] transition-all flex-1">
+                  <input type="radio" v-model="form.role" value="instructor" class="text-[#264790] focus:ring-[#44A6D9]" />
+                  <span class="text-xs sm:text-sm font-bold text-slate-700">Instruktur</span>
+                </label>
+              </div>
             </div>
 
             <!-- Password Field -->

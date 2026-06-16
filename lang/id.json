@@ -1,0 +1,23 @@
+{
+    "home": "Beranda",
+    "services": "Layanan",
+    "about_us": "Tentang Kami",
+    "blog": "Blog",
+    "login": "Masuk",
+    "courses": "Kursus",
+    "welcome": "Selamat Datang di Drastha Learning",
+    "logout": "Keluar",
+    "profile": "Profil Saya",
+    "dashboard": "Dasbor",
+    "enrolled_courses": "Kursus Terdaftar",
+    "learning_progress": "Progres Belajar",
+    "reviews": "Ulasan",
+    "quiz_attempts": "Riwayat Kuis",
+    "wishlist": "Daftar Keinginan",
+    "order_history": "Riwayat Pesanan",
+    "qa": "Tanya & Jawab",
+    "hero_title": "Belajar Lebih Terarah, Berkembang Lebih Cepat",
+    "hero_subtitle": "Platform Learning Management System (LMS) yang dirancang untuk mendukung pembelajaran modern, interaktif, dan berkelanjutan.",
+    "start_learning": "Mulai Belajar Sekarang >>",
+    "contact_admin": "Hubungi Admin"
+}

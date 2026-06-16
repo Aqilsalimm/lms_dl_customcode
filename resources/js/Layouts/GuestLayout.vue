@@ -22,6 +22,9 @@ const isLoginModalOpen = ref(false);
 const showPassword = ref(false);
 
 const isScrolled = ref(false);
+const isLangOpen = ref(false);
+const page = usePage();
+const currentLocale = computed(() => page.props.locale || 'id');
 
 const handleScroll = () => {
   isScrolled.value = window.scrollY > 20;
@@ -244,11 +247,11 @@ const Logo = () => {
       ]"
     >
       <header 
-        class="bg-[#FFFFFF] w-full flex justify-between items-center relative transition-all duration-500 ease-in-out mx-auto"
+        class="w-full flex justify-between items-center relative transition-all duration-500 ease-in-out mx-auto"
         :class="[
           isScrolled 
-            ? 'rounded-full px-8 py-3 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50' 
-            : 'rounded-full px-8 py-3 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50 md:rounded-t-none md:rounded-b-[30px] md:px-12 lg:px-16 md:py-4 md:border-none md:shadow-[0_4px_30px_rgb(0,0,0,0.04)]'
+            ? 'bg-[#FFFFFF] rounded-full px-8 py-3 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50' 
+            : 'bg-transparent border-transparent shadow-none px-8 py-3 md:rounded-t-none md:rounded-b-[30px] md:px-12 lg:px-16 md:py-6'
         ]"
       >
         
@@ -257,7 +260,7 @@ const Logo = () => {
 
         <!-- Navigasi Tengah -->
         <nav class="hidden md:flex items-center gap-8 font-medium text-[#1A2B49]/80">
-          <Link href="/" class="hover:text-[#44A6D9] transition-colors">Beranda</Link>
+          <Link href="/" class="hover:text-[#44A6D9] transition-colors">{{ $t('home') }}</Link>
           
           <!-- MENU: LAYANAN (MEGA MENU) -->
           <div 
@@ -266,7 +269,7 @@ const Logo = () => {
             @mouseleave="isLayananOpen = false"
           >
             <button class="flex items-center gap-1 hover:text-[#44A6D9] text-[#264790] font-semibold transition-colors">
-              <span>Layanan</span>
+              <span>{{ $t('services') }}</span>
               <ChevronDown :size="16" :class="{'rotate-180': isLayananOpen}" class="transition-transform duration-300" />
             </button>
             
@@ -306,7 +309,7 @@ const Logo = () => {
             @mouseleave="isTentangKamiOpen = false"
           >
             <button class="flex items-center gap-1 hover:text-[#44A6D9] text-[#264790] font-semibold transition-colors">
-              <span>Tentang Kami</span>
+              <span>{{ $t('about_us') }}</span>
               <ChevronDown :size="16" :class="{'rotate-180': isTentangKamiOpen}" class="transition-transform duration-300" />
             </button>
             
@@ -374,34 +377,73 @@ const Logo = () => {
             </transition>
           </div>
 
-          <Link href="/blogs" class="hover:text-[#44A6D9] transition-colors py-4">Blog</Link>
+          <Link href="/blogs" class="hover:text-[#44A6D9] transition-colors py-4">{{ $t('blog') }}</Link>
         </nav>
 
         <!-- Ikon Kanan Desktop -->
         <div class="hidden md:flex items-center gap-6 text-[#1A2B49]">
-          <button @click="handleUserIconClick" class="hover:text-[#44A6D9] transition-colors outline-none">
+          <button @click="handleUserIconClick" class="hover:text-[#44A6D9] transition-colors outline-none" aria-label="Akun Pengguna atau Login">
             <User :size="22" />
           </button>
-          <Link href="/cart" class="hover:text-[#44A6D9] transition-colors">
+          <Link href="/cart" class="hover:text-[#44A6D9] transition-colors" aria-label="Keranjang Belanja">
             <ShoppingCart :size="22" />
           </Link>
           <div class="h-6 w-px bg-slate-200"></div>
-          <button class="flex items-center gap-2 hover:text-[#44A6D9] transition-colors font-semibold text-sm">
-            <Globe :size="20" /><span>English</span>
-          </button>
+          <div class="relative">
+            <button 
+              @click="isLangOpen = !isLangOpen" 
+              class="flex items-center gap-1.5 hover:text-[#44A6D9] transition-colors font-semibold text-sm outline-none"
+              aria-label="Pilih Bahasa / Select Language"
+            >
+              <Globe :size="20" />
+              <span>{{ currentLocale === 'en' ? 'English' : 'Indonesia' }}</span>
+              <ChevronDown :size="14" class="transition-transform duration-200" :class="{ 'rotate-180': isLangOpen }" />
+            </button>
+            
+            <div 
+              v-if="isLangOpen" 
+              class="absolute right-0 mt-2 w-36 bg-white border border-slate-100 rounded-2xl shadow-xl py-2 z-50 animate-fadeIn"
+            >
+              <Link 
+                href="/language/en" 
+                @click="isLangOpen = false"
+                class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-[#264790] transition-colors"
+                :class="{ 'font-bold text-[#264790]': currentLocale === 'en' }"
+              >
+                English
+              </Link>
+              <Link 
+                href="/language/id" 
+                @click="isLangOpen = false"
+                class="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-[#264790] transition-colors"
+                :class="{ 'font-bold text-[#264790]': currentLocale === 'id' }"
+              >
+                Indonesia
+              </Link>
+            </div>
+          </div>
         </div>
 
         <!-- Header Mobile -->
-        <div class="flex md:hidden justify-between items-center w-full px-2">
-          <Link href="/cart" class="text-[#1A2B49] hover:text-[#44A6D9] transition-colors">
-            <ShoppingCart :size="22" />
-          </Link>
+        <div class="flex md:hidden justify-between items-center w-full px-2 gap-3">
+          <div class="flex items-center gap-3">
+            <Link href="/cart" class="text-[#1A2B49] hover:text-[#44A6D9] transition-colors" aria-label="Keranjang Belanja">
+              <ShoppingCart :size="22" />
+            </Link>
+            <Link 
+              :href="'/language/' + (currentLocale === 'en' ? 'id' : 'en')" 
+              class="text-[#1A2B49] hover:text-[#44A6D9] transition-colors outline-none"
+              aria-label="Ubah Bahasa / Switch Language"
+            >
+              <Globe :size="22" />
+            </Link>
+          </div>
           <div class="flex-grow flex justify-center">
             <Link href="/">
               <div v-html="Logo()"></div>
             </Link>
           </div>
-          <button @click="handleUserIconClick" class="text-[#1A2B49] hover:text-[#44A6D9] transition-colors outline-none">
+          <button @click="handleUserIconClick" class="text-[#1A2B49] hover:text-[#44A6D9] transition-colors outline-none" aria-label="Akun Pengguna atau Login">
             <User :size="22" />
           </button>
         </div>

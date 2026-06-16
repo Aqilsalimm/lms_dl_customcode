@@ -85,6 +85,13 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
+        // Check if instructor profile is pending
+        if ($user->status === 'pending') {
+            return Inertia::render('Dashboard/Instructor/PendingApproval', [
+                'user' => $user
+            ]);
+        }
+
         // Get all courses owned by instructor
         $courses = Course::where('instructor_id', $user->id)
             ->withCount(['enrollments', 'modules', 'lessons'])

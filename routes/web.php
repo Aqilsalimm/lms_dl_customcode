@@ -10,10 +10,13 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\DiscussionController;
+use App\Http\Controllers\LocalizationController;
 use App\Models\Course;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+Route::get('/language/{locale}', [LocalizationController::class, 'switchLanguage'])->name('language.switch');
 
 Route::get('/', function () {
     $courses = Course::where('status', 'published')
@@ -72,8 +75,19 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // Instructor Registration Flow
+    Route::get('/instructor/setup', [\App\Http\Controllers\InstructorRegistrationController::class, 'create'])->name('instructor.profile.setup');
+    Route::post('/instructor/setup', [\App\Http\Controllers\InstructorRegistrationController::class, 'store'])->name('instructor.profile.store');
+
     // Role Management (Admin only)
     Route::post('/dashboard/change-role/{user}', [DashboardController::class, 'changeRole']);
+    
+    // User Management (Admin only)
+    Route::get('/dashboard/users-manage', [\App\Http\Controllers\Admin\UserManageController::class, 'index'])->name('dashboard.users.manage');
+    Route::post('/dashboard/users-manage/{user}/approve', [\App\Http\Controllers\Admin\UserManageController::class, 'approveInstructor'])->name('dashboard.users.approve');
+    Route::post('/dashboard/users-manage/{user}/reject', [\App\Http\Controllers\Admin\UserManageController::class, 'rejectInstructor'])->name('dashboard.users.reject');
+    Route::post('/dashboard/users-manage/{user}/role', [\App\Http\Controllers\Admin\UserManageController::class, 'updateRole'])->name('dashboard.users.role');
+    Route::get('/dashboard/users-manage/export', [\App\Http\Controllers\Admin\UserManageController::class, 'export'])->name('dashboard.users.export');
     
     // LMS Settings
     Route::get('/dashboard/settings', [DashboardController::class, 'settings'])->name('dashboard.settings');

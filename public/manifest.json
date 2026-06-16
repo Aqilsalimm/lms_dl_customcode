@@ -1,0 +1,22 @@
+{
+  "short_name": "DrasthaLMS",
+  "name": "Drastha Learning Management System",
+  "icons": [
+    {
+      "src": "/images/logo/logo_dl.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logo/logo_dl.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#1A2B49",
+  "theme_color": "#264790",
+  "display": "standalone",
+  "orientation": "portrait"
+}

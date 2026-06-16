@@ -48,12 +48,28 @@ createInertiaApp({
             import.meta.glob('./Pages/**/*.vue'),
         ),
     setup({ el, App, props, plugin }) {
-        return createApp({ render: () => h(App, props) })
+        const app = createApp({ render: () => h(App, props) })
             .use(plugin)
-            .use(ZiggyVue)
-            .mount(el);
+            .use(ZiggyVue);
+
+        // Global translation helper
+        app.config.globalProperties.$t = (key) => {
+            const translations = props.initialPage.props.translations || {};
+            return translations[key] || key;
+        };
+
+        return app.mount(el);
     },
     progress: {
         color: '#4B5563',
     },
 });
+
+// Register Service Worker for PWA Support
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW Registered!', reg))
+            .catch(err => console.log('SW Reg Failed!', err));
+    });
+}
