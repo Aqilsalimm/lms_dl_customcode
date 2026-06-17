@@ -1,5 +1,24 @@
 <?php
 
+/**
+ * ==================================================================================
+ * DRASTHA LEARNING LMS - CORE DASHBOARD CONTROLLER
+ * ==================================================================================
+ * 
+ * Role & Responsibilities:
+ * - Directs route branching for Admins, Instructors, and Students dashboards.
+ * - Compiles statistics, financial summaries, and student telemetry logs.
+ * - Handles bulk course import parses from CSV/XLSX spreadsheets.
+ * - Manages administration settings, categories, and tag metadata resources.
+ * 
+ * Maintenance Notes:
+ * - Keep telemetry collection efficient; avoid redundant database hits in log compilation.
+ * - Column mappings in processImportRows() must match the xlsx templates.
+ * 
+ * @package App\Http\Controllers
+ * @author Senior Fullstack Developer
+ */
+
 namespace App\Http\Controllers;
 
 use App\Models\Course;
@@ -371,7 +390,7 @@ class DashboardController extends Controller
      */
     public function changeRole(Request $request, User $user)
     {
-        $this->authorize('isAdmin', auth()->user());
+        abort_unless(auth()->user()->isAdmin(), 403, 'Unauthorized action.');
 
         $request->validate([
             'role' => 'required|string|in:admin,instructor,student',

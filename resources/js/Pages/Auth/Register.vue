@@ -17,7 +17,6 @@ const form = useForm({
     password_confirmation: '', // Handled under-the-hood in Step 1 transition
     otp_code: '',
     role: 'student',
-    personal_goal: '',
     photo: null,
 });
 
@@ -33,15 +32,6 @@ const handlePhotoChange = (e) => {
     photoPreviewUrl.value = null;
   }
 };
-
-const personalGoals = computed(() => {
-  const settings = usePage().props.settings;
-  const rawGoals = settings?.personal_goals;
-  if (rawGoals) {
-    return rawGoals.split(',').map(g => g.trim()).filter(g => g.length > 0);
-  }
-  return ['Web Developer', 'Mobile Developer', 'UI/UX Designer', 'Data Scientist', 'Python Developer'];
-});
 
 // Generated dummy OTP for visual presentation and testing ease
 const mockOtp = ref('123456');
@@ -366,23 +356,6 @@ const Logo = () => {
               <span class="text-[10px] text-slate-400 font-bold leading-normal">
                 Only JPG, JPEG or PNG files with Max Size of 1MB
               </span>
-            </div>
-
-            <!-- Personal Goal Select Field (Clean border/shadow wrapper structure) -->
-            <div class="flex flex-col gap-2">
-              <label class="text-xs sm:text-sm font-extrabold text-[#264790]">Personal Goal (Optional)</label>
-              <div class="relative w-full bg-[#F4F7F9] border border-slate-100 rounded-2xl overflow-hidden focus-within:border-[#44A6D9]/50 focus-within:bg-white transition-all">
-                <select 
-                  v-model="form.personal_goal"
-                  class="w-full bg-transparent border-0 px-5 py-4 text-xs sm:text-sm text-slate-700 font-bold focus:outline-none focus:ring-0 appearance-none cursor-pointer outline-none shadow-none"
-                >
-                  <option value="">Pilih Keahlian (Opsional)</option>
-                  <option v-for="goal in personalGoals" :key="goal" :value="goal">{{ goal }}</option>
-                </select>
-                <div class="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                  <ChevronDown :size="16" />
-                </div>
-              </div>
             </div>
 
             <!-- Submit Finalize CTA Button -->

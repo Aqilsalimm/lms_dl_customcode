@@ -69,6 +69,8 @@ class WithdrawalRequestController extends Controller
     // Admin Payout View
     public function adminIndex()
     {
+        abort_unless(auth()->user()->isAdmin(), 403, 'Unauthorized access.');
+
         $withdrawals = Withdrawal::with(['user.paymentProfile.method'])->latest()->get();
         return Inertia::render('Dashboard/Admin/Withdrawals', [
             'withdrawals' => $withdrawals,
@@ -78,6 +80,8 @@ class WithdrawalRequestController extends Controller
     // Admin Approves Request
     public function complete(Request $request, Withdrawal $withdrawal)
     {
+        abort_unless(auth()->user()->isAdmin(), 403, 'Unauthorized access.');
+
         $request->validate([
             'receipt' => 'nullable|image|max:2048',
             'admin_note' => 'nullable|string'
@@ -86,6 +90,10 @@ class WithdrawalRequestController extends Controller
         $path = $withdrawal->receipt_path;
         if ($request->hasFile('receipt')) {
             $path = $request->file('receipt')->store('receipts', 'public');
+            \App\Services\ImageOptimizer::optimize(
+                storage_path('app/public/' . $path),
+                $request->file('receipt')->getMimeType()
+            );
         }
 
         $withdrawal->update([
@@ -100,6 +108,8 @@ class WithdrawalRequestController extends Controller
     // Admin Rejects Request
     public function reject(Request $request, Withdrawal $withdrawal)
     {
+        abort_unless(auth()->user()->isAdmin(), 403, 'Unauthorized access.');
+
         $request->validate([
             'admin_note' => 'required|string'
         ]);

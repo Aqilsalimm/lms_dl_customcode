@@ -11,6 +11,8 @@ class WithdrawalSettingController extends Controller
 {
     public function index()
     {
+        abort_unless(auth()->user()->isAdmin(), 403, 'Unauthorized access.');
+
         $methods = WithdrawalMethod::all();
         return Inertia::render('Dashboard/Admin/WithdrawalSettings', [
             'methods' => $methods
@@ -19,6 +21,8 @@ class WithdrawalSettingController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless(auth()->user()->isAdmin(), 403, 'Unauthorized access.');
+
         $request->validate([
             'type' => 'required|in:bank,ewallet',
             'name' => 'required|string|max:255',
@@ -32,6 +36,8 @@ class WithdrawalSettingController extends Controller
 
     public function update(Request $request, WithdrawalMethod $method)
     {
+        abort_unless(auth()->user()->isAdmin(), 403, 'Unauthorized access.');
+
         $request->validate([
             'type' => 'required|in:bank,ewallet',
             'name' => 'required|string|max:255',
@@ -45,6 +51,8 @@ class WithdrawalSettingController extends Controller
 
     public function destroy(WithdrawalMethod $method)
     {
+        abort_unless(auth()->user()->isAdmin(), 403, 'Unauthorized access.');
+
         $method->delete();
         return back()->with('success', 'Withdrawal method deleted.');
     }

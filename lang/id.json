@@ -228,5 +228,6 @@
     "registration_success": "Pendaftaran Berhasil!",
     "registration_success_desc_1": "Selamat! Anda telah resmi terdaftar di kelas",
     "registration_success_desc_2": "Silakan masuk ke Dashboard Siswa Anda untuk memulai pelajaran.",
-    "go_to_dashboard": "Masuk ke Dashboard"
+    "go_to_dashboard": "Masuk ke Dashboard",
+    "add_to_cart": "Tambah ke Keranjang"
 }

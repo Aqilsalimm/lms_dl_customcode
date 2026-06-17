@@ -36,13 +36,16 @@ class RegisteredUserController extends Controller
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => 'required|string|in:student,instructor',
-            'personal_goal' => 'nullable|string|max:255',
             'photo' => 'nullable|image|max:1024',
         ]);
 
         $photoPath = null;
         if ($request->hasFile('photo')) {
             $photoPath = $request->file('photo')->store('profile-photos', 'public');
+            \App\Services\ImageOptimizer::optimize(
+                storage_path('app/public/' . $photoPath),
+                $request->file('photo')->getMimeType()
+            );
         }
 
         $user = User::create([
@@ -51,7 +54,6 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'status' => $request->role === 'instructor' ? 'pending' : 'active',
-            'personal_goal' => $request->personal_goal,
             'photo' => $photoPath ? '/storage/' . $photoPath : null,
         ]);
 

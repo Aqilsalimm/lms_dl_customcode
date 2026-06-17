@@ -1,4 +1,24 @@
 <script setup>
+/**
+ * ==================================================================================
+ * DRASTHA LEARNING LMS - COURSE BUILDER INTERFACE (FRONTEND)
+ * ==================================================================================
+ * 
+ * File Size: ~3780 lines
+ * 
+ * Role & Responsibilities:
+ * - Serves as the primary admin/instructor workflow panel for designing and organizing courses.
+ * - Divided into 3 steps: 
+ *   1. Course Details & Metadata (Title, price, description, pricing models).
+ *   2. Curriculum Builder (CRUD operations for modules, lessons, PPT slides, quizzes, and Q&A).
+ *   3. Additional info (Course goals, target audience, live session integrations with Zoom/GMeet, completion certificates).
+ * 
+ * Maintenance Notes:
+ * - This file is extremely large. Consider splitting individual subsections into separate components 
+ *   (e.g., PptSlideBuilder.vue, QuizManager.vue) for cleaner modularity in future iterations.
+ * - Always keep Axios endpoints synchronized with CourseBuilderController.php definitions.
+ */
+
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, usePage, router } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';

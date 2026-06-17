@@ -8,6 +8,7 @@ import {
 } from 'lucide-vue-next';
 import axios from 'axios';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
+import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 
 const props = defineProps({
   cartItems: Array,
@@ -161,29 +162,7 @@ const handlePayNow = () => {
   });
 };
 
-// Logo Helper
-const Logo = () => {
-  const settings = usePage().props.settings;
-  const customLogo = settings?.course_logo;
-  if (customLogo && customLogo !== '/images/logo-placeholder.png') {
-    return `<div class="flex items-center gap-2">
-      <img src="${customLogo}" alt="Drastha Learning Logo" class="h-10 w-auto object-contain" />
-    </div>`;
-  }
-  return `<div class="flex items-center gap-2">
-    <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M50 20 L20 35 L50 50 L80 35 Z" fill="#264790"/>
-      <path d="M30 40 L30 65 C30 75 70 75 70 65 L70 40" stroke="#44A6D9" stroke-width="6" fill="none"/>
-      <path d="M15 45 C15 75 40 90 50 90 C60 90 85 75 85 45" stroke="#264790" stroke-width="4" stroke-dasharray="4 4" fill="none"/>
-      <circle cx="75" cy="25" r="3" fill="#44A6D9"/>
-      <circle cx="85" cy="15" r="2" fill="#F9CC6B"/>
-    </svg>
-    <div class="flex flex-col justify-center">
-      <span class="font-bold text-[10px] tracking-widest text-[#264790] uppercase leading-tight">Drastha</span>
-      <span class="font-bold text-[10px] tracking-widest text-[#44A6D9] uppercase leading-tight">Learning</span>
-    </div>
-  </div>`;
-};
+// Logo Helper removed, using ApplicationLogo component directly.
 </script>
 
 <template>
@@ -286,9 +265,18 @@ const Logo = () => {
                 <!-- Benefit Block -->
                 <div>
                   <h4 class="font-extrabold text-sm sm:text-base text-[#1A2B49] mb-1.5">Benefit :</h4>
-                  <p class="text-slate-500 font-medium text-xs sm:text-sm">
-                    {{ item.about || 'Modul Lengkap, E-Certificate, Dokumentasi Belajar, Report Study Berkala' }}
-                  </p>
+                  <ul class="text-slate-500 font-medium text-xs sm:text-sm list-disc pl-4 space-y-1">
+                    <template v-if="Array.isArray(item.about)">
+                      <li v-for="(benefit, index) in item.about" :key="index">{{ benefit }}</li>
+                    </template>
+                    <template v-else-if="typeof item.about === 'string' && item.about.startsWith('{')">
+                      <div v-html="JSON.parse(item.about).what_will_learn || 'Materi komprehensif.'"></div>
+                    </template>
+                    <template v-else>
+                      <li v-if="item.about">{{ item.about }}</li>
+                      <li v-else>Modul Lengkap, E-Certificate, Dokumentasi Belajar, Report Study Berkala</li>
+                    </template>
+                  </ul>
                 </div>
               </div>
 
@@ -416,42 +404,77 @@ const Logo = () => {
 
     </div>
 
-    <!-- CLEAN FOOTER -->
-    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 mt-16 border-t border-slate-100">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <!-- Inline SVG DL Logo -->
-          <div class="flex items-center gap-2 mb-4" v-html="Logo()"></div>
-          <p class="text-slate-500 font-medium text-xs max-w-sm">
-            Platform Learning Management System (LMS) yang dirancang untuk mendukung pembelajaran modern, interaktif, dan berkelanjutan.
-          </p>
-        </div>
+    <!-- FOOTER SECTION (Matches Welcome.vue Footer) -->
+    <footer class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32 md:pb-12 mt-16">
+      
+      <div class="bg-[#FFFFFF] rounded-[2.5rem] p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-slate-50">
+        
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-8 mb-12">
+          
+          <div class="md:col-span-5 flex flex-col gap-6">
+            
+            <div class="flex items-center gap-2 mb-4">
+            <ApplicationLogo />
+          </div>
 
-        <div class="flex flex-wrap gap-x-12 gap-y-6">
-          <div>
-            <h4 class="font-bold text-xs text-[#1A2B49] uppercase tracking-wider mb-3">Tautan Cepat</h4>
-            <div class="flex flex-col gap-2 text-xs font-semibold text-slate-400">
-              <Link href="/" class="hover:text-[#44A6D9] transition-colors">Home</Link>
-              <Link href="/courses" class="hover:text-[#44A6D9] transition-colors">Kelas Kami</Link>
-              <Link href="/#hubungi-kami" class="hover:text-[#44A6D9] transition-colors">Hubungi Kami</Link>
+            <p class="text-[#264790] text-sm md:text-base font-medium leading-relaxed max-w-md">
+              Platform Learning Management System (LMS) yang dirancang untuk mendukung pembelajaran modern, interaktif, dan berkelanjutan.
+            </p>
+
+            <div class="flex items-center gap-4">
+              <a href="#" class="text-[#264790] hover:text-[#44A6D9] transition-colors p-1 border-[1.5px] border-[#264790] hover:border-[#44A6D9] rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-instagram"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+              </a>
+              <a href="#" class="text-[#264790] hover:text-[#44A6D9] transition-colors p-1 border-[1.5px] border-[#264790] hover:border-[#44A6D9] rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-twitter"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
+              </a>
+              <a href="#" class="text-[#264790] hover:text-[#44A6D9] transition-colors p-1 border-[1.5px] border-[#264790] hover:border-[#44A6D9] rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-facebook"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+              </a>
+              <a href="#" class="text-[#264790] hover:text-[#44A6D9] transition-colors p-1 border-[1.5px] border-[#264790] hover:border-[#44A6D9] rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-linkedin"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
+              </a>
             </div>
           </div>
-          <div>
-            <h4 class="font-bold text-xs text-[#1A2B49] uppercase tracking-wider mb-3">Kontak</h4>
-            <p class="text-xs font-semibold text-slate-400 mb-1">PT. DRASTHA BERKAH SENTOSA</p>
-            <p class="text-xs font-semibold text-slate-400">Jl. Budi Luhur B/2, Wagir, Kwangsan, Sedati</p>
+
+          <div class="md:col-span-3 flex flex-col gap-5">
+            <h4 class="font-extrabold text-[#1A2B49] text-lg">Tautan Cepat</h4>
+            <ul class="flex flex-col gap-3">
+              <li><Link href="/" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Home</Link></li>
+              <li><Link href="/courses" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Kelas Kami</Link></li>
+              <li><Link href="/contact" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Hubungi Kami</Link></li>
+              <li><Link href="/about" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Tentang Kami</Link></li>
+              <li><Link href="/blog" class="text-[#264790] hover:text-[#44A6D9] text-sm md:text-base font-medium transition-colors">Blog Kami</Link></li>
+            </ul>
+          </div>
+
+          <div class="md:col-span-4 flex flex-col gap-5">
+            <h4 class="font-extrabold text-[#1A2B49] text-lg">Kontak</h4>
+            <ul class="flex flex-col gap-3 text-[#264790] text-sm md:text-base font-medium leading-relaxed">
+              <li class="font-bold text-[#264790] uppercase tracking-wide">
+                PT. DRASTHA BERKAH SENTOSA
+              </li>
+              <li>031-9960-5068 (Pulsa)</li>
+              <li>0812-3485-9768 (WhatsApp)</li>
+              <li class="max-w-xs">
+                Jl Budi Luhur B/2 Wagir Indah Kwangsan, Sedati Sidoarjo Jawa Timur 61253
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+        <div class="w-full h-px bg-slate-300/50 mb-6"></div>
+
+        <div class="flex flex-col-reverse md:flex-row justify-between items-center gap-4 text-[#264790] text-xs md:text-sm font-semibold">
+          <p>&copy; 2026 Drastha Learning. All Rights Reserved</p>
+          
+          <div class="flex flex-wrap justify-center gap-4 md:gap-8">
+            <Link href="#" class="hover:text-[#44A6D9] transition-colors border-b border-transparent hover:border-[#44A6D9] pb-0.5">Privacy Policy</Link>
+            <Link href="#" class="hover:text-[#44A6D9] transition-colors border-b border-transparent hover:border-[#44A6D9] pb-0.5">Terms of Service</Link>
           </div>
         </div>
-      </div>
 
-      <div class="h-px bg-slate-100 my-8"></div>
-
-      <div class="flex flex-col sm:flex-row justify-between items-center text-[10px] font-bold text-slate-400 gap-4">
-        <span>&copy; 2026 Drastha Learning. All Rights Reserved</span>
-        <div class="flex gap-6">
-          <a href="#" class="hover:text-[#44A6D9] transition-colors">Privacy Policy</a>
-          <a href="#" class="hover:text-[#44A6D9] transition-colors">Terms of Service</a>
-        </div>
       </div>
     </footer>
 

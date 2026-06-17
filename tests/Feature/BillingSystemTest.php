@@ -27,12 +27,25 @@ class BillingSystemTest extends TestCase
     {
         parent::setUp();
         
+        // Insert developer bypass license key for premium routes check
+        \App\Models\Setting::forceCreate([
+            'key' => 'license_key',
+            'value' => 'DRSTHA-DEVELOPER-BYPASS-9999'
+        ]);
+
         // Setup initial data
-        $this->user = User::first() ?? User::forceCreate([
+        $this->user = User::where('email', 'test_feature@example.com')->first() ?? User::forceCreate([
             'name' => 'Test User',
             'email' => 'test_feature@example.com',
             'password' => bcrypt('password'),
             'role' => 'student'
+        ]);
+
+        $instructor = User::where('role', 'instructor')->first() ?? User::forceCreate([
+            'name' => 'Instructor User',
+            'email' => 'instructor_test@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'instructor'
         ]);
 
         $this->course = Course::first() ?? Course::forceCreate([
@@ -41,6 +54,8 @@ class BillingSystemTest extends TestCase
             'description' => 'Test',
             'price' => 100000,
             'payment_type' => 'monthly',
+            'instructor_id' => $instructor->id,
+            'status' => 'published',
         ]);
         
         Mail::fake();

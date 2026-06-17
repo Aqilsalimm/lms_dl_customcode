@@ -360,6 +360,13 @@ class BlogController extends Controller
 
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('blogs/uploads', 'public');
+            
+            // Compress and optimize the uploaded image
+            \App\Services\ImageOptimizer::optimize(
+                storage_path('app/public/' . $path),
+                $request->file('image')->getMimeType()
+            );
+
             return response()->json([
                 'success' => true,
                 'url' => '/storage/' . $path

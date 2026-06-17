@@ -182,6 +182,7 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     // Checkout Routes
     Route::post('/payment/checkout', [PaymentController::class, 'checkout'])->name('payment.checkout');
     Route::post('/payment/mock-complete/{order}', [PaymentController::class, 'completeMockPayment'])->name('payment.mock-complete');
+    Route::post('/payment/cancel/{order}', [PaymentController::class, 'cancel'])->name('payment.cancel');
     Route::post('/cart/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
     Route::get('/checkout', [CartController::class, 'checkoutPage'])->name('cart.checkout-page');
     Route::get('/checkout/resume/{order}', [CartController::class, 'resumeCheckout'])->name('checkout.resume');

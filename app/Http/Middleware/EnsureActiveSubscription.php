@@ -17,7 +17,14 @@ class EnsureActiveSubscription
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $courseSlug = $request->route('slug'); // Assuming course slug is passed in route
+        $courseParam = $request->route('course') ?? $request->route('slug');
+        $courseSlug = null;
+
+        if ($courseParam instanceof \App\Models\Course) {
+            $courseSlug = $courseParam->slug;
+        } elseif (is_string($courseParam)) {
+            $courseSlug = $courseParam;
+        }
 
         if (!$courseSlug) {
             return $next($request);

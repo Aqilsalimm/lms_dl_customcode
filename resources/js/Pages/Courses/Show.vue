@@ -573,7 +573,7 @@ import { usePage } from '@inertiajs/vue3';
                 :disabled="isProcessing"
                 class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-4 rounded-2xl font-bold text-sm shadow-md transition-colors flex items-center justify-center gap-1.5"
               >
-                <CreditCard :size="16" /> {{ $t('register_now') || 'Daftar Sekarang' }}
+                <ShoppingCart :size="16" /> {{ $t('add_to_cart') || 'Tambah ke Keranjang' }}
               </button>
 
               <button 

@@ -1,5 +1,23 @@
 <?php
 
+/**
+ * ==================================================================================
+ * DRASTHA LEARNING LMS - COURSE BUILDER CONTROLLER
+ * ==================================================================================
+ * 
+ * Role & Responsibilities:
+ * - Directs REST operations for modules, lessons, quizzes, and questions.
+ * - Handles Google presentation and Canva embeds parsing.
+ * - Validates administrative restrictions for native PPT features.
+ * 
+ * Maintenance Notes:
+ * - Sync properties on lesson/quiz edit payloads carefully with step 2 of CourseBuilder.vue.
+ * - Modifying route signatures requires updates to Vue Axios references.
+ * 
+ * @package App\Http\Controllers
+ * @author Senior Fullstack Developer
+ */
+
 namespace App\Http\Controllers;
 
 use App\Models\Course;
@@ -167,6 +185,10 @@ class CourseBuilderController extends Controller
 
         if ($request->hasFile('thumbnail')) {
             $path = $request->file('thumbnail')->store('courses/thumbnails', 'public');
+            \App\Services\ImageOptimizer::optimize(
+                storage_path('app/public/' . $path),
+                $request->file('thumbnail')->getMimeType()
+            );
             $data['thumbnail'] = $path;
         } elseif ($request->has('thumbnail')) {
             $data['thumbnail'] = $request->thumbnail;

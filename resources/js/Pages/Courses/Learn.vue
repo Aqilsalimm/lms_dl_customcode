@@ -1,4 +1,24 @@
 <script setup>
+/**
+ * ==================================================================================
+ * DRASTHA LEARNING LMS - ACTIVE STUDENT LEARNING PANEL (FRONTEND)
+ * ==================================================================================
+ * 
+ * File Size: ~1292 lines
+ * 
+ * Role & Responsibilities:
+ * - Directs the course workspace interface for enrolled students.
+ * - Renders materials: Videos (YouTube/Vimeo), Slides (Google Slides/Canva iframe embeds), 
+ *   or Native PPT cards.
+ * - Handles interactive quiz sessions, math formulas, essays, and score submissions.
+ * - Captures student telemetry data (watching progress logged every 15s via logStudyProgress).
+ * - Manages Q&A / discussions via MaterialDiscussion child component.
+ * 
+ * Maintenance Notes:
+ * - Ensure progress logs are debounced/throttled. Telemetry is a major source of DB hits.
+ * - Coordinate math formula and true/false quiz validators with QuizAttempt validations on the backend.
+ */
+
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { 

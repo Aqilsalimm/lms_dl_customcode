@@ -249,9 +249,6 @@ const form = useForm({
 
     // License Settings
     license_key: getSetting('license_key', ''),
-
-    // Personal Goal options
-    personal_goals: getSetting('personal_goals', 'Web Developer, Mobile Developer, UI/UX Designer, Data Scientist, Python Developer'),
   }
 });
 
@@ -2102,11 +2099,10 @@ const triggerTestNotification = (eventType, role) => {
               <div v-if="form.settings.limit_login_sessions">
                 <label class="block text-sm font-bold text-slate-700 mb-1.5">Maximum Concurrent Active Sessions</label>
                 <p class="text-xs text-slate-500 mb-2">Set the maximum number of active login sessions allowed per user.</p>
-                <input v-model.number="form.settings.max_active_sessions" type="number" min="1" class="w-full md:w-1/3 border-2 border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-blue-500 text-sm font-bold bg-slate-50" />
               </div>
             </div>
 
-            <!-- 7. Email Verification -->
+            <!-- Email Verification -->
             <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-6">
               <div class="flex items-center justify-between">
                 <div>
@@ -2119,23 +2115,6 @@ const triggerTestNotification = (eventType, role) => {
                 </div>
               </div>
             </div>
-
-            <!-- 8. Personal Goal Options -->
-            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-6">
-              <div class="flex flex-col gap-3">
-                <div>
-                  <span class="block text-sm font-bold text-slate-700">Personal Goal Options</span>
-                  <span class="text-xs text-slate-500 block mt-1">Specify options for the Personal Goal dropdown during student registration (separate with commas).</span>
-                </div>
-                <textarea 
-                  v-model="form.settings.personal_goals" 
-                  rows="3" 
-                  placeholder="Web Developer, Mobile Developer, UI/UX Designer, Data Scientist, Python Developer"
-                  class="w-full border-2 border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 text-sm font-semibold bg-slate-50 transition-colors"
-                ></textarea>
-              </div>
-            </div>
-
           </div>
         </div>
 

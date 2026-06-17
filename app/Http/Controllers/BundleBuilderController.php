@@ -56,6 +56,10 @@ class BundleBuilderController extends Controller
 
         if ($request->hasFile('thumbnail')) {
             $path = $request->file('thumbnail')->store('bundles/thumbnails', 'public');
+            \App\Services\ImageOptimizer::optimize(
+                storage_path('app/public/' . $path),
+                $request->file('thumbnail')->getMimeType()
+            );
             $bundle->update(['thumbnail' => '/storage/' . $path]);
         }
 
@@ -112,6 +116,10 @@ class BundleBuilderController extends Controller
 
         if ($request->hasFile('thumbnail')) {
             $path = $request->file('thumbnail')->store('bundles/thumbnails', 'public');
+            \App\Services\ImageOptimizer::optimize(
+                storage_path('app/public/' . $path),
+                $request->file('thumbnail')->getMimeType()
+            );
             $data['thumbnail'] = '/storage/' . $path;
         }
 

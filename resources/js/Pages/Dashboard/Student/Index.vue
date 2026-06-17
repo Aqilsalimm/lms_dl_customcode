@@ -6,7 +6,7 @@ import { ref, onMounted, computed } from 'vue';
 import { 
   BookOpen, Award, Clock, ArrowRight, Play, Download,
   CreditCard, CheckCircle, HelpCircle, Calendar, Trophy, AlertCircle,
-  MessageSquare, Users, Activity, PlayCircle, Layers
+  MessageSquare, Users, Activity, PlayCircle, Layers, X, AlertTriangle
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -18,6 +18,8 @@ const props = defineProps({
 
 const isProcessing = ref(false);
 const completionsMap = ref({});
+const isModalOpen = ref(false);
+const selectedOrder = ref(null);
 
 onMounted(() => {
   const savedCompletions = localStorage.getItem('drastha_course_completions');
@@ -25,6 +27,14 @@ onMounted(() => {
     try {
       completionsMap.value = JSON.parse(savedCompletions);
     } catch (e) {}
+  }
+
+  // Load Midtrans Snap script if not already loaded
+  if (!document.querySelector('script[src*="snap.js"]')) {
+    const script = document.createElement('script');
+    script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+    script.setAttribute('data-client-key', 'SB-Mid-client-placeholder');
+    document.head.appendChild(script);
   }
 });
 
@@ -52,6 +62,33 @@ const payOrder = (snapToken, orderId) => {
       onError: function(result) { window.location.reload(); }
     });
   }
+};
+
+const openManageOrderModal = (order) => {
+  selectedOrder.value = order;
+  isModalOpen.value = true;
+};
+
+const handleCancelOrder = () => {
+  if (!selectedOrder.value) return;
+  if (confirm('Apakah Anda yakin ingin membatalkan transaksi pendaftaran ini?')) {
+    isProcessing.value = true;
+    router.post(`/payment/cancel/${selectedOrder.value.id}`, {}, {
+      onFinish: () => {
+        isProcessing.value = false;
+        isModalOpen.value = false;
+        selectedOrder.value = null;
+      }
+    });
+  }
+};
+
+const handleContinuePayment = () => {
+  if (!selectedOrder.value) return;
+  const token = selectedOrder.value.snap_token;
+  const id = selectedOrder.value.id;
+  isModalOpen.value = false;
+  payOrder(token, id);
 };
 
 const formatDate = (dateStr) => {
@@ -243,11 +280,11 @@ const formatDate = (dateStr) => {
                   
                   <button 
                     v-if="order.status === 'pending' && order.snap_token"
-                    @click="payOrder(order.snap_token, order.id)"
+                    @click="openManageOrderModal(order)"
                     :disabled="isProcessing"
                     class="bg-[#264790] hover:bg-[#1A2B49] text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm transition-colors"
                   >
-                    Bayar
+                    Lanjutkan
                   </button>
 
                   <a 
@@ -268,6 +305,63 @@ const formatDate = (dateStr) => {
           </div>
         </div>
 
+      </div>
+
+      <!-- Manage Order Modal -->
+      <div v-if="isModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 transition-all duration-300">
+        <div class="bg-white rounded-[2rem] w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden transform transition-all duration-300 animate-in fade-in zoom-in-95">
+          <!-- Modal Header -->
+          <div class="px-8 pt-8 pb-4 flex items-center justify-between border-b border-slate-100">
+            <div class="flex items-center gap-2 text-[#1A2B49]">
+              <AlertTriangle class="text-amber-500" :size="24" />
+              <h3 class="text-xl font-extrabold">Kelola Pembelian</h3>
+            </div>
+            <button @click="isModalOpen = false" class="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100">
+              <X :size="20" />
+            </button>
+          </div>
+
+          <!-- Modal Body -->
+          <div class="px-8 py-6">
+            <p class="text-slate-500 text-sm font-medium mb-4">
+              Anda memiliki transaksi pendaftaran yang belum selesai untuk kelas berikut:
+            </p>
+            <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 mb-6">
+              <h4 class="font-extrabold text-[#1A2B49] text-sm mb-1">
+                {{ selectedOrder?.buyable?.title || 'Kelas/Paket' }}
+              </h4>
+              <p class="text-slate-400 text-xs font-bold">
+                INV-#{{ selectedOrder?.id }} &bull; Rp {{ parseFloat(selectedOrder?.amount).toLocaleString('id-ID') }}
+              </p>
+            </div>
+            <p class="text-slate-500 text-xs font-medium">
+              Apakah Anda ingin membatalkan pendaftaran ini atau melanjutkan pembayaran?
+            </p>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="px-8 pb-8 pt-2 flex flex-col gap-3">
+            <button 
+              @click="handleContinuePayment"
+              class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+            >
+              <CreditCard :size="16" /> Lanjutkan Pembayaran
+            </button>
+            <button 
+              @click="handleCancelOrder"
+              :disabled="isProcessing"
+              class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-100 py-3.5 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2"
+            >
+              <X :size="16" /> Batalkan Pembelian
+            </button>
+            <button 
+              @click="isModalOpen = false"
+              class="w-full bg-slate-50 hover:bg-slate-100 text-slate-500 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-center"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
       </div>
 
     </DashboardWrapper>

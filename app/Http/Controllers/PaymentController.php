@@ -253,6 +253,10 @@ class PaymentController extends Controller
      */
     public function completeMockPayment(Request $request, Order $order)
     {
+        if ($order->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $serverKey = config('midtrans.server_key');
         if (!empty($serverKey) && !str_contains($serverKey, 'placeholder')) {
             return response()->json(['message' => 'Not allowed in production/configured mode'], 403);
@@ -419,5 +423,24 @@ class PaymentController extends Controller
                 }
             }
         }
+    }
+
+    /**
+     * Cancel a pending order
+     */
+    public function cancel(Order $order)
+    {
+        $user = auth()->user();
+        if ($order->user_id !== $user->id) {
+            abort(403, 'Unauthorized access to this order.');
+        }
+
+        if ($order->status !== 'pending') {
+            return back()->with('error', 'Hanya pesanan pending yang dapat dibatalkan.');
+        }
+
+        $order->update(['status' => 'failed']);
+
+        return back()->with('success', 'Pesanan berhasil dibatalkan.');
     }
 }
