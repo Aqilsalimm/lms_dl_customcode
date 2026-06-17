@@ -1,6 +1,7 @@
 <script setup>
 import { ref, nextTick } from 'vue';
 import { Sparkles, Phone, X, Send, ChevronLeft, ChevronDown, ChevronUp } from 'lucide-vue-next';
+import { usePage } from '@inertiajs/vue3';
 
 const isOpen = ref(false);
 const currentScreen = ref('selection'); // 'selection' or 'ai_chat'
@@ -57,7 +58,7 @@ const getTemplateAnswer = (userMessage) => {
 
 // Main chat service handler
 const callGeminiAPI = async (promptText) => {
-  const apiKey = window.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY || '';
+  const apiKey = window.GEMINI_API_KEY || usePage().props.gemini_api_key || '';
   if (!apiKey) {
     // Safe offline fallback
     return new Promise((resolve) => {

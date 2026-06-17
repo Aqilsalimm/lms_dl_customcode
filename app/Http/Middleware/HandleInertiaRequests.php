@@ -44,6 +44,7 @@ class HandleInertiaRequests extends Middleware
             'locale' => $locale,
             'translations' => $translations,
             'settings' => \App\Models\Setting::pluck('value', 'key')->toArray(),
+            'gemini_api_key' => config('services.gemini.key'),
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
