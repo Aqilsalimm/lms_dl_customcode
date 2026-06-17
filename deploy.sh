@@ -62,14 +62,41 @@ $PHP_BIN artisan db:seed --class=ProductionSeeder --force
 echo "Creating storage symlink..."
 $PHP_BIN artisan storage:link
 
-# 10. Create secure symlink for Hostinger Web Root
-echo "Creating/updating web root symlink..."
-# If public_html is an actual folder and not a symlink, back it up or delete it
-if [ -d "~/domains/drasthalearning.com/public_html" ] && [ ! -L "~/domains/drasthalearning.com/public_html" ]; then
-    echo "Warning: public_html is a physical directory. Renaming it to public_html_backup..."
-    mv ~/domains/drasthalearning.com/public_html ~/domains/drasthalearning.com/public_html_backup
+# 10. Deploy public assets to physical public_html folder (prevents Hostinger symlink 403 errors)
+echo "Deploying public files to public_html..."
+# If public_html is currently a symlink, remove it
+if [ -L "$HOME/domains/drasthalearning.com/public_html" ]; then
+    echo "Removing existing public_html symlink..."
+    rm "$HOME/domains/drasthalearning.com/public_html"
 fi
 
-ln -sfn ~/domains/drasthalearning.com/drastha-lms/public ~/domains/drasthalearning.com/public_html
+# Ensure public_html exists as a physical directory
+if [ ! -d "$HOME/domains/drasthalearning.com/public_html" ]; then
+    echo "Creating physical public_html directory..."
+    mkdir -p "$HOME/domains/drasthalearning.com/public_html"
+fi
+
+# Clear old files in public_html, but keep the backup folder if it is in there
+find "$HOME/domains/drasthalearning.com/public_html" -mindepth 1 -maxdepth 1 ! -name 'public_html_backup' -exec rm -rf {} +
+
+# Copy all files from public/ to public_html/
+echo "Copying public assets..."
+cp -r "$HOME/domains/drasthalearning.com/drastha-lms/public/." "$HOME/domains/drasthalearning.com/public_html"
+
+# Modify index.php in public_html to point to drastha-lms
+echo "Updating index.php paths..."
+sed -i "s|__DIR__.'/../storage|__DIR__.'/../drastha-lms/storage|g" "$HOME/domains/drasthalearning.com/public_html/index.php"
+sed -i "s|__DIR__.'/../vendor|__DIR__.'/../drastha-lms/vendor|g" "$HOME/domains/drasthalearning.com/public_html/index.php"
+sed -i "s|__DIR__.'/../bootstrap|__DIR__.'/../drastha-lms/bootstrap|g" "$HOME/domains/drasthalearning.com/public_html/index.php"
+
+# 11. Create storage symlink inside public_html pointing to drastha-lms/storage/app/public
+echo "Creating storage symlink..."
+rm -rf "$HOME/domains/drasthalearning.com/public_html/storage"
+ln -sfn "$HOME/domains/drasthalearning.com/drastha-lms/storage/app/public" "$HOME/domains/drasthalearning.com/public_html/storage"
+
+# 12. Fix permissions for safety
+echo "Setting correct folder and file permissions..."
+find "$HOME/domains/drasthalearning.com/public_html" -type d -exec chmod 755 {} \;
+find "$HOME/domains/drasthalearning.com/public_html" -type f -exec chmod 644 {} \;
 
 echo "=== Deployment Completed Successfully ==="
