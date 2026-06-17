@@ -39,26 +39,30 @@ git pull origin production
 echo "Installing PHP dependencies..."
 $COMPOSER_BIN install --no-interaction --prefer-dist --optimize-autoloader --no-dev
 
-# 5. Clear and rebuild cache
+# 5. Clear bootstrap cache files physically to prevent stale configs
+echo "Clearing bootstrap cache files..."
+rm -f bootstrap/cache/*.php
+
+# 6. Run database migrations
+echo "Running database migrations..."
+$PHP_BIN artisan migrate --force
+
+# 7. Clear and rebuild cache
 echo "Clearing system cache..."
 $PHP_BIN artisan optimize:clear
 $PHP_BIN artisan config:cache
 $PHP_BIN artisan route:cache
 $PHP_BIN artisan view:cache
 
-# 6. Run database migrations
-echo "Running database migrations..."
-$PHP_BIN artisan migrate --force
-
-# 7. Seed production database (cleans test users & registers Superadmin)
+# 8. Seed production database (cleans test users & registers Superadmin)
 echo "Seeding production database..."
 $PHP_BIN artisan db:seed --class=ProductionSeeder --force
 
-# 8. Create/Verify public storage symlink
+# 9. Create/Verify public storage symlink
 echo "Creating storage symlink..."
 $PHP_BIN artisan storage:link
 
-# 9. Create secure symlink for Hostinger Web Root
+# 10. Create secure symlink for Hostinger Web Root
 echo "Creating/updating web root symlink..."
 # If public_html is an actual folder and not a symlink, back it up or delete it
 if [ -d "~/domains/drasthalearning.com/public_html" ] && [ ! -L "~/domains/drasthalearning.com/public_html" ]; then
