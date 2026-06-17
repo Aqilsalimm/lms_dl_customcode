@@ -7,6 +7,7 @@ use App\Models\Enrollment;
 use App\Models\Course;
 use App\Models\Bundle;
 use App\Models\Coupon;
+use App\Models\User;
 use App\Services\MidtransService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -143,6 +144,9 @@ class PaymentController extends Controller
                 }
             }
 
+            // Allocate Revenue Share to Instructor
+            $this->allocateRevenueShare($order);
+
             return response()->json([
                 'completed' => true,
                 'order_id' => $order->id
@@ -230,6 +234,9 @@ class PaymentController extends Controller
                             }
                         }
                     }
+
+                    // Allocate Revenue Share to Instructor
+                    $this->allocateRevenueShare($order);
                 }
             } elseif (in_array($transactionStatus, ['pending'])) {
                 $order->update(['status' => 'pending']);
@@ -289,6 +296,9 @@ class PaymentController extends Controller
                     }
                 }
             }
+
+            // Allocate Revenue Share to Instructor
+            $this->allocateRevenueShare($order);
         });
 
         return response()->json(['message' => 'Mock payment succeeded. User enrolled!']);
@@ -386,5 +396,28 @@ class PaymentController extends Controller
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="Invoice-DRSTH-' . $order->id . '.pdf"',
         ]);
+    }
+
+    /**
+     * Allocate revenue share to instructor based on settings percentage
+     */
+    private function allocateRevenueShare(Order $order)
+    {
+        if ($order->amount <= 0) {
+            return;
+        }
+
+        $buyable = $order->buyable_type::find($order->buyable_id);
+        if ($buyable && isset($buyable->instructor_id)) {
+            $instructor = User::find($buyable->instructor_id);
+            if ($instructor) {
+                $percentage = (float) (\App\Models\Setting::where('key', 'sharing_percentage_instructor')->value('value') ?? 70);
+                $shareAmount = ($order->amount * $percentage) / 100;
+
+                if ($shareAmount > 0) {
+                    $instructor->increment('balance', $shareAmount);
+                }
+            }
+        }
     }
 }

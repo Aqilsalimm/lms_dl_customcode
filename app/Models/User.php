@@ -80,6 +80,11 @@ class User extends Authenticatable
         return $this->hasMany(Discussion::class);
     }
 
+    public function paymentProfile(): HasOne
+    {
+        return $this->hasOne(InstructorPaymentProfile::class);
+    }
+
     // Check enrollment helper
     public function hasEnrolled(int $courseId): bool
     {

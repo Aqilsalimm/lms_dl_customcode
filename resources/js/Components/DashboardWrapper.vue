@@ -99,7 +99,7 @@ const hasBlogAccess = computed(() => {
 });
 
 const filteredInstructorMenu = computed(() => {
-  return instructorMenu;
+  return instructorMenu.value;
 });
 
 const getInitials = (name) => {

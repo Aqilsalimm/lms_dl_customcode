@@ -45,46 +45,46 @@ const changeUserRole = (userId, newRole) => {
       <!-- Metrics Grid -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
         <!-- Metric 1: Revenue -->
-        <div class="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex items-center gap-5 transition-transform duration-300 hover:-translate-y-1">
+        <div class="bg-white rounded-[2rem] p-6 pr-8 lg:pr-10 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex items-center gap-5 transition-transform duration-300 hover:-translate-y-1">
           <div class="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
             <TrendingUp :size="24" stroke-width="2.5" />
           </div>
-          <div>
-            <p class="text-slate-400 text-[10px] font-extrabold uppercase tracking-widest mb-0.5">Total Pendapatan</p>
-            <h3 class="text-xl font-extrabold text-[#1A2B49]">{{ metrics.total_revenue }}</h3>
+          <div class="flex-1 overflow-hidden">
+            <p class="text-slate-400 text-[10px] font-extrabold uppercase tracking-widest mb-0.5 truncate">Total Pendapatan</p>
+            <h3 class="text-xl font-extrabold text-[#1A2B49] truncate">{{ metrics.total_revenue }}</h3>
           </div>
         </div>
 
         <!-- Metric 2: Students -->
-        <div class="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex items-center gap-5 transition-transform duration-300 hover:-translate-y-1">
+        <div class="bg-white rounded-[2rem] p-6 pr-8 lg:pr-10 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex items-center gap-5 transition-transform duration-300 hover:-translate-y-1">
           <div class="w-14 h-14 rounded-full bg-sky-50 flex items-center justify-center text-sky-600 shrink-0">
             <Users :size="24" stroke-width="2.5" />
           </div>
-          <div>
-            <p class="text-slate-400 text-[10px] font-extrabold uppercase tracking-widest mb-0.5">Total Siswa</p>
-            <h3 class="text-xl font-extrabold text-[#1A2B49]">{{ metrics.total_students }} Siswa</h3>
+          <div class="flex-1 overflow-hidden">
+            <p class="text-slate-400 text-[10px] font-extrabold uppercase tracking-widest mb-0.5 truncate">Total Siswa</p>
+            <h3 class="text-xl font-extrabold text-[#1A2B49] truncate">{{ metrics.total_students }} Siswa</h3>
           </div>
         </div>
 
         <!-- Metric 3: Instructors -->
-        <div class="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex items-center gap-5 transition-transform duration-300 hover:-translate-y-1">
+        <div class="bg-white rounded-[2rem] p-6 pr-8 lg:pr-10 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex items-center gap-5 transition-transform duration-300 hover:-translate-y-1">
           <div class="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
             <Shield :size="24" stroke-width="2.5" />
           </div>
-          <div>
-            <p class="text-slate-400 text-[10px] font-extrabold uppercase tracking-widest mb-0.5">Total Pengajar</p>
-            <h3 class="text-xl font-extrabold text-[#1A2B49]">{{ metrics.total_instructors }} Guru</h3>
+          <div class="flex-1 overflow-hidden">
+            <p class="text-slate-400 text-[10px] font-extrabold uppercase tracking-widest mb-0.5 truncate">Total Pengajar</p>
+            <h3 class="text-xl font-extrabold text-[#1A2B49] truncate">{{ metrics.total_instructors }} Guru</h3>
           </div>
         </div>
 
         <!-- Metric 4: Courses -->
-        <div class="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex items-center gap-5 transition-transform duration-300 hover:-translate-y-1">
+        <div class="bg-white rounded-[2rem] p-6 pr-8 lg:pr-10 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex items-center gap-5 transition-transform duration-300 hover:-translate-y-1">
           <div class="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
             <BookOpen :size="24" stroke-width="2.5" />
           </div>
-          <div>
-            <p class="text-slate-400 text-[10px] font-extrabold uppercase tracking-widest mb-0.5">Total Kursus</p>
-            <h3 class="text-xl font-extrabold text-[#1A2B49]">{{ metrics.total_courses }} Kelas</h3>
+          <div class="flex-1 overflow-hidden">
+            <p class="text-slate-400 text-[10px] font-extrabold uppercase tracking-widest mb-0.5 truncate">Total Kursus</p>
+            <h3 class="text-xl font-extrabold text-[#1A2B49] truncate">{{ metrics.total_courses }} Kelas</h3>
           </div>
         </div>
       </div>

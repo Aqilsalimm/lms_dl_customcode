@@ -57,7 +57,10 @@ Route::get('/dashboard/qa', [DiscussionController::class, 'index'])->middleware(
 
 // Instructor placeholder routes
 Route::get('/dashboard/announcements', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.announcements');
-Route::get('/dashboard/withdrawals', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.withdrawals');
+// Instructor Withdrawal routes
+Route::get('/dashboard/withdrawals', [\App\Http\Controllers\WithdrawalRequestController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard.withdrawals');
+Route::post('/dashboard/withdrawals', [\App\Http\Controllers\WithdrawalRequestController::class, 'store'])->middleware(['auth', 'verified'])->name('dashboard.withdrawals.store');
+Route::post('/dashboard/payment-profile', [\App\Http\Controllers\Instructor\PaymentProfileController::class, 'store'])->middleware(['auth', 'verified'])->name('dashboard.payment-profile.store');
 Route::get('/dashboard/google-meet', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.google-meet');
 Route::get('/dashboard/zoom', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.zoom');
 
@@ -92,6 +95,16 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     // LMS Settings
     Route::get('/dashboard/settings', [DashboardController::class, 'settings'])->name('dashboard.settings');
     Route::post('/dashboard/settings', [DashboardController::class, 'updateSettings'])->name('dashboard.settings.update');
+
+    // Admin Withdrawal Settings & Requests
+    Route::get('/dashboard/admin/withdrawals', [\App\Http\Controllers\WithdrawalRequestController::class, 'adminIndex'])->name('dashboard.admin.withdrawals');
+    Route::post('/dashboard/admin/withdrawals/{withdrawal}/complete', [\App\Http\Controllers\WithdrawalRequestController::class, 'complete'])->name('dashboard.admin.withdrawals.complete');
+    Route::post('/dashboard/admin/withdrawals/{withdrawal}/reject', [\App\Http\Controllers\WithdrawalRequestController::class, 'reject'])->name('dashboard.admin.withdrawals.reject');
+
+    Route::get('/dashboard/settings/withdrawal-methods', [\App\Http\Controllers\Admin\WithdrawalSettingController::class, 'index'])->name('dashboard.settings.withdrawal-methods');
+    Route::post('/dashboard/settings/withdrawal-methods', [\App\Http\Controllers\Admin\WithdrawalSettingController::class, 'store'])->name('dashboard.settings.withdrawal-methods.store');
+    Route::put('/dashboard/settings/withdrawal-methods/{method}', [\App\Http\Controllers\Admin\WithdrawalSettingController::class, 'update'])->name('dashboard.settings.withdrawal-methods.update');
+    Route::delete('/dashboard/settings/withdrawal-methods/{method}', [\App\Http\Controllers\Admin\WithdrawalSettingController::class, 'destroy'])->name('dashboard.settings.withdrawal-methods.destroy');
     
     // e-Commerce Settings & Analytics (Admin only)
     Route::get('/dashboard/ecommerce/analytics', [\App\Http\Controllers\Admin\EcommerceController::class, 'analytics'])

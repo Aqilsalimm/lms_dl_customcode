@@ -612,24 +612,28 @@ class DashboardController extends Controller
     public function downloadImportTemplate()
     {
         $headers = [
-            'Row Type', 'Title', 'Description', 'Publish Status', 'Difficulty Level', 
-            'Duration Hours', 'Duration Minutes', 'Price Type', 'Price', 'Strike Price',
-            'ACF: Usia Peserta', 'ACF: Tipe Kelas', 'ACF: Informasi Sesi', 'ACF: Informasi Durasi',
-            'ACF: Tipe Satuan Produk', 'ACF: Status Pendaftaran'
+            'Row Type', 'Title', 'Description', 'Publish Status', 'Course Type', 'Difficulty Level', 
+            'Payment Type', 'Price Type', 'Price', 'Strike Price', 'Capacity', 'Start Date', 'End Date',
+            'Timezone', 'Meeting URL', 'Tools', 'Benefit: Overview', 'Benefit: What Will Learn',
+            'Benefit: Target Audience', 'Benefit: Requirements', 'Duration Hours', 'Duration Minutes'
         ];
         
         $data = [
-            ['course', 'Kelas Pemrograman Web Fullstack', 'Belajar HTML, CSS, Javascript, PHP dan Database MySQL dari nol.', 'publish', 'SD', '40', '0', 'paid', '250000', '500000', '15', 'Online Class', 'Two Session per Week', '2 Hours for 1 Session', '/Bulan', 'Buka'],
-            ['topic', 'Bagian 1: Pengenalan HTML & CSS', 'Dasar markup internet dan styling halaman web.', 'publish', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['lesson', 'Pelajaran 1: Apa itu HTML?', 'Penjelasan dasar tentang tag HTML dan strukturnya.', 'publish', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['lesson', 'Pelajaran 2: Styling dengan CSS', 'Cara mempercantik halaman web menggunakan CSS.', 'publish', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['topic', 'Bagian 2: Javascript Interaktif', 'Membuat website menjadi dinamis dan interaktif.', 'publish', '', '', '', '', '', '', '', '', '', '', '', ''],
-            ['lesson', 'Pelajaran 1: Variabel dan Kondisional', 'Belajar logika dasar pemrograman Javascript.', 'publish', '', '', '', '', '', '', '', '', '', '', '', '']
+            ['course', 'Kelas Pemrograman Web Fullstack', 'Belajar HTML, CSS, Javascript, PHP dan Database MySQL dari nol.', 'publish', 'async', 'Umum', 'one-time', 'paid', '250000', '500000', '50', '', '', 'Asia/Jakarta', '', 'VSCode, Chrome, PHPMyAdmin', 'Overview kelas...', 'HTML, CSS, JS', 'Pemula', 'Laptop ram 4GB', '40', '0'],
+            ['topic', 'Bagian 1: Pengenalan HTML & CSS', 'Dasar markup internet dan styling halaman web.', 'publish', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['lesson', 'Pelajaran 1: Apa itu HTML?', 'Penjelasan dasar tentang tag HTML dan strukturnya.', 'publish', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['lesson', 'Pelajaran 2: Styling dengan CSS', 'Cara mempercantik halaman web menggunakan CSS.', 'publish', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['topic', 'Bagian 2: Javascript Interaktif', 'Membuat website menjadi dinamis dan interaktif.', 'publish', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+            ['lesson', 'Pelajaran 1: Variabel dan Kondisional', 'Belajar logika dasar pemrograman Javascript.', 'publish', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
         ];
 
-        $tempFile = tempnam(sys_get_temp_dir(), 'xlsx');
+        $filename = 'drastha_lms_course_template.xlsx';
+        $tempFile = storage_path('app/public/' . uniqid() . '.xlsx');
+        
         if (DrasthaXlsxWriter::generate($tempFile, $headers, $data)) {
-            return response()->download($tempFile, 'drastha_lms_course_template.xlsx')->deleteFileAfterSend(true);
+            return response()->download($tempFile, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
         }
 
         return redirect()->back()->with('error', 'Gagal membuat template.');
@@ -719,19 +723,36 @@ class DashboardController extends Controller
         $idx_title = array_search('title', $header) !== false ? array_search('title', $header) : 1;
         $idx_desc = array_search('description', $header) !== false ? array_search('description', $header) : 2;
         $idx_publish_status = array_search('publish status', $header) !== false ? array_search('publish status', $header) : 3;
-        $idx_difficulty = array_search('difficulty level', $header) !== false ? array_search('difficulty level', $header) : 4;
-        $idx_hours = array_search('duration hours', $header) !== false ? array_search('duration hours', $header) : 5;
-        $idx_minutes = array_search('duration minutes', $header) !== false ? array_search('duration minutes', $header) : 6;
+        
+        // Step 1: Basics
+        $idx_course_type = array_search('course type', $header) !== false ? array_search('course type', $header) : 4;
+        $idx_difficulty = array_search('difficulty level', $header) !== false ? array_search('difficulty level', $header) : 5;
+        $idx_payment_type = array_search('payment_type', $header) !== false ? array_search('payment_type', $header) : 6;
+        if ($idx_payment_type === false) $idx_payment_type = array_search('payment type', $header);
+        
         $idx_price_type = array_search('price type', $header) !== false ? array_search('price type', $header) : 7;
         $idx_price = array_search('price', $header) !== false ? array_search('price', $header) : 8;
+        $idx_strike_price = array_search('strike price', $header) !== false ? array_search('strike price', $header) : 9;
+        $idx_capacity = array_search('capacity', $header) !== false ? array_search('capacity', $header) : 10;
         
-        // ACF/Custom meta
-        $idx_usia = array_search('acf: usia peserta', $header) !== false ? array_search('acf: usia peserta', $header) : 10;
-        $idx_tipe_kelas = array_search('acf: tipe kelas', $header) !== false ? array_search('acf: tipe kelas', $header) : 11;
-        $idx_sesi = array_search('acf: informasi sesi', $header) !== false ? array_search('acf: informasi sesi', $header) : 12;
-        $idx_durasi = array_search('acf: informasi durasi', $header) !== false ? array_search('acf: informasi durasi', $header) : 13;
-        $idx_satuan = array_search('acf: tipe satuan produk', $header) !== false ? array_search('acf: tipe satuan produk', $header) : 14;
-        $idx_status_pendaftaran = array_search('acf: status pendaftaran', $header) !== false ? array_search('acf: status pendaftaran', $header) : 15;
+        // Step 1: Schedule (Live Class)
+        $idx_start_date = array_search('start date', $header) !== false ? array_search('start date', $header) : 11;
+        $idx_end_date = array_search('end_date', $header) !== false ? array_search('end_date', $header) : 12;
+        $idx_timezone = array_search('timezone', $header) !== false ? array_search('timezone', $header) : 13;
+        $idx_meeting_url = array_search('meeting url', $header) !== false ? array_search('meeting url', $header) : 14;
+        
+        // Step 1: Tools
+        $idx_tools = array_search('tools', $header) !== false ? array_search('tools', $header) : 15;
+        
+        // Step 3: Additional / Benefits
+        $idx_benefit_overview = array_search('benefit: overview', $header) !== false ? array_search('benefit: overview', $header) : 16;
+        $idx_benefit_learn = array_search('benefit: what will learn', $header) !== false ? array_search('benefit: what will learn', $header) : 17;
+        $idx_benefit_target = array_search('benefit: target audience', $header) !== false ? array_search('benefit: target audience', $header) : 18;
+        $idx_benefit_req = array_search('benefit: requirements', $header) !== false ? array_search('benefit: requirements', $header) : 19;
+
+        // Duration
+        $idx_hours = array_search('duration hours', $header) !== false ? array_search('duration hours', $header) : 20;
+        $idx_minutes = array_search('duration minutes', $header) !== false ? array_search('duration minutes', $header) : 21;
 
         $current_course_id = $courseId ?: 0;
         $current_module_id = 0;
@@ -752,7 +773,19 @@ class DashboardController extends Controller
             $desc = isset($data[$idx_desc]) ? trim($data[$idx_desc]) : '';
             
             $publish_status = isset($data[$idx_publish_status]) ? strtolower(trim($data[$idx_publish_status])) : 'publish';
-            $status = ($publish_status === 'publish' || $publish_status === 'published') ? 'published' : 'draft';
+            $requested_status = ($publish_status === 'publish' || $publish_status === 'published') ? 'published' : 'draft';
+            $status = $requested_status;
+
+            // Security: If the user is an instructor, force 'pending' if they requested 'published'
+            // BUT ONLY if the moderation setting is enabled.
+            if (!auth()->user()->isAdmin() && $status === 'published') {
+                $moderationEnabled = \App\Models\Setting::where('key', 'instructor_course_moderation')->value('value');
+                // We assume true if setting is not found, or check if it's strictly 'true' or 1.
+                // In settings page, it's a toggle.
+                if (filter_var($moderationEnabled, FILTER_VALIDATE_BOOLEAN)) {
+                    $status = 'pending';
+                }
+            }
 
             if (empty($title)) {
                 $log[] = '<span style="color:#f59e0b;">[Baris ' . ($i + 1) . '] Lewati: Judul kosong.</span>';
@@ -770,15 +803,16 @@ class DashboardController extends Controller
                 $module_order = 0;
                 $lesson_order = 0;
 
-                // Map difficulty level to course level: SD, SMP, SMA, Umum
-                $diff_input = isset($data[$idx_difficulty]) ? strtolower(trim($data[$idx_difficulty])) : '';
-                $level = 'Umum';
-                if (str_contains($diff_input, 'sd') || str_contains($diff_input, 'begin')) {
-                    $level = 'SD';
-                } elseif (str_contains($diff_input, 'smp') || str_contains($diff_input, 'inter')) {
-                    $level = 'SMP';
-                } elseif (str_contains($diff_input, 'sma') || str_contains($diff_input, 'adv')) {
-                    $level = 'SMA';
+                // Step 1: Basics
+                $course_type = isset($data[$idx_course_type]) ? strtolower(trim($data[$idx_course_type])) : 'async';
+                if ($course_type !== 'live_class') $course_type = 'async';
+                
+                $level = isset($data[$idx_difficulty]) ? trim($data[$idx_difficulty]) : 'Umum';
+                
+                $payment_input = isset($data[$idx_payment_type]) ? strtolower(trim($data[$idx_payment_type])) : 'one-time';
+                $payment_type = 'one-time';
+                if ($payment_input === 'monthly' || $payment_input === 'langganan' || $payment_input === '/bulan') {
+                    $payment_type = 'monthly';
                 }
 
                 $price_type = isset($data[$idx_price_type]) ? strtolower(trim($data[$idx_price_type])) : 'free';
@@ -787,44 +821,61 @@ class DashboardController extends Controller
                     $price = (float) filter_var($data[$idx_price], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
                 }
 
-                // ACF info formatting to save as "about" (Benefit) in our model
-                $usia = isset($data[$idx_usia]) ? trim($data[$idx_usia]) : '';
-                $tipe_kelas = isset($data[$idx_tipe_kelas]) ? trim($data[$idx_tipe_kelas]) : '';
-                $sesi = isset($data[$idx_sesi]) ? trim($data[$idx_sesi]) : '';
-                $durasi = isset($data[$idx_durasi]) ? trim($data[$idx_durasi]) : '';
-                $satuan = isset($data[$idx_satuan]) ? trim($data[$idx_satuan]) : '';
-                $status_pendaftaran = isset($data[$idx_status_pendaftaran]) ? trim($data[$idx_status_pendaftaran]) : '';
+                $capacity = isset($data[$idx_capacity]) ? (int)$data[$idx_capacity] : 20;
 
-                $about_bullets = [];
-                if (!empty($usia)) $about_bullets[] = "Usia Peserta: " . $usia;
-                if (!empty($tipe_kelas)) $about_bullets[] = "Tipe Kelas: " . $tipe_kelas;
-                if (!empty($sesi)) $about_bullets[] = "Informasi Sesi: " . $sesi;
-                if (!empty($durasi)) $about_bullets[] = "Informasi Durasi: " . $durasi;
-                if (!empty($satuan)) $about_bullets[] = "Satuan Produk: " . $satuan;
-                if (!empty($status_pendaftaran)) $about_bullets[] = "Status Pendaftaran: " . $status_pendaftaran;
-                
-                $about = implode(', ', $about_bullets) ?: 'Modul Lengkap, E-Certificate, Dokumentasi Belajar';
+                // Step 1: Schedule
+                $start_date = !empty($data[$idx_start_date]) ? trim($data[$idx_start_date]) : null;
+                $end_date = !empty($data[$idx_end_date]) ? trim($data[$idx_end_date]) : null;
+                $timezone = !empty($data[$idx_timezone]) ? trim($data[$idx_timezone]) : 'Asia/Jakarta';
+                $meeting_url = !empty($data[$idx_meeting_url]) ? trim($data[$idx_meeting_url]) : null;
+
+                // Step 1: Tools
+                $tools_str = isset($data[$idx_tools]) ? trim($data[$idx_tools]) : '';
+                $tools_array = !empty($tools_str) ? array_map('trim', explode(',', $tools_str)) : [];
+
+                // Step 3: Benefits (Stored as JSON in "about")
+                $about_obj = [
+                    'class_type' => ($course_type === 'live_class' ? 'Online' : 'Offline'),
+                    'overview' => isset($data[$idx_benefit_overview]) ? trim($data[$idx_benefit_overview]) : '',
+                    'what_will_learn' => isset($data[$idx_benefit_learn]) ? trim($data[$idx_benefit_learn]) : '',
+                    'target_audience' => isset($data[$idx_benefit_target]) ? trim($data[$idx_benefit_target]) : '',
+                    'duration_hours' => 0,
+                    'materials_included' => 0,
+                    'requirements' => isset($data[$idx_benefit_req]) ? trim($data[$idx_benefit_req]) : '',
+                    'selected_certificate' => 'template_1',
+                    'custom_certificates' => [],
+                    'prerequisites' => [],
+                    'attachments' => [],
+                    'live_zoom_link' => '',
+                    'live_zoom_data' => null,
+                    'live_gmeet_link' => '',
+                    'live_gmeet_data' => null,
+                    'intro_video_url' => ''
+                ];
 
                 try {
                     $course = Course::create([
                         'instructor_id' => auth()->id(),
-                        'category_id' => null,
+                        'course_type' => $course_type,
                         'title' => $title,
                         'description' => $desc,
-                        'about' => $about,
+                        'about' => json_encode($about_obj),
                         'bg_color' => '#44A6D9',
                         'icon_type' => 'code',
                         'price' => $price,
+                        'payment_type' => $payment_type,
                         'level' => $level,
-                        'capacity' => 20,
-                        'status' => $status
+                        'capacity' => $capacity,
+                        'status' => $status,
+                        'start_date' => $start_date,
+                        'end_date' => $end_date,
+                        'timezone' => $timezone,
+                        'meeting_url' => $meeting_url,
+                        'tools' => $tools_array
                     ]);
 
                     $current_course_id = $course->id;
-                    $log[] = '<span style="color:#38bdf8;">[COURSE CREATED] ID ' . $current_course_id . ' : ' . htmlspecialchars($title) . ' (' . $status . ')</span>';
-                    if (!empty($about_bullets)) {
-                        $log[] = ' -> <span style="color:#94a3b8;">Metadata imported: ' . htmlspecialchars($about) . '</span>';
-                    }
+                    $log[] = '<span style="color:#38bdf8;">[COURSE CREATED] ID ' . $current_course_id . ' : ' . htmlspecialchars($title) . ' (' . strtoupper($course_type) . ' - ' . $status . ')</span>';
                 } catch (\Exception $e) {
                     $log[] = '<span style="color:#ef4444;">[COURSE FAILED] Gagal membuat Kursus "' . htmlspecialchars($title) . '": ' . $e->getMessage() . '</span>';
                 }
@@ -871,7 +922,10 @@ class DashboardController extends Controller
                         'title' => $title,
                         'content' => json_encode([
                             'type' => 'text',
-                            'text' => $desc
+                            'summary' => $desc,
+                            'featured_image' => null,
+                            'exercise_files' => [],
+                            'is_preview' => false
                         ]),
                         'video_url' => '',
                         'duration_minutes' => $duration,
@@ -923,9 +977,13 @@ class DashboardController extends Controller
             ['single_choice', 'Apa kepanjangan dari CSS?', '10', 'Creative Style Sheets', 'Cascading Style Sheets', 'Computer Style Sheets', 'Colorful Style Sheets', '', 'B']
         ];
 
-        $tempFile = tempnam(sys_get_temp_dir(), 'xlsx');
+        $filename = 'drastha_lms_quiz_template.xlsx';
+        $tempFile = storage_path('app/public/' . uniqid() . '.xlsx');
+
         if (DrasthaXlsxWriter::generate($tempFile, $headers, $data)) {
-            return response()->download($tempFile, 'drastha_lms_quiz_template.xlsx')->deleteFileAfterSend(true);
+            return response()->download($tempFile, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])->deleteFileAfterSend(true);
         }
 
         return redirect()->back()->with('error', 'Gagal membuat template kuis.');
@@ -1130,8 +1188,10 @@ class DrasthaXlsxReader
         $shared_strings = [];
         $shared_strings_xml = $zip->getFromName('xl/sharedStrings.xml');
         if ($shared_strings_xml) {
+            // Remove namespaces and prefixes to avoid "mc for Ignorable" errors
             $shared_strings_xml = preg_replace('/xmlns[^=]*="[^"]*"/i', '', $shared_strings_xml);
-            $xml = simplexml_load_string($shared_strings_xml);
+            $shared_strings_xml = preg_replace('/[a-z0-9]+:([a-z0-9]+)/i', '$1', $shared_strings_xml);
+            $xml = @simplexml_load_string($shared_strings_xml);
             if ($xml && isset($xml->si)) {
                 foreach ($xml->si as $si) {
                     if (isset($si->t)) {
@@ -1155,8 +1215,10 @@ class DrasthaXlsxReader
         $rows = [];
         $sheet_xml = $zip->getFromName('xl/worksheets/sheet1.xml');
         if ($sheet_xml) {
+            // Remove namespaces and prefixes to avoid "mc for Ignorable" errors
             $sheet_xml = preg_replace('/xmlns[^=]*="[^"]*"/i', '', $sheet_xml);
-            $xml = simplexml_load_string($sheet_xml);
+            $sheet_xml = preg_replace('/[a-z0-9]+:([a-z0-9]+)/i', '$1', $sheet_xml);
+            $xml = @simplexml_load_string($sheet_xml);
             if ($xml && isset($xml->sheetData->row)) {
                 foreach ($xml->sheetData->row as $row) {
                     $row_idx = intval($row['r']) - 1;
