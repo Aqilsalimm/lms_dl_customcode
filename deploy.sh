@@ -7,16 +7,22 @@ echo "=== Starting Deployment for Drastha Learning ==="
 
 # 1. Define PHP and Composer Executables dynamically for Hostinger
 PHP_BIN="php"
-if [ -f "/opt/alt/php83/usr/bin/php" ]; then
+if [ -f "/usr/bin/php8.3" ]; then
+    PHP_BIN="/usr/bin/php8.3"
+elif [ -f "/usr/local/bin/php8.3" ]; then
+    PHP_BIN="/usr/local/bin/php8.3"
+elif [ -f "/opt/alt/php83/usr/bin/php" ]; then
     PHP_BIN="/opt/alt/php83/usr/bin/php"
 elif [ -f "/usr/bin/php83" ]; then
     PHP_BIN="/usr/bin/php83"
 elif [ -f "/usr/local/bin/php83" ]; then
     PHP_BIN="/usr/local/bin/php83"
-elif command -v php83 &> /dev/null; then
-    PHP_BIN="php83"
+elif [ -f "/usr/bin/ea-php83" ]; then
+    PHP_BIN="/usr/bin/ea-php83"
 elif command -v php8.3 &> /dev/null; then
     PHP_BIN="php8.3"
+elif command -v php83 &> /dev/null; then
+    PHP_BIN="php83"
 fi
 
 echo "Using PHP binary: $($PHP_BIN -v | head -n 1)"
