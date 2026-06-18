@@ -731,13 +731,13 @@ const rightFeatures = computed(() => [
  
               <div class="flex flex-col w-full max-w-sm gap-4">
                 
-                <button class="bg-[#264790] group-hover:bg-[#44A6D9] text-white font-bold py-3.5 px-6 rounded-full transition-colors duration-500 flex items-center justify-center gap-2 w-full shadow-md">
+                <a href="https://wa.me/6281234859768?text=Halo%2C%20Drastha%20Learning%2C%20Saya%20Ingin%20Lebih%20Lanjut%20Tentang%20Kursus%20di%20Drastha%20Learning%3F" target="_blank" rel="noopener noreferrer" class="bg-[#264790] group-hover:bg-[#44A6D9] text-white font-bold py-3.5 px-6 rounded-full transition-colors duration-500 flex items-center justify-center gap-2 w-full shadow-md">
                   <MessageCircle :size="20" /> {{ $t('chat_wa') }}
-                </button>
+                </a>
  
-                <button class="bg-[#F9CC6B] hover:brightness-95 text-[#1A2B49] font-bold py-3.5 px-6 rounded-full transition-all flex items-center justify-center gap-2 w-full shadow-md">
+                <a href="mailto:admin@drasthalearning.com" class="bg-[#F9CC6B] hover:brightness-95 text-[#1A2B49] font-bold py-3.5 px-6 rounded-full transition-all flex items-center justify-center gap-2 w-full shadow-md">
                   <Mail :size="20" /> {{ $t('send_email') }}
-                </button>
+                </a>
                 
               </div>
             </div>
