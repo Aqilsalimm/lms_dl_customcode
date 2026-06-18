@@ -371,7 +371,7 @@
     ]
   },
   "resources/js/Pages/Courses/Show.vue": {
-    "file": "assets/Show-BVH4AXLU.js",
+    "file": "assets/Show-9NF-z7-L.js",
     "name": "Show",
     "src": "resources/js/Pages/Courses/Show.vue",
     "isDynamicEntry": true,
@@ -384,7 +384,7 @@
       "_GuestLayout-pAlWzwHy.js"
     ],
     "css": [
-      "assets/Show-dHgbXf2R.css"
+      "assets/Show-Ct9ABdkx.css"
     ]
   },
   "resources/js/Pages/Dashboard.vue": {
@@ -726,7 +726,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-BbVPha2s.js",
+    "file": "assets/app-J27iI9fT.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,

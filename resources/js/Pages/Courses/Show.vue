@@ -45,6 +45,30 @@ const introVideoUrl = computed(() => {
   return '';
 });
 
+const courseBenefits = computed(() => {
+  if (props.course.about && props.course.about.startsWith('{') && props.course.about.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(props.course.about);
+      const learn = parsed.what_will_learn;
+      if (Array.isArray(learn) && learn.length > 0) {
+        return learn.join(', ');
+      } else if (typeof learn === 'string' && learn.trim() !== '') {
+        return learn;
+      }
+      
+      const overview = parsed.overview;
+      if (typeof overview === 'string' && overview.trim() !== '') {
+        return overview;
+      }
+      
+      return '';
+    } catch (e) {
+      return '';
+    }
+  }
+  return props.course.about;
+});
+
 const youtubeEmbedUrl = computed(() => {
   const url = introVideoUrl.value;
   if (!url) return '';
@@ -367,7 +391,7 @@ import { usePage } from '@inertiajs/vue3';
               <div>
                 <h4 class="font-extrabold text-base mb-1.5">{{ $t('benefit_label') || 'Benefit' }} :</h4>
                 <p class="text-slate-500 font-medium text-sm sm:text-base">
-                  {{ course.about || $t('course_benefit_fallback') || 'Modul Lengkap, E-Certificate, Dokumentasi Belajar, Report Study Berkala' }}
+                  {{ courseBenefits || $t('course_benefit_fallback') || 'Modul Lengkap, E-Certificate, Dokumentasi Belajar, Report Study Berkala' }}
                 </p>
               </div>
             </div>
