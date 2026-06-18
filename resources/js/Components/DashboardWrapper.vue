@@ -239,7 +239,7 @@ const activeAdminAccordion = ref(getInitialAccordion());
       <!-- SIDEBAR -->
       <aside 
         :class="[
-          'fixed lg:static inset-y-0 left-0 z-50 w-[280px] bg-slate-50 lg:bg-transparent overflow-y-auto lg:overflow-visible transition-transform duration-300 ease-in-out lg:translate-x-0 p-6 lg:p-0 shadow-2xl lg:shadow-none border-r border-slate-200 lg:border-none',
+          'fixed lg:static inset-y-0 left-0 z-50 lg:z-10 w-[280px] bg-slate-50 lg:bg-transparent overflow-y-auto lg:overflow-visible transition-transform duration-300 ease-in-out lg:translate-x-0 p-6 lg:p-0 shadow-2xl lg:shadow-none border-r border-slate-200 lg:border-none',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         ]"
       >
