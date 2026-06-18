@@ -33,7 +33,7 @@ class EnsureActiveSubscription
         $user = $request->user();
 
         if (!$user) {
-            return redirect()->route('login');
+            return redirect()->to('/?login=true');
         }
 
         // Find the subscription for this user and course

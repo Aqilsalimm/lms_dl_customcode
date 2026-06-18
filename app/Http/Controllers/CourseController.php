@@ -17,7 +17,7 @@ class CourseController extends Controller
         // Check Course Visibility Setting
         $visibility = \App\Models\Setting::where('key', 'course_visibility')->value('value');
         if (filter_var($visibility, FILTER_VALIDATE_BOOLEAN) && !auth()->check()) {
-            return redirect()->route('login')->with('error', 'Please log in to view courses.');
+            return redirect()->to('/?login=true')->with('error', 'Please log in to view courses.');
         }
 
         $query = Course::where('status', 'published')->with(['category', 'instructor']);
@@ -65,7 +65,7 @@ class CourseController extends Controller
         // Check Course Visibility Setting
         $visibility = \App\Models\Setting::where('key', 'course_visibility')->value('value');
         if (filter_var($visibility, FILTER_VALIDATE_BOOLEAN) && !auth()->check()) {
-            return redirect()->route('login')->with('error', 'Please log in to view course details.');
+            return redirect()->to('/?login=true')->with('error', 'Please log in to view course details.');
         }
 
         $course = Course::where('slug', $slug)
@@ -98,7 +98,7 @@ class CourseController extends Controller
     {
         // 1. Authenticate check
         if (!auth()->check()) {
-            return redirect()->route('login');
+            return redirect()->to('/?login=true');
         }
 
         // 2. Fetch course with published modules & lessons
@@ -293,7 +293,7 @@ class CourseController extends Controller
     public function certificate(string $slug)
     {
         if (!auth()->check()) {
-            return redirect()->route('login');
+            return redirect()->to('/?login=true');
         }
 
         $course = Course::where('slug', $slug)
