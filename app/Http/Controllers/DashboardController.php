@@ -491,6 +491,104 @@ class DashboardController extends Controller
     }
 
     /**
+     * Display Instructor's Live Class Schedule page
+     */
+    public function liveClassSchedule()
+    {
+        $user = auth()->user();
+        if (!$user->isInstructor() && !$user->isAdmin()) {
+            return redirect()->route('dashboard')->with('error', 'Unauthorized access.');
+        }
+
+        // Fetch instructor's live class courses
+        $courses = Course::where('course_type', 'live_class')
+            ->when(!$user->isAdmin(), function($query) use ($user) {
+                return $query->where('instructor_id', $user->id);
+            })
+            ->get();
+
+        return Inertia::render('Dashboard/Instructor/LiveClass', [
+            'courses' => $courses
+        ]);
+    }
+
+    /**
+     * Update Live Class Schedule details
+     */
+    public function updateLiveClassSchedule(Request $request, Course $course)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && $course->instructor_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'timezone' => 'nullable|string',
+            'meeting_url' => 'nullable|string|url',
+            'recording_url' => 'nullable|string|url',
+            'max_participants' => 'nullable|integer|min:1',
+            'is_event_finished' => 'nullable|boolean',
+            'platform_type' => 'required|string|in:zoom,meet',
+        ]);
+
+        $course->update([
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'timezone' => $request->timezone ?: 'Asia/Jakarta',
+            'meeting_url' => $request->meeting_url,
+            'recording_url' => $request->recording_url,
+            'max_participants' => $request->max_participants,
+            'is_event_finished' => $request->is_event_finished ? true : false,
+        ]);
+
+        // Also synchronize the `about` JSON field (for Course Builder integration)
+        $about = [];
+        if ($course->about && str_starts_with($course->about, '{') && str_ends_with($course->about, '}')) {
+            try {
+                $about = json_decode($course->about, true) ?: [];
+            } catch (\Exception $e) {}
+        } else {
+            $about = ['overview' => $course->about ?: ''];
+        }
+
+        $formVal = [
+            'name' => 'Kelas Live: ' . $course->title,
+            'summary' => $about['overview'] ?? 'Sesi tanya jawab live interaktif mengenai materi pembelajaran.',
+            'date' => $request->start_date ? substr($request->start_date, 0, 10) : date('Y-m-d'),
+            'time' => $request->start_date ? substr($request->start_date, 11, 5) : '19:00',
+            'duration' => 40,
+            'durationUnit' => 'Minutes',
+            'timezone' => $request->timezone ?: 'Asia/Jakarta',
+            'link' => $request->meeting_url ?: '',
+            'meetingId' => '',
+            'password' => '',
+        ];
+
+        if ($request->platform_type === 'zoom') {
+            $about['live_zoom_link'] = $request->meeting_url;
+            $about['live_zoom_data'] = $formVal;
+            $about['live_gmeet_link'] = '';
+            $about['live_gmeet_data'] = null;
+        } else {
+            $about['live_gmeet_link'] = $request->meeting_url;
+            $about['live_gmeet_data'] = $formVal;
+            $about['live_zoom_link'] = '';
+            $about['live_zoom_data'] = null;
+        }
+
+        // Reset the reminder sent flag when meeting schedule changes so that it will send again if scheduled in the future
+        $about['live_class_reminder_sent'] = false;
+
+        $course->update([
+            'about' => json_encode($about)
+        ]);
+
+        return redirect()->back()->with('success', 'Jadwal kelas live berhasil diperbarui!');
+    }
+
+    /**
      * Display Course Builder Settings page (Admin only)
      */
     public function courseBuilderSettings()

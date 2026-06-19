@@ -1,12 +1,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage, useForm } from '@inertiajs/vue3';
 import { 
   ShoppingCart, User, Globe, ChevronDown, GraduationCap, 
   Home, Newspaper, Calendar, Clock, MapPin, Code,
   Share2, CheckCircle2, Map, CreditCard, Play,
   BarChart3, RotateCw, Award, Image as ImageIcon,
-  Instagram, Twitter, Facebook, Linkedin
+  Instagram, Twitter, Facebook, Linkedin, Heart, Star
 } from 'lucide-vue-next';
 import axios from 'axios';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
@@ -207,6 +207,63 @@ const handleAccessLesson = (lesson) => {
 const handleShare = () => {
   navigator.clipboard.writeText(window.location.href);
   alert(usePage().props.translations['alert_share_success'] || 'Link rincian kelas berhasil disalin ke clipboard!');
+};
+
+const isWishlisted = ref(props.course.is_wishlisted || false);
+
+const handleWishlist = () => {
+  if (!usePage().props.auth.user) {
+    alert(usePage().props.translations['alert_login_wishlist'] || 'Silakan login terlebih dahulu untuk menambahkan ke wishlist.');
+    router.get('/login');
+    return;
+  }
+  
+  // Optimistic UI update
+  isWishlisted.value = !isWishlisted.value;
+  
+  router.post(`/wishlist/toggle`, {
+    course_id: props.course.id
+  }, {
+    preserveScroll: true,
+    onError: () => {
+      // Revert on error
+      isWishlisted.value = !isWishlisted.value;
+    }
+  });
+};
+
+const reviewForm = useForm({
+  rating: 5,
+  comment: ''
+});
+
+const isSubmittingReview = ref(false);
+
+const submitReview = () => {
+  if (!usePage().props.auth.user) {
+    alert(usePage().props.translations['alert_login_review'] || 'Silakan login terlebih dahulu untuk memberikan ulasan.');
+    router.get('/login');
+    return;
+  }
+  
+  if (!props.isEnrolled) {
+     alert(usePage().props.translations['alert_enroll_review'] || 'Anda harus terdaftar di kelas ini untuk memberikan ulasan.');
+     return;
+  }
+
+  isSubmittingReview.value = true;
+  reviewForm.post(`/courses/${props.course.slug}/reviews`, {
+    preserveScroll: true,
+    onSuccess: () => {
+      reviewForm.reset();
+      isSubmittingReview.value = false;
+      alert(usePage().props.translations['alert_review_success'] || 'Ulasan Anda berhasil dikirim!');
+    },
+    onError: () => {
+      isSubmittingReview.value = false;
+      alert(usePage().props.translations['alert_review_failed'] || 'Gagal mengirim ulasan, silakan periksa input Anda.');
+    }
+  });
 };
 
 // Logo Helper
@@ -563,6 +620,77 @@ import { usePage } from '@inertiajs/vue3';
 
           </div>
 
+          <!-- Section: Reviews -->
+          <div class="mb-10">
+            <h3 class="text-2xl font-extrabold text-[#1A2B49] mb-5">{{ $t('course_reviews') || 'Ulasan Kelas' }}</h3>
+            
+            <!-- Review Submission Form -->
+            <div v-if="isEnrolled" class="bg-white rounded-3xl p-6 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.015)] mb-8">
+              <h4 class="font-bold text-[#1A2B49] mb-4">Berikan Ulasan Anda</h4>
+              <form @submit.prevent="submitReview" class="flex flex-col gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-slate-500 mb-2">Rating</label>
+                  <div class="flex items-center gap-1">
+                    <button 
+                      v-for="star in 5" 
+                      :key="star"
+                      type="button"
+                      @click="reviewForm.rating = star"
+                      class="text-2xl outline-none focus:outline-none transition-colors"
+                      :class="star <= reviewForm.rating ? 'text-yellow-400' : 'text-slate-200'"
+                    >
+                      <Star :size="24" :fill="star <= reviewForm.rating ? 'currentColor' : 'none'" />
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-500 mb-2">Komentar</label>
+                  <textarea 
+                    v-model="reviewForm.comment"
+                    rows="3"
+                    class="w-full rounded-xl border-slate-200 focus:border-[#44A6D9] focus:ring focus:ring-[#44A6D9]/20 transition-all text-sm"
+                    placeholder="Ceritakan pengalaman Anda mengikuti kelas ini..."
+                    required
+                  ></textarea>
+                </div>
+                <div class="flex justify-end">
+                  <button 
+                    type="submit" 
+                    :disabled="isSubmittingReview"
+                    class="bg-[#264790] hover:bg-[#44A6D9] text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md transition-colors disabled:opacity-50"
+                  >
+                    {{ isSubmittingReview ? 'Mengirim...' : 'Kirim Ulasan' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+            <div v-else class="bg-slate-50 rounded-2xl p-6 text-center border border-slate-100 mb-8">
+              <p class="text-slate-500 text-sm font-semibold">Anda harus mendaftar dan menyelesaikan kelas ini untuk memberikan ulasan.</p>
+            </div>
+
+            <!-- Review List -->
+            <div v-if="course.reviews && course.reviews.length > 0" class="flex flex-col gap-4">
+              <div v-for="review in course.reviews" :key="review.id" class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex gap-4">
+                <div class="w-12 h-12 rounded-full bg-slate-100 shrink-0 overflow-hidden">
+                  <img :src="review.user?.avatar || '/images/avatars/default.png'" alt="User Avatar" class="w-full h-full object-cover">
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-center justify-between mb-1">
+                    <h5 class="font-bold text-[#1A2B49] text-sm">{{ review.user?.name || 'User' }}</h5>
+                    <span class="text-xs text-slate-400 font-semibold">{{ new Date(review.created_at).toLocaleDateString() }}</span>
+                  </div>
+                  <div class="flex items-center gap-0.5 mb-2">
+                    <Star v-for="s in 5" :key="s" :size="14" :fill="s <= review.rating ? 'currentColor' : 'none'" :class="s <= review.rating ? 'text-yellow-400' : 'text-slate-200'" />
+                  </div>
+                  <p class="text-slate-500 text-sm leading-relaxed">{{ review.comment }}</p>
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-center py-8">
+              <p class="text-slate-400 text-sm font-semibold">Belum ada ulasan untuk kelas ini.</p>
+            </div>
+          </div>
+
         </div>
 
         <!-- RIGHT COLUMN: Sticky Purchase Sidebar -->
@@ -600,12 +728,20 @@ import { usePage } from '@inertiajs/vue3';
                 <ShoppingCart :size="16" /> {{ $t('add_to_cart') || 'Tambah ke Keranjang' }}
               </button>
 
-              <button 
-                @click="handleShare"
-                class="w-full bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-100 py-4 rounded-2xl font-bold text-sm transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Share2 :size="16" /> {{ $t('share_label') || 'Bagikan' }}
-              </button>
+              <div class="flex gap-3">
+                <button 
+                  @click="handleShare"
+                  class="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-100 py-4 rounded-2xl font-bold text-sm transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Share2 :size="16" /> {{ $t('share_label') || 'Bagikan' }}
+                </button>
+                <button 
+                  @click="handleWishlist"
+                  class="w-[60px] bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-100 py-4 rounded-2xl transition-colors flex items-center justify-center"
+                >
+                  <Heart :size="18" :class="{'fill-[#FF4D4F] text-[#FF4D4F]': isWishlisted}" />
+                </button>
+              </div>
             </div>
 
             <div class="h-px bg-slate-100"></div>

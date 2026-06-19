@@ -115,4 +115,9 @@ class Course extends Model
     {
         return $this->lessons()->count() . ' Sesi';
     }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
 }

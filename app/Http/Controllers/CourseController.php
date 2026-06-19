@@ -70,13 +70,17 @@ class CourseController extends Controller
 
         $course = Course::where('slug', $slug)
             ->where('status', 'published')
-            ->with(['category', 'tags', 'instructor', 'modules.lessons', 'modules.quizzes.questions'])
+            ->with(['category', 'tags', 'instructor', 'modules.lessons', 'modules.quizzes.questions', 'reviews.user'])
             ->firstOrFail();
 
-        // Check if current user is enrolled
+        // Check if current user is enrolled and wishlisted
         $isEnrolled = false;
+        $isWishlisted = false;
         if (auth()->check()) {
             $isEnrolled = auth()->user()->hasEnrolled($course->id);
+            $isWishlisted = \App\Models\Wishlist::where('user_id', auth()->id())
+                ->where('course_id', $course->id)
+                ->exists();
         }
 
         $contentSummary = filter_var(
@@ -84,8 +88,11 @@ class CourseController extends Controller
             FILTER_VALIDATE_BOOLEAN
         );
 
+        $courseData = $course->toArray();
+        $courseData['is_wishlisted'] = $isWishlisted;
+
         return Inertia::render('Courses/Show', [
-            'course' => $course,
+            'course' => $courseData,
             'isEnrolled' => $isEnrolled,
             'showContentSummary' => $contentSummary
         ]);

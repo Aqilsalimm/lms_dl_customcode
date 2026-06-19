@@ -88,24 +88,11 @@ class ImageOptimizer
         $width = $imagick->getImageWidth();
         $height = $imagick->getImageHeight();
 
-        // Resize if needed
         if ($width > $maxWidth || $height > $maxHeight) {
             $ratio = min($maxWidth / $width, $maxHeight / $height);
             $newWidth = (int)($width * $ratio);
             $newHeight = (int)($height * $ratio);
             $imagick->resizeImage($newWidth, $newHeight, Imagick::FILTER_LANCZOS, 1);
-            $width = $newWidth;
-            $height = $newHeight;
-        }
-
-        // Ensure square crop (center)
-        if ($width !== $height) {
-            $size = min($width, $height);
-            $x = (int)(($width - $size) / 2);
-            $y = (int)(($height - $size) / 2);
-            $imagick->cropImage($size, $size, $x, $y);
-            $imagick->setImagePage(0, 0, 0, 0); // reset canvas
-            $width = $height = $size;
         }
 
         // Set compression/quality
@@ -123,23 +110,7 @@ class ImageOptimizer
         // Strip metadata/profiles for smaller size
         $imagick->stripImage();
 
-        // Write and enforce max size 500KB, reduce quality if needed
         $imagick->writeImage($filePath);
-        // Loop to reduce quality if file exceeds 500KB
-        $maxSize = 500 * 1024; // 500KB
-        $currentQuality = $quality;
-        while (file_exists($filePath) && filesize($filePath) > $maxSize && $currentQuality > 10) {
-            $currentQuality -= 5;
-            if (str_contains($mimeType, 'jpeg') || str_contains($mimeType, 'jpg')) {
-                $imagick->setImageCompressionQuality($currentQuality);
-            } elseif (str_contains($mimeType, 'png')) {
-                $imagick->setImageCompressionQuality((int)($currentQuality * 0.9));
-            } elseif (str_contains($mimeType, 'webp')) {
-                $imagick->setImageCompressionQuality($currentQuality);
-            }
-            $imagick->writeImage($filePath);
-        }
-
         $imagick->clear();
         $imagick->destroy();
 

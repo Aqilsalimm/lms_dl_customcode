@@ -61,7 +61,6 @@ const sidebarMenu = computed(() => [
   { label: usePage().props.translations?.enrolled_courses || 'Enrolled Courses', icon: BookOpen, route: 'dashboard.enrolled-courses' },
   { label: usePage().props.translations?.learning_progress || 'Learning Progress', icon: Activity, route: 'dashboard.learning-progress' },
   { label: usePage().props.translations?.reviews || 'Reviews', icon: Star, route: 'dashboard.reviews' },
-  { label: usePage().props.translations?.quiz_attempts || 'My Quiz Attempts', icon: HelpCircle, route: 'dashboard.quiz-attempts' },
   { label: usePage().props.translations?.wishlist || 'Wishlist', icon: Heart, route: 'dashboard.wishlist' },
   { label: usePage().props.translations?.order_history || 'Order History', icon: ShoppingCart, route: 'dashboard.order-history' },
   { label: usePage().props.translations?.qa || 'Question & Answer', icon: MessageCircle, route: 'dashboard.qa' },
@@ -70,11 +69,8 @@ const sidebarMenu = computed(() => [
 const instructorMenu = computed(() => [
   { label: usePage().props.translations?.my_courses || 'My Courses', icon: MonitorPlay, route: 'course-builder.index' },
   { label: usePage().props.translations?.my_bundles || 'My Bundles', icon: BookOpen, route: 'bundle-builder.index' },
-  { label: usePage().props.translations?.announcements || 'Announcements', icon: Megaphone, route: 'dashboard.announcements' },
   { label: usePage().props.translations?.withdrawals || 'Withdrawals', icon: Wallet, route: 'dashboard.withdrawals' },
-  { label: usePage().props.translations?.quiz_attempts || 'Quiz Attempts', icon: HelpCircle, route: 'dashboard.quiz-attempts' },
-  { label: usePage().props.translations?.google_meet || 'Google Meet', icon: Video, route: 'dashboard.google-meet' },
-  { label: usePage().props.translations?.zoom || 'Zoom', icon: Video, route: 'dashboard.zoom' },
+  { label: usePage().props.translations?.live_class || 'Live Class Schedule', icon: Video, route: 'dashboard.live-class' },
 ]);
 
 const hasBlogAccess = computed(() => {
@@ -127,9 +123,8 @@ const activeAdminAccordion = ref(getInitialAccordion());
       <!-- User Info & Mobile Menu Button -->
       <div class="flex items-center justify-between w-full md:w-auto gap-5">
         <div class="flex items-center gap-5">
-          <div class="w-20 h-20 rounded-full bg-[#264790] text-white flex items-center justify-center text-3xl font-extrabold shadow-md shrink-0 overflow-hidden">
-            <img v-if="user.photo" :src="user.photo" :alt="user.name" class="w-full h-full object-cover" />
-            <span v-else>{{ getInitials(user.name) }}</span>
+          <div class="w-20 h-20 rounded-full bg-[#264790] text-white flex items-center justify-center text-3xl font-extrabold shadow-md shrink-0">
+            {{ getInitials(user.name) }}
           </div>
           <div>
             <h2 class="text-2xl font-extrabold text-[#1A2B49] flex items-center gap-2">

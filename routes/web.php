@@ -55,14 +55,14 @@ Route::get('/dashboard/wishlist', [DashboardController::class, 'placeholder'])->
 Route::get('/dashboard/order-history', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.order-history');
 Route::get('/dashboard/qa', [DiscussionController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard.qa');
 
-// Instructor placeholder routes
-Route::get('/dashboard/announcements', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.announcements');
+// Instructor Live Class routes
+Route::get('/dashboard/live-class', [DashboardController::class, 'liveClassSchedule'])->middleware(['auth', 'verified'])->name('dashboard.live-class');
+Route::post('/dashboard/live-class/{course}/update-schedule', [DashboardController::class, 'updateLiveClassSchedule'])->middleware(['auth', 'verified'])->name('dashboard.live-class.update-schedule');
+
 // Instructor Withdrawal routes
 Route::get('/dashboard/withdrawals', [\App\Http\Controllers\WithdrawalRequestController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard.withdrawals');
 Route::post('/dashboard/withdrawals', [\App\Http\Controllers\WithdrawalRequestController::class, 'store'])->middleware(['auth', 'verified'])->name('dashboard.withdrawals.store');
 Route::post('/dashboard/payment-profile', [\App\Http\Controllers\Instructor\PaymentProfileController::class, 'store'])->middleware(['auth', 'verified'])->name('dashboard.payment-profile.store');
-Route::get('/dashboard/google-meet', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.google-meet');
-Route::get('/dashboard/zoom', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.zoom');
 
 use App\Http\Controllers\Auth\OtpController;
 
@@ -77,6 +77,10 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    
+    // Profile Photo routes
+    Route::post('/profile/photo', [\App\Http\Controllers\ProfilePhotoController::class, 'update'])->name('profile.photo.update');
+    Route::delete('/profile/photo', [\App\Http\Controllers\ProfilePhotoController::class, 'destroy'])->name('profile.photo.destroy');
 
     // Instructor Registration Flow
     Route::get('/instructor/setup', [\App\Http\Controllers\InstructorRegistrationController::class, 'create'])->name('instructor.profile.setup');
@@ -213,6 +217,12 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::post('/discussions', [DiscussionController::class, 'store'])->name('discussions.store');
     Route::post('/discussions/{discussion}/resolve', [DiscussionController::class, 'toggleResolved'])->name('discussions.resolve');
     Route::get('/dashboard/qna', [DiscussionController::class, 'instructorInbox'])->name('dashboard.qna');
+    
+    // E-Commerce & Engagement: Wishlist
+    Route::post('/wishlist/toggle', [\App\Http\Controllers\WishlistController::class, 'toggle'])->name('wishlist.toggle');
+    
+    // E-Commerce & Engagement: Review
+    Route::post('/courses/{slug}/reviews', [\App\Http\Controllers\ReviewController::class, 'store'])->name('reviews.store');
 });
 
 // Shopping Cart Public Routes

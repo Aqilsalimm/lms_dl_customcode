@@ -12,3 +12,4 @@ Schedule::command('app:send-abandoned-cart-reminders')->everyMinute();
 Schedule::command('app:check-expired-enrollments')->everyMinute();
 Schedule::command('app:cancel-expired-orders')->everyMinute();
 Schedule::command('billing:process-monthly')->dailyAt('00:00');
+Schedule::command('liveclass:remind')->hourly();

@@ -44,7 +44,6 @@ git pull origin production
 # 4. Install composer dependencies (optimized for production)
 echo "Installing PHP dependencies..."
 $COMPOSER_BIN install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-$PHP_BIN artisan storage:link
 
 # 5. Clear bootstrap cache files physically to prevent stale configs
 echo "Clearing bootstrap cache files..."

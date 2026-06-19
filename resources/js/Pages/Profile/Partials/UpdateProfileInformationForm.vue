@@ -20,6 +20,27 @@ const form = useForm({
     name: user.name,
     email: user.email,
 });
+
+const photoForm = useForm({
+    photo: null,
+});
+
+const onFileChange = (e) => {
+    photoForm.photo = e.target.files[0];
+};
+
+const updatePhoto = () => {
+    photoForm.post(route('profile.photo.update'), {
+        preserveScroll: true,
+        onSuccess: () => photoForm.reset(),
+    });
+};
+
+const deletePhoto = () => {
+    useForm({}).delete(route('profile.photo.destroy'), {
+        preserveScroll: true,
+    });
+};
 </script>
 
 <template>
@@ -33,6 +54,53 @@ const form = useForm({
                 Update your account's profile information and email address.
             </p>
         </header>
+
+        <!-- Profile Photo Form -->
+        <form @submit.prevent="updatePhoto" class="mt-6 space-y-6">
+            <div>
+                <InputLabel value="Profile Photo" />
+                <div class="mt-2 flex items-center space-x-6">
+                    <div class="shrink-0">
+                        <img class="h-16 w-16 object-cover rounded-full" 
+                             :src="$page.props.auth.user.photo ? '/storage/' + $page.props.auth.user.photo : 'https://ui-avatars.com/api/?name=' + encodeURI($page.props.auth.user.name) + '&color=7F9CF5&background=EBF4FF'" 
+                             alt="Current profile photo" />
+                    </div>
+                    <label class="block">
+                        <span class="sr-only">Choose profile photo</span>
+                        <input type="file" @change="onFileChange" accept="image/*" class="block w-full text-sm text-slate-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-full file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-blue-50 file:text-blue-700
+                            hover:file:bg-blue-100
+                        "/>
+                    </label>
+                    <button type="button" v-if="$page.props.auth.user.photo" @click="deletePhoto" class="text-red-500 hover:text-red-700 text-sm font-medium">
+                        Remove Photo
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <PrimaryButton :disabled="photoForm.processing">Save Photo</PrimaryButton>
+
+                <Transition
+                    enter-active-class="transition ease-in-out"
+                    enter-from-class="opacity-0"
+                    leave-active-class="transition ease-in-out"
+                    leave-to-class="opacity-0"
+                >
+                    <p
+                        v-if="photoForm.recentlySuccessful"
+                        class="text-sm text-gray-600"
+                    >
+                        Photo Saved.
+                    </p>
+                </Transition>
+            </div>
+        </form>
+        
+        <hr class="my-8 border-gray-200" />
 
         <form
             @submit.prevent="form.patch(route('profile.update'))"
