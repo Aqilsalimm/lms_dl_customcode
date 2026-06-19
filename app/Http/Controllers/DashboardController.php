@@ -32,6 +32,8 @@ use App\Models\Module;
 use App\Models\Tag;
 use App\Models\Quiz;
 use App\Models\QuizQuestion;
+use App\Models\Review;
+use App\Models\Wishlist;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -488,6 +490,67 @@ class DashboardController extends Controller
     public function placeholder()
     {
         return redirect()->route('dashboard')->with('info', 'This feature is currently under development.');
+    }
+
+    /**
+     * Display Student's Reviews page
+     */
+    public function reviews()
+    {
+        $user = auth()->user();
+        
+        // Fetch all reviews left by this student
+        $reviews = Review::with('course')
+            ->where('user_id', $user->id)
+            ->latest()
+            ->get();
+
+        // Fetch enrolled courses so they can leave a new review
+        $enrolledCourseIds = Enrollment::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->pluck('course_id');
+
+        $coursesToReview = Course::whereIn('id', $enrolledCourseIds)
+            ->get();
+
+        return Inertia::render('Dashboard/Student/Reviews', [
+            'reviews' => $reviews,
+            'coursesToReview' => $coursesToReview
+        ]);
+    }
+
+    /**
+     * Display Student's Wishlist page
+     */
+    public function wishlist()
+    {
+        $user = auth()->user();
+        
+        $wishlistItems = Wishlist::with(['course.instructor', 'course.category'])
+            ->where('user_id', $user->id)
+            ->latest()
+            ->get();
+
+        return Inertia::render('Dashboard/Student/Wishlist', [
+            'wishlistItems' => $wishlistItems
+        ]);
+    }
+
+    /**
+     * Display Student's Order History page
+     */
+    public function orderHistory()
+    {
+        $user = auth()->user();
+        
+        $orders = Order::with('buyable')
+            ->where('user_id', $user->id)
+            ->latest()
+            ->get();
+
+        return Inertia::render('Dashboard/Student/OrderHistory', [
+            'orders' => $orders
+        ]);
     }
 
     /**

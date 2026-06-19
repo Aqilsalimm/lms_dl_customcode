@@ -664,8 +664,20 @@
       "_GuestLayout-v4Xc5R1Y.js"
     ]
   },
+  "resources/js/Pages/Dashboard/Student/OrderHistory.vue": {
+    "file": "assets/OrderHistory-OCPfy0bF.js",
+    "name": "OrderHistory",
+    "src": "resources/js/Pages/Dashboard/Student/OrderHistory.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_vendor-core-DpIFdsji.js",
+      "_vendor-lucide-D-RyysuX.js",
+      "_DashboardWrapper-D3C7C3W9.js",
+      "_GuestLayout-v4Xc5R1Y.js"
+    ]
+  },
   "resources/js/Pages/Dashboard/Student/Qa.vue": {
-    "file": "assets/Qa-DI1gco2p.js",
+    "file": "assets/Qa-4urkLSJ_.js",
     "name": "Qa",
     "src": "resources/js/Pages/Dashboard/Student/Qa.vue",
     "isDynamicEntry": true,
@@ -676,8 +688,36 @@
       "_GuestLayout-v4Xc5R1Y.js"
     ]
   },
+  "resources/js/Pages/Dashboard/Student/Reviews.vue": {
+    "file": "assets/Reviews-C6Ls1drr.js",
+    "name": "Reviews",
+    "src": "resources/js/Pages/Dashboard/Student/Reviews.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js",
+      "_vendor-core-DpIFdsji.js",
+      "_vendor-Bia7WiVP.js",
+      "_vendor-lucide-D-RyysuX.js",
+      "_DashboardWrapper-D3C7C3W9.js",
+      "_GuestLayout-v4Xc5R1Y.js"
+    ]
+  },
+  "resources/js/Pages/Dashboard/Student/Wishlist.vue": {
+    "file": "assets/Wishlist-BXQTBd-3.js",
+    "name": "Wishlist",
+    "src": "resources/js/Pages/Dashboard/Student/Wishlist.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js",
+      "_vendor-core-DpIFdsji.js",
+      "_vendor-Bia7WiVP.js",
+      "_vendor-lucide-D-RyysuX.js",
+      "_DashboardWrapper-D3C7C3W9.js",
+      "_GuestLayout-v4Xc5R1Y.js"
+    ]
+  },
   "resources/js/Pages/Profile/Edit.vue": {
-    "file": "assets/Edit-enV-HZZ5.js",
+    "file": "assets/Edit-BKgJvz_4.js",
     "name": "Edit",
     "src": "resources/js/Pages/Profile/Edit.vue",
     "isDynamicEntry": true,
@@ -690,7 +730,7 @@
     ]
   },
   "resources/js/Pages/Profile/Partials/DeleteUserForm.vue": {
-    "file": "assets/DeleteUserForm-Bys5KfZe.js",
+    "file": "assets/DeleteUserForm-DHJC9ZFU.js",
     "name": "DeleteUserForm",
     "src": "resources/js/Pages/Profile/Partials/DeleteUserForm.vue",
     "isDynamicEntry": true,
@@ -702,7 +742,7 @@
     ]
   },
   "resources/js/Pages/Profile/Partials/UpdatePasswordForm.vue": {
-    "file": "assets/UpdatePasswordForm-Bn6nFi35.js",
+    "file": "assets/UpdatePasswordForm-B-QSMgY7.js",
     "name": "UpdatePasswordForm",
     "src": "resources/js/Pages/Profile/Partials/UpdatePasswordForm.vue",
     "isDynamicEntry": true,
@@ -713,7 +753,7 @@
     ]
   },
   "resources/js/Pages/Profile/Partials/UpdateProfileInformationForm.vue": {
-    "file": "assets/UpdateProfileInformationForm-BY1dDxFh.js",
+    "file": "assets/UpdateProfileInformationForm-BqysMmmk.js",
     "name": "UpdateProfileInformationForm",
     "src": "resources/js/Pages/Profile/Partials/UpdateProfileInformationForm.vue",
     "isDynamicEntry": true,
@@ -724,7 +764,7 @@
     ]
   },
   "resources/js/Pages/Welcome.vue": {
-    "file": "assets/Welcome-LU0SbdXl.js",
+    "file": "assets/Welcome-D7K9Dnl2.js",
     "name": "Welcome",
     "src": "resources/js/Pages/Welcome.vue",
     "isDynamicEntry": true,
@@ -740,7 +780,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-DKhchk4V.js",
+    "file": "assets/app-DLk5nlyC.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -788,7 +828,10 @@
       "resources/js/Pages/Dashboard/Student/EnrolledCourses.vue",
       "resources/js/Pages/Dashboard/Student/Index.vue",
       "resources/js/Pages/Dashboard/Student/LearningProgress.vue",
+      "resources/js/Pages/Dashboard/Student/OrderHistory.vue",
       "resources/js/Pages/Dashboard/Student/Qa.vue",
+      "resources/js/Pages/Dashboard/Student/Reviews.vue",
+      "resources/js/Pages/Dashboard/Student/Wishlist.vue",
       "resources/js/Pages/Dashboard.vue",
       "resources/js/Pages/Profile/Edit.vue",
       "resources/js/Pages/Profile/Partials/DeleteUserForm.vue",
@@ -797,7 +840,7 @@
       "resources/js/Pages/Welcome.vue"
     ],
     "css": [
-      "assets/app-DuV5RCHO.css"
+      "assets/app-u0slKrP5.css"
     ]
   }
 }

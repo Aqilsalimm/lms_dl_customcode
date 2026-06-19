@@ -38,4 +38,15 @@ class ReviewController extends Controller
 
         return back()->with('success', 'Review submitted successfully.');
     }
+
+    public function destroy(Review $review)
+    {
+        if ($review->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $review->delete();
+
+        return back()->with('success', 'Review deleted successfully.');
+    }
 }

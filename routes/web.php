@@ -46,14 +46,18 @@ Route::get('/dashboard/learning-progress', [DashboardController::class, 'learnin
     ->middleware(['auth', 'verified'])
     ->name('dashboard.learning-progress');
 
-use App\Http\Controllers\Student\QaController;
+use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\ReviewController;
 
-// Placeholder routes for unimplemented dashboard features
-Route::get('/dashboard/reviews', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.reviews');
+Route::get('/dashboard/reviews', [DashboardController::class, 'reviews'])->middleware(['auth', 'verified'])->name('dashboard.reviews');
 Route::get('/dashboard/quiz-attempts', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.quiz-attempts');
-Route::get('/dashboard/wishlist', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.wishlist');
-Route::get('/dashboard/order-history', [DashboardController::class, 'placeholder'])->middleware(['auth', 'verified'])->name('dashboard.order-history');
+Route::get('/dashboard/wishlist', [DashboardController::class, 'wishlist'])->middleware(['auth', 'verified'])->name('dashboard.wishlist');
+Route::get('/dashboard/order-history', [DashboardController::class, 'orderHistory'])->middleware(['auth', 'verified'])->name('dashboard.order-history');
 Route::get('/dashboard/qa', [DiscussionController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard.qa');
+
+Route::post('/wishlist/toggle', [WishlistController::class, 'toggle'])->middleware(['auth', 'verified'])->name('wishlist.toggle');
+Route::post('/courses/{slug}/reviews', [ReviewController::class, 'store'])->middleware(['auth', 'verified'])->name('reviews.store');
+Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->middleware(['auth', 'verified'])->name('reviews.destroy');
 
 // Instructor Live Class routes
 Route::get('/dashboard/live-class', [DashboardController::class, 'liveClassSchedule'])->middleware(['auth', 'verified'])->name('dashboard.live-class');
