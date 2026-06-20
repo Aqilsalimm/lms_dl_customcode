@@ -172,7 +172,7 @@ onMounted(() => {
 const handleRegister = () => {
   if (!usePage().props.auth.user) {
     alert(usePage().props.translations['alert_login_register'] || 'Silakan login terlebih dahulu untuk mendaftar kelas.');
-    router.get('/login');
+    window.dispatchEvent(new Event('open-login-modal'));
     return;
   }
   isProcessing.value = true;
@@ -194,7 +194,7 @@ const handleRegister = () => {
 const handleAccessLesson = (lesson) => {
   if (!usePage().props.auth.user) {
     alert(usePage().props.translations['alert_login_access'] || 'Silakan login terlebih dahulu untuk mengakses kelas.');
-    router.get('/login');
+    window.dispatchEvent(new Event('open-login-modal'));
     return;
   }
   if (!props.isEnrolled) {
@@ -214,7 +214,7 @@ const isWishlisted = ref(props.course.is_wishlisted || false);
 const handleWishlist = () => {
   if (!usePage().props.auth.user) {
     alert(usePage().props.translations['alert_login_wishlist'] || 'Silakan login terlebih dahulu untuk menambahkan ke wishlist.');
-    router.get('/login');
+    window.dispatchEvent(new Event('open-login-modal'));
     return;
   }
   
@@ -242,7 +242,7 @@ const isSubmittingReview = ref(false);
 const submitReview = () => {
   if (!usePage().props.auth.user) {
     alert(usePage().props.translations['alert_login_review'] || 'Silakan login terlebih dahulu untuk memberikan ulasan.');
-    router.get('/login');
+    window.dispatchEvent(new Event('open-login-modal'));
     return;
   }
   

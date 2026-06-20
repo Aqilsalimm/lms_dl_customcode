@@ -32,10 +32,22 @@ const handleScroll = () => {
   isScrolled.value = window.scrollY > 20;
 };
 
+let loginPromptInterval = null;
+
 onMounted(() => {
   if (typeof window !== 'undefined') {
     window.addEventListener('scroll', handleScroll);
     handleScroll(); // Trigger initial check
+
+    window.addEventListener('open-login-modal', () => {
+      isLoginModalOpen.value = true;
+    });
+
+    loginPromptInterval = setInterval(() => {
+      if (!isLoggedIn.value && !isLoginModalOpen.value) {
+        isLoginModalOpen.value = true;
+      }
+    }, 20000);
 
     // Listener for Google OAuth Popup
     window.addEventListener('message', (event) => {
@@ -102,6 +114,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('scroll', handleScroll);
+    if (loginPromptInterval) clearInterval(loginPromptInterval);
   }
 });
 
