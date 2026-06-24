@@ -2097,8 +2097,7 @@ const triggerTestNotification = (eventType, role) => {
               </div>
 
               <div v-if="form.settings.limit_login_sessions">
-                <label class="block text-sm font-bold text-slate-700 mb-1.5">Maximum Concurrent Active Sessions</label>
-                <p class="text-xs text-slate-500 mb-2">Set the maximum number of active login sessions allowed per user.</p>
+                <p class="text-xs text-slate-500 mb-2">Dengan mengaktifkan fitur ini, pengguna dibatasi hanya dapat memiliki 1 sesi login aktif. Untuk masuk dari perangkat baru, pengguna harus keluar (log out) terlebih dahulu dari perangkat aktif sebelumnya.</p>
               </div>
             </div>
 

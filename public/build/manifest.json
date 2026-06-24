@@ -484,7 +484,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Admin/Settings.vue": {
-    "file": "assets/Settings-X6pKad4g.js",
+    "file": "assets/Settings-BtjezNDg.js",
     "name": "Settings",
     "src": "resources/js/Pages/Dashboard/Admin/Settings.vue",
     "isDynamicEntry": true,
@@ -495,7 +495,7 @@
       "_DashboardWrapper-D3C7C3W9.js"
     ],
     "css": [
-      "assets/Settings-C6twme4G.css"
+      "assets/Settings-pjGlkr9m.css"
     ]
   },
   "resources/js/Pages/Dashboard/Admin/UserManage.vue": {
@@ -780,7 +780,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-cR28mJvF.js",
+    "file": "assets/app-BUvpbzfH.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,

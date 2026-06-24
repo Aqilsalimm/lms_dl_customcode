@@ -86,6 +86,26 @@ class GoogleController extends Controller
             ]);
         }
 
+        // Limit Concurrent Login Sessions
+        $limitSessions = \App\Models\Setting::where('key', 'limit_login_sessions')->value('value');
+        if (filter_var($limitSessions, FILTER_VALIDATE_BOOLEAN)) {
+            $hasActiveSession = \DB::table('sessions')
+                ->where('user_id', $user->id)
+                ->where('id', '!=', session()->getId())
+                ->where('last_activity', '>=', now()->subMinutes(config('session.lifetime'))->getTimestamp())
+                ->exists();
+
+            if ($hasActiveSession) {
+                return view('auth.google-callback', [
+                    'authData' => [
+                        'success' => false,
+                        'error' => 'Akun Anda sedang aktif di perangkat lain. Silakan log out terlebih dahulu dari perangkat tersebut.',
+                        'redirect_url' => '/?login=true'
+                    ]
+                ]);
+            }
+        }
+
         Auth::login($user, true);
 
         return view('auth.google-callback', [
