@@ -26,8 +26,24 @@ class AuthenticationTest extends TestCase
             'password' => 'password',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertGuest();
+        $response->assertRedirect('/login/otp');
+
+        // Retrieve the generated OTP code from the database
+        $otp = \App\Models\Otp::where('email', $user->email)->first();
+        $this->assertNotNull($otp);
+
+        // Submit the OTP code to complete authentication
+        $otpResponse = $this->withSession([
+                'login_otp_email' => $user->email,
+                'login_otp_remember' => false
+            ])
+            ->post('/login/otp', [
+                'otp_code' => $otp->otp_code,
+            ]);
+
+        $this->assertAuthenticatedAs($user);
+        $otpResponse->assertRedirect(route('dashboard', absolute: false));
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void

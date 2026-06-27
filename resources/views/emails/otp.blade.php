@@ -73,10 +73,10 @@
             <span style="font-size: 20px; font-weight: bold; color: #ffffff; letter-spacing: 1px;">DRASTHA LEARNING</span>
         </div>
         <div class="content">
-            <h1>Kode Verifikasi Registrasi</h1>
-            <p>Terima kasih telah mendaftar di Drastha Learning. Gunakan kode OTP di bawah ini untuk memverifikasi alamat email Anda. Kode ini berlaku selama 10 menit.</p>
+            <h1>Kode Verifikasi Keamanan</h1>
+            <p>Gunakan kode OTP di bawah ini untuk memverifikasi pendaftaran atau akses masuk Anda di Drastha Learning. Kode ini berlaku selama 10 menit.</p>
             <div class="otp-code">{{ $otpCode }}</div>
-            <p style="font-size: 14px; color: #9ca3af; margin-bottom: 0;">Jika Anda tidak merasa melakukan pendaftaran ini, abaikan saja email ini.</p>
+            <p style="font-size: 14px; color: #9ca3af; margin-bottom: 0;">Jika Anda tidak merasa meminta kode ini, abaikan saja email ini.</p>
         </div>
         <div class="footer">
             <p>&copy; {{ date('Y') }} Drastha Learning. All rights reserved.</p>

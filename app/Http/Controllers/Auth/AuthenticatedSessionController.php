@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\User;
+use App\Models\Otp;
+use App\Mail\OtpMail;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,9 +35,122 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
 
+        $user = Auth::user();
+
+        // Enforce OTP verification by logging out immediately
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        // Store OTP details in the new guest session
+        session([
+            'login_otp_email' => $user->email,
+            'login_otp_remember' => $request->boolean('remember'),
+        ]);
+
+        // Generate a 6-digit OTP code
+        $code = random_int(100000, 999999);
+
+        // Store OTP in database
+        Otp::create([
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'otp_code' => (string) $code,
+            'expires_at' => now()->addMinutes(10),
+            'used' => false,
+        ]);
+
+        // Send OTP email
+        Mail::to($user->email)->send(new OtpMail($code));
+
+        return redirect()->route('login.otp');
+    }
+
+    /**
+     * Display the login OTP verification view.
+     */
+    public function showOtpForm(Request $request): Response|RedirectResponse
+    {
+        if (!session()->has('login_otp_email')) {
+            return redirect()->route('login');
+        }
+
+        return Inertia::render('Auth/LoginOtp', [
+            'email' => session('login_otp_email'),
+            'status' => session('status'),
+        ]);
+    }
+
+    /**
+     * Verify the login OTP.
+     */
+    public function verifyOtp(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'otp_code' => 'required|digits:6',
+        ]);
+
+        $email = session('login_otp_email');
+        if (!$email) {
+            return redirect()->route('login');
+        }
+
+        $otp = Otp::where('email', $email)
+            ->where('otp_code', $request->otp_code)
+            ->where('used', false)
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>', now());
+            })
+            ->first();
+
+        if (!$otp) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'otp_code' => 'Kode OTP tidak valid atau telah kadaluarsa.',
+            ]);
+        }
+
+        // Mark OTP as used
+        $otp->update(['used' => true]);
+
+        // Log the user in
+        $user = User::where('email', $email)->firstOrFail();
+        Auth::login($user, session('login_otp_remember', false));
+
+        // Clean up temporary session data
         $request->session()->regenerate();
+        session()->forget(['login_otp_email', 'login_otp_remember']);
 
         return redirect()->intended(route('dashboard', absolute: false));
+    }
+
+    /**
+     * Resend the login OTP.
+     */
+    public function resendOtp(Request $request): RedirectResponse
+    {
+        $email = session('login_otp_email');
+        if (!$email) {
+            return redirect()->route('login');
+        }
+
+        $user = User::where('email', $email)->firstOrFail();
+
+        // Generate new OTP
+        $code = random_int(100000, 999999);
+
+        Otp::create([
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'otp_code' => (string) $code,
+            'expires_at' => now()->addMinutes(10),
+            'used' => false,
+        ]);
+
+        // Send email
+        Mail::to($user->email)->send(new OtpMail($code));
+
+        return redirect()->back()->with('status', 'Kode OTP baru telah berhasil dikirim ke email Anda.');
     }
 
     /**

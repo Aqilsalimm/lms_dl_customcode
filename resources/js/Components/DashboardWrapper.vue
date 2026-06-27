@@ -357,6 +357,10 @@ const activeAdminAccordion = ref(getInitialAccordion());
                 <Link :href="route('dashboard.settings') + '?tab=monetization'" :class="page.url.includes('tab=monetization') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Monetization</Link>
                 <Link :href="route('dashboard.settings') + '?tab=design'" :class="page.url.includes('tab=design') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Design</Link>
                 <Link :href="route('dashboard.settings') + '?tab=advanced'" :class="page.url.includes('tab=advanced') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Advanced</Link>
+                <Link :href="route('dashboard.settings') + '?tab=notifications'" :class="page.url.includes('tab=notifications') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Notifications</Link>
+                <Link :href="route('dashboard.settings') + '?tab=authentication'" :class="page.url.includes('tab=authentication') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Authentication</Link>
+                <Link :href="route('dashboard.settings') + '?tab=certificate'" :class="page.url.includes('tab=certificate') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Certificate</Link>
+                <Link :href="route('dashboard.settings') + '?tab=license'" :class="page.url.includes('tab=license') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">License</Link>
               </div>
             </div>
 
