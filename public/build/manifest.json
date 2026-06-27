@@ -202,7 +202,7 @@
     ]
   },
   "resources/js/Pages/Auth/LoginOtp.vue": {
-    "file": "assets/LoginOtp-DVx778Jr.js",
+    "file": "assets/LoginOtp-DoLCKZ7W.js",
     "name": "LoginOtp",
     "src": "resources/js/Pages/Auth/LoginOtp.vue",
     "isDynamicEntry": true,
@@ -791,7 +791,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-q1TWusDR.js",
+    "file": "assets/app-tfgSSPCc.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -852,7 +852,7 @@
       "resources/js/Pages/Welcome.vue"
     ],
     "css": [
-      "assets/app-CG2cWYS7.css"
+      "assets/app-u0slKrP5.css"
     ]
   }
 }
