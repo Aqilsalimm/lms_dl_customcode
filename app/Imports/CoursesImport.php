@@ -64,8 +64,15 @@ class CoursesImport implements ToModel, WithHeadingRow
             }
         }
 
+        // Map instructor_id: Non-admin users must only register courses under their own ID.
+        // Even if the imported file specifies an instructor_id, we override it for safety.
+        $instructorId = auth()->id() ?? 1;
+        if (auth()->check() && auth()->user()->isAdmin() && !empty($row['instructor_id'])) {
+            $instructorId = intval($row['instructor_id']);
+        }
+
         return new Course([
-            'instructor_id' => auth()->id() ?? 1, // fallback to 1 if not logged in (e.g. CLI), but should be logged in
+            'instructor_id' => $instructorId,
             'title'         => $title,
             'slug'          => Str::slug($title) . '-' . uniqid(),
             'category_id'   => $categoryId,

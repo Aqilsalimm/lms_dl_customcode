@@ -245,9 +245,17 @@ class CourseBuilderController extends Controller
     }
 
     // --- MODULES (SECTIONS) MANAGEMENT ---
+    
+    private function validateCourseOwner(Course $course)
+    {
+        if (!auth()->user()->isAdmin() && $course->instructor_id !== auth()->id()) {
+            abort(403, 'Unauthorized course access');
+        }
+    }
 
     public function addModule(Request $request, Course $course)
     {
+        $this->validateCourseOwner($course);
         $request->validate(['title' => 'required|string|max:255']);
 
         $sortOrder = $course->modules()->count();
@@ -266,6 +274,7 @@ class CourseBuilderController extends Controller
 
     public function updateModule(Request $request, Module $module)
     {
+        $this->validateCourseOwner($module->course);
         $request->validate(['title' => 'required|string|max:255']);
         $module->update(['title' => $request->title]);
 
@@ -277,6 +286,7 @@ class CourseBuilderController extends Controller
 
     public function deleteModule(Module $module)
     {
+        $this->validateCourseOwner($module->course);
         $module->delete();
         return response()->json(['message' => 'Module deleted successfully']);
     }
@@ -285,6 +295,7 @@ class CourseBuilderController extends Controller
 
     public function addLesson(Request $request, Module $module)
     {
+        $this->validateCourseOwner($module->course);
         $slideContentObj = is_array($request->slide_content) ? $request->slide_content : json_decode($request->slide_content, true);
         if ($slideContentObj && isset($slideContentObj['type']) && $slideContentObj['type'] === 'ppt') {
             $settings = \App\Models\Setting::pluck('value', 'key')->toArray();
@@ -344,6 +355,7 @@ class CourseBuilderController extends Controller
 
     public function updateLesson(Request $request, Lesson $lesson)
     {
+        $this->validateCourseOwner($lesson->module->course);
         $slideContentObj = is_array($request->slide_content) ? $request->slide_content : json_decode($request->slide_content, true);
         if ($slideContentObj && isset($slideContentObj['type']) && $slideContentObj['type'] === 'ppt') {
             $settings = \App\Models\Setting::pluck('value', 'key')->toArray();
@@ -428,6 +440,7 @@ class CourseBuilderController extends Controller
 
     public function deleteLesson(Lesson $lesson)
     {
+        $this->validateCourseOwner($lesson->module->course);
         $lesson->delete();
         return response()->json(['message' => 'Lesson deleted successfully']);
     }
@@ -436,6 +449,7 @@ class CourseBuilderController extends Controller
 
     public function addQuiz(Request $request, Module $module)
     {
+        $this->validateCourseOwner($module->course);
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -460,6 +474,7 @@ class CourseBuilderController extends Controller
 
     public function updateQuiz(Request $request, Quiz $quiz)
     {
+        $this->validateCourseOwner($quiz->module->course);
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -476,6 +491,7 @@ class CourseBuilderController extends Controller
 
     public function deleteQuiz(Quiz $quiz)
     {
+        $this->validateCourseOwner($quiz->module->course);
         $quiz->delete();
         return response()->json(['message' => 'Quiz deleted successfully']);
     }
@@ -484,6 +500,7 @@ class CourseBuilderController extends Controller
 
     public function addQuestion(Request $request, Quiz $quiz)
     {
+        $this->validateCourseOwner($quiz->module->course);
         $request->validate([
             'question_text' => 'required|string',
             'options' => 'required|array',
@@ -508,6 +525,7 @@ class CourseBuilderController extends Controller
 
     public function updateQuestion(Request $request, QuizQuestion $question)
     {
+        $this->validateCourseOwner($question->quiz->module->course);
         $request->validate([
             'question_text' => 'required|string',
             'options' => 'required|array',
@@ -524,6 +542,7 @@ class CourseBuilderController extends Controller
 
     public function deleteQuestion(QuizQuestion $question)
     {
+        $this->validateCourseOwner($question->quiz->module->course);
         $question->delete();
         return response()->json(['message' => 'Question deleted successfully']);
     }
