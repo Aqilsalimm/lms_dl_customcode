@@ -241,4 +241,70 @@ class CourseBuilderAuthorizationTest extends TestCase
         $this->assertInstanceOf(Course::class, $course);
         $this->assertEquals($instructor->id, $course->instructor_id);
     }
+
+    public function test_correct_option_index_is_concealed_from_students()
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $student = User::factory()->create(['role' => 'student']);
+
+        $course = Course::create([
+            'title' => 'Course with Quiz',
+            'instructor_id' => $instructor->id,
+            'price' => 150000,
+            'level' => 'Umum',
+            'status' => 'published',
+            'slug' => 'course-with-quiz',
+        ]);
+
+        $module = Module::create([
+            'course_id' => $course->id,
+            'title' => 'Quiz Module',
+            'sort_order' => 0,
+        ]);
+
+        $quiz = Quiz::create([
+            'module_id' => $module->id,
+            'title' => 'Security Quiz',
+            'time_limit_minutes' => 10,
+        ]);
+
+        $question = QuizQuestion::create([
+            'quiz_id' => $quiz->id,
+            'question_text' => 'What is 1 + 1?',
+            'options' => ['1', '2', '3', '4'],
+            'correct_option_index' => 1,
+            'sort_order' => 0,
+        ]);
+
+        // 1. Check public show page does not disclose key
+        $response = $this->get(route('courses.show', $course->slug));
+        $response->assertStatus(200);
+        
+        // Assert correct_option_index is hidden in raw Inertia response data
+        $pageData = $response->original->getData();
+        $inertiaData = $pageData['page'] ?? [];
+        $props = $inertiaData['props'] ?? [];
+        $quizQuestions = $props['course']['modules'][0]['quizzes'][0]['questions'] ?? [];
+        
+        $this->assertNotEmpty($quizQuestions);
+        $this->assertArrayNotHasKey('correct_option_index', $quizQuestions[0]);
+
+        // Enroll student to allow access to learn page
+        \App\Models\Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+        ]);
+
+        // 2. Check classroom learn page does not disclose key
+        $response = $this->actingAs($student)->get(route('courses.learn', $course->slug));
+        $response->assertStatus(200);
+
+        $pageData = $response->original->getData();
+        $inertiaData = $pageData['page'] ?? [];
+        $props = $inertiaData['props'] ?? [];
+        $learnQuestions = $props['course']['modules'][0]['quizzes'][0]['questions'] ?? [];
+        
+        $this->assertNotEmpty($learnQuestions);
+        $this->assertArrayNotHasKey('correct_option_index', $learnQuestions[0]);
+    }
 }

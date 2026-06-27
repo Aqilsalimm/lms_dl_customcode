@@ -368,7 +368,7 @@
     ]
   },
   "resources/js/Pages/Courses/Learn.vue": {
-    "file": "assets/Learn-C-DJSJ6T.js",
+    "file": "assets/Learn-vkf3my_w.js",
     "name": "Learn",
     "src": "resources/js/Pages/Courses/Learn.vue",
     "isDynamicEntry": true,
@@ -380,7 +380,7 @@
       "_GuestLayout-Buq9RPGi.js"
     ],
     "css": [
-      "assets/Learn-DvI8KfJg.css"
+      "assets/Learn-CxU1p7QP.css"
     ]
   },
   "resources/js/Pages/Courses/Show.vue": {
@@ -793,7 +793,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-Dbm-KidK.js",
+    "file": "assets/app-B7fkH570.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,

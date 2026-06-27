@@ -97,6 +97,15 @@ class CourseController extends Controller
             FILTER_VALIDATE_BOOLEAN
         );
 
+        // Hide correct answer key index for all quiz questions in Inertia props
+        $course->modules->each(function ($module) {
+            $module->quizzes->each(function ($quiz) {
+                $quiz->questions->each(function ($question) {
+                    $question->makeHidden(['correct_option_index']);
+                });
+            });
+        });
+
         $courseData = $course->toArray();
         $courseData['is_wishlisted'] = $isWishlisted;
 
@@ -126,6 +135,12 @@ class CourseController extends Controller
         $course->modules->each(function ($module) {
             $module->lessons->each(function ($lesson) {
                 $lesson->makeHidden(['content', 'video_url', 'slide_url', 'slide_content']);
+            });
+            // Hide correct answer key index for all quiz questions in Inertia props
+            $module->quizzes->each(function ($quiz) {
+                $quiz->questions->each(function ($question) {
+                    $question->makeHidden(['correct_option_index']);
+                });
             });
         });
 
@@ -256,29 +271,87 @@ class CourseController extends Controller
             ->where('course_id', $course->id)
             ->firstOrFail();
 
-        $completedQuizzes = $enrollment->completed_quizzes ?? [];
-        
         $quizIdInt = (int) $quizId;
-        if (!in_array($quizIdInt, $completedQuizzes)) {
-            $completedQuizzes[] = $quizIdInt;
+        $quiz = \App\Models\Quiz::with('questions')->findOrFail($quizIdInt);
+
+        // Grade the quiz server-side
+        $submittedAnswers = $request->input('answers', []);
+        $correctCount = 0;
+        $results = [];
+        $questions = $quiz->questions;
+
+        foreach ($questions as $q) {
+            $studentAnswer = $submittedAnswers[$q->id] ?? '';
+            $isCorrect = false;
+            $type = 'multiple_choice';
+            $correctText = '';
+            
+            $opts = $q->options ?? [];
+            if (isset($opts[0]) && $opts[0] === '[TRUE_FALSE]') {
+                $type = 'true_false';
+                $correctIdx = (int) $q->correct_option_index;
+                $correctText = $opts[$correctIdx + 1] ?? ($correctIdx === 0 ? 'Benar' : 'Salah');
+                $isCorrect = (int) $studentAnswer === $correctIdx;
+            } elseif (isset($opts[0]) && $opts[0] === '[ESSAY]') {
+                $type = 'essay';
+                $expectedKeyword = trim(strtolower($opts[1] ?? ''));
+                $correctText = $opts[1] ?? '';
+                $textAns = trim(strtolower($studentAnswer));
+                $isCorrect = strpos($textAns, $expectedKeyword) !== false && strlen($expectedKeyword) > 0;
+            } elseif (isset($opts[0]) && $opts[0] === '[MATH_FORMULA]') {
+                $type = 'math_formula';
+                $expectedFormula = trim(strtolower($opts[1] ?? ''));
+                $expectedValue = trim(strtolower($opts[2] ?? ''));
+                $correctText = 'Kunci: ' . ($opts[2] ?? $opts[1] ?? '');
+                $textAns = trim(strtolower($studentAnswer));
+                $isCorrect = $textAns === $expectedValue || $textAns === $expectedFormula;
+            } else {
+                $type = 'multiple_choice';
+                $correctIdx = (int) $q->correct_option_index;
+                $correctText = $opts[$correctIdx] ?? '';
+                $isCorrect = (int) $studentAnswer === $correctIdx;
+            }
+
+            if ($isCorrect) {
+                $correctCount++;
+            }
+
+            $results[] = [
+                'question_text' => $q->question_text,
+                'is_correct' => $isCorrect,
+                'student_answer' => $studentAnswer,
+                'correct_text' => $correctText,
+                'type' => $type
+            ];
         }
 
-        $enrollment->completed_quizzes = $completedQuizzes;
+        $totalQuestions = count($questions);
+        $score = $totalQuestions > 0 ? (int) round(($correctCount / $totalQuestions) * 100) : 0;
 
-        // Check if all lessons AND quizzes are completed
-        $totalLessonsCount = $course->lessons()->count();
-        $totalQuizzesCount = \App\Models\Quiz::whereIn('module_id', $course->modules()->pluck('id'))->count();
-        $completedLessons = $enrollment->completed_lessons ?? [];
+        $completedQuizzes = $enrollment->completed_quizzes ?? [];
+        if ($score >= 70) {
+            if (!in_array($quizIdInt, $completedQuizzes)) {
+                $completedQuizzes[] = $quizIdInt;
+            }
+            $enrollment->completed_quizzes = $completedQuizzes;
 
-        if (count($completedLessons) >= $totalLessonsCount && count($completedQuizzes) >= $totalQuizzesCount) {
-            $enrollment->completed_at = now();
-        } else {
-            $enrollment->completed_at = null;
+            // Check if all lessons AND quizzes are completed
+            $totalLessonsCount = $course->lessons()->count();
+            $totalQuizzesCount = \App\Models\Quiz::whereIn('module_id', $course->modules()->pluck('id'))->count();
+            $completedLessons = $enrollment->completed_lessons ?? [];
+
+            if (count($completedLessons) >= $totalLessonsCount && count($completedQuizzes) >= $totalQuizzesCount) {
+                $enrollment->completed_at = now();
+            } else {
+                $enrollment->completed_at = null;
+            }
+
+            $enrollment->save();
         }
-
-        $enrollment->save();
 
         return response()->json([
+            'score' => $score,
+            'results' => $results,
             'completedQuizzes' => $completedQuizzes,
             'completedAt' => $enrollment->completed_at,
         ]);

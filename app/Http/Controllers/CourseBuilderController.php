@@ -158,7 +158,7 @@ class CourseBuilderController extends Controller
             'status' => 'required|string|in:draft,published,pending',
             'description' => 'nullable|string',
             'about' => 'nullable|string',
-            'thumbnail' => 'nullable',
+            'thumbnail' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'bg_color' => 'nullable|string',
             'icon_type' => 'nullable|string',
             'course_type' => 'nullable|string|in:async,live_class',

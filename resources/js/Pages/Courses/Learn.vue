@@ -574,91 +574,41 @@ const startQuiz = (quiz) => {
 const submitQuiz = () => {
   if (!activeQuiz.value || !activeQuiz.value.questions) return;
   
-  let correctCount = 0;
-  const questions = activeQuiz.value.questions;
-  const results = [];
+  const qId = activeQuiz.value.id;
+  
+  axios.post(`/courses/${props.course.slug}/quizzes/${qId}/toggle-complete`, {
+    answers: quizAnswers.value
+  })
+    .then(response => {
+      quizScore.value = response.data.score;
+      quizResults.value = response.data.results;
+      quizSubmitted.value = true;
 
-  questions.forEach(q => {
-    const studentAnswer = quizAnswers.value[q.id];
-    let isCorrect = false;
-    let type = 'multiple_choice';
-    let correctText = '';
-    
-    const opts = q.options || [];
-    if (opts[0] === '[TRUE_FALSE]') {
-      type = 'true_false';
-      const correctIdx = q.correct_option_index;
-      correctText = opts[correctIdx + 1] || (correctIdx === 0 ? 'Benar' : 'Salah');
-      isCorrect = parseInt(studentAnswer) === correctIdx;
-    } else if (opts[0] === '[ESSAY]') {
-      type = 'essay';
-      const expectedKeyword = (opts[1] || '').trim().toLowerCase();
-      correctText = opts[1] || '';
-      const textAns = (studentAnswer || '').trim().toLowerCase();
-      isCorrect = textAns.includes(expectedKeyword) && expectedKeyword.length > 0;
-    } else if (opts[0] === '[MATH_FORMULA]') {
-      type = 'math_formula';
-      const expectedFormula = (opts[1] || '').trim().toLowerCase();
-      const expectedValue = (opts[2] || '').trim().toLowerCase();
-      correctText = `Kunci: ${opts[2] || opts[1]}`;
-      const textAns = (studentAnswer || '').trim().toLowerCase();
-      isCorrect = textAns === expectedValue || textAns === expectedFormula;
-    } else {
-      type = 'multiple_choice';
-      const correctIdx = q.correct_option_index;
-      correctText = opts[correctIdx] || '';
-      isCorrect = parseInt(studentAnswer) === correctIdx;
-    }
+      if (response.data.score >= 70) {
+        if (!completedQuizzes.value.includes(qId)) {
+          completedQuizzes.value.push(qId);
+          
+          const savedCompletions = localStorage.getItem('drastha_quiz_completions');
+          let completionsMap = {};
+          if (savedCompletions) {
+            try {
+              completionsMap = JSON.parse(savedCompletions);
+            } catch (e) {}
+          }
+          completionsMap[props.course.id] = completedQuizzes.value;
+          localStorage.setItem('drastha_quiz_completions', JSON.stringify(completionsMap));
+        }
 
-    if (isCorrect) {
-      correctCount++;
-    }
-    
-    results.push({
-      question_text: q.question_text,
-      is_correct: isCorrect,
-      student_answer: studentAnswer,
-      correct_text: correctText,
-      type: type
-    });
-  });
-
-  quizScore.value = Math.round((correctCount / questions.length) * 100);
-  quizResults.value = results;
-  quizSubmitted.value = true;
-
-  if (quizScore.value >= 70) {
-    const qId = activeQuiz.value.id;
-    if (!completedQuizzes.value.includes(qId)) {
-      completedQuizzes.value.push(qId);
-      
-      const savedCompletions = localStorage.getItem('drastha_quiz_completions');
-      let completionsMap = {};
-      if (savedCompletions) {
-        try {
-          completionsMap = JSON.parse(savedCompletions);
-        } catch (e) {}
+        if (response.data.completedAt) {
+          showCompletedOverlay.value = true;
+        } else {
+          showCompletedOverlay.value = false;
+        }
       }
-      completionsMap[props.course.id] = completedQuizzes.value;
-      localStorage.setItem('drastha_quiz_completions', JSON.stringify(completionsMap));
-
-      // Sync to database
-      axios.post(`/courses/${props.course.slug}/quizzes/${qId}/toggle-complete`)
-        .then(response => {
-          if (response.data.completedQuizzes) {
-            completedQuizzes.value = response.data.completedQuizzes;
-          }
-          if (response.data.completedAt) {
-            showCompletedOverlay.value = true;
-          } else {
-            showCompletedOverlay.value = false;
-          }
-        })
-        .catch(error => {
-          console.error('Failed to sync quiz completion:', error);
-        });
-    }
-  }
+    })
+    .catch(error => {
+      console.error('Failed to submit quiz:', error);
+    });
 };
 
 // Logo Helper
