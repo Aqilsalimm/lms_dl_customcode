@@ -266,4 +266,142 @@ class PaymentNotificationSecurityTest extends TestCase
             Setting::where('key', 'midtrans_client_key')->value('value')
         );
     }
+
+    /**
+     * Test sensitive keys are completely removed from Inertia global shared props and gemini_api_key is removed
+     */
+    public function test_sensitive_keys_and_gemini_key_are_not_shared_globally_via_inertia()
+    {
+        // Set sensitive settings keys
+        Setting::updateOrCreate(['key' => 'midtrans_server_key'], ['value' => 'SB-Mid-server-secret123']);
+        Setting::updateOrCreate(['key' => 'xendit_secret_key'], ['value' => 'xendit_secret_456']);
+        Setting::updateOrCreate(['key' => 'license_key'], ['value' => 'DRSTHA-MASTER-789']);
+        Setting::updateOrCreate(['key' => 'site_name'], ['value' => 'Drastha Learning Platform']);
+
+        // Set Gemini config key
+        config(['services.gemini.key' => 'gemini-secret-api-key']);
+
+        // Fetch home page (or any public page)
+        $response = $this->get('/');
+        $response->assertStatus(200);
+
+        // Get shared Inertia props
+        $page = $response->original->getData()['page'];
+        $props = $page['props'];
+
+        // Assert gemini_api_key is NOT in props
+        $this->assertArrayNotHasKey('gemini_api_key', $props);
+
+        // Assert sensitive settings keys are NOT in settings prop
+        $settings = $props['settings'];
+        $this->assertArrayNotHasKey('midtrans_server_key', $settings);
+        $this->assertArrayNotHasKey('xendit_secret_key', $settings);
+        $this->assertArrayNotHasKey('license_key', $settings);
+
+        // Assert public settings keys ARE in settings prop
+        $this->assertArrayHasKey('site_name', $settings);
+        $this->assertEquals('Drastha Learning Platform', $settings['site_name']);
+    }
+
+    /**
+     * Test Gemini chat proxy route works as expected
+     */
+    public function test_gemini_chat_proxy_route_succeeds()
+    {
+        // 1. Test offline/default fallback when key is not configured
+        config(['services.gemini.key' => '']);
+        
+        $response = $this->postJson(route('api.gemini.chat'), [
+            'message' => 'Halo CS'
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure(['reply']);
+        $this->assertStringContainsString('Halo!', $response->json('reply'));
+
+        // 2. Test input validation
+        $response = $this->postJson(route('api.gemini.chat'), [
+            'message' => ''
+        ]);
+        $response->assertStatus(422);
+    }
+
+    /**
+     * Test that all required security headers are set in the response
+     */
+    public function test_security_headers_are_present_on_web_responses()
+    {
+        $response = $this->get('/');
+        $response->assertStatus(200);
+        
+        $response->assertHeader('X-Frame-Options', 'DENY');
+        $response->assertHeader('X-Content-Type-Options', 'nosniff');
+        $response->assertHeader('X-XSS-Protection', '1; mode=block');
+        $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $response->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+        $response->assertHeader('Content-Security-Policy');
+        
+        $response->assertHeaderMissing('X-Powered-By');
+        $response->assertHeaderMissing('x-powered-by');
+    }
+
+    /**
+     * Test that requesting .htaccess returns 404 Not Found
+     */
+    public function test_htaccess_access_returns_404()
+    {
+        $response = $this->get('/.htaccess');
+        $response->assertStatus(404);
+    }
+
+    /**
+     * Test that XSRF-TOKEN cookie SameSite attribute is configured to 'strict'
+     */
+    public function test_xsrf_cookie_samesite_attribute_is_strict()
+    {
+        // Set config same_site to strict to test it
+        config(['session.same_site' => 'strict']);
+        
+        $response = $this->get('/');
+        $response->assertStatus(200);
+        
+        $cookies = $response->headers->getCookies();
+        $xsrfCookieFound = false;
+        
+        foreach ($cookies as $cookie) {
+            if ($cookie->getName() === 'XSRF-TOKEN') {
+                $xsrfCookieFound = true;
+                $this->assertEquals('strict', $cookie->getSameSite());
+            }
+        }
+        
+        $this->assertTrue($xsrfCookieFound, 'XSRF-TOKEN cookie was not set in the response.');
+    }
+
+    /**
+     * Test that command-line and scraper user-agents are blocked when requested
+     */
+    public function test_scraper_user_agents_are_blocked()
+    {
+        // 1. Test curl is blocked
+        $response = $this->withHeaders([
+            'X-Test-Force-UA-Block' => '1',
+            'User-Agent' => 'curl/7.68.0'
+        ])->get('/');
+        $response->assertStatus(404);
+
+        // 2. Test empty User-Agent is blocked
+        $response = $this->withHeaders([
+            'X-Test-Force-UA-Block' => '1',
+            'User-Agent' => ''
+        ])->get('/');
+        $response->assertStatus(404);
+
+        // 3. Test normal browser is allowed
+        $response = $this->withHeaders([
+            'X-Test-Force-UA-Block' => '1',
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        ])->get('/');
+        $response->assertStatus(200);
+    }
 }

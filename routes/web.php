@@ -239,6 +239,9 @@ Route::post('/cart/clear', [CartController::class, 'clear'])->name('cart.clear')
 // Midtrans webhook notifications (CSRF-exempted in bootstrap/app.php)
 Route::post('/payment/notification', [PaymentController::class, 'notification'])->name('payment.notification');
 
+// Gemini AI Chat Proxy Route (Secure server-side proxy to hide Gemini API key)
+Route::post('/api/gemini/chat', [\App\Http\Controllers\GeminiChatController::class, 'chat'])->name('api.gemini.chat');
+
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 Route::get('/courses/{course:slug}', [CourseController::class, 'show'])->name('courses.show');
 

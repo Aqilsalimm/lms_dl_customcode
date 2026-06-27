@@ -43,13 +43,34 @@ class HandleInertiaRequests extends Middleware
             ],
             'locale' => $locale,
             'translations' => $translations,
-            'settings' => \App\Models\Setting::pluck('value', 'key')->toArray(),
-            'gemini_api_key' => config('services.gemini.key'),
+            'settings' => $this->getPublicSettings(),
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
                 'logout_message' => $request->session()->get('logout_message'),
             ],
         ];
+    }
+
+    /**
+     * Get public settings, filtering out any sensitive backend keys
+     */
+    private function getPublicSettings(): array
+    {
+        $settings = \App\Models\Setting::pluck('value', 'key')->toArray();
+        
+        $sensitiveKeys = [
+            'midtrans_server_key',
+            'xendit_secret_key',
+            'brevo_api_key',
+            'google_client_secret',
+            'license_key',
+        ];
+        
+        foreach ($sensitiveKeys as $key) {
+            unset($settings[$key]);
+        }
+        
+        return $settings;
     }
 }

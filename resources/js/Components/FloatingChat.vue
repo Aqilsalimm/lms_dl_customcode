@@ -58,59 +58,19 @@ const getTemplateAnswer = (userMessage) => {
 
 // Main chat service handler
 const callGeminiAPI = async (promptText) => {
-  const apiKey = window.GEMINI_API_KEY || usePage().props.gemini_api_key || '';
-  if (!apiKey) {
-    // Safe offline fallback
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(getTemplateAnswer(promptText));
-      }, 1000);
-    });
-  }
-
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { text: promptText }
-            ]
-          }
-        ],
-        systemInstruction: {
-          parts: [
-            {
-              text: `Anda adalah Asisten Virtual Support khusus untuk platform Drastha Learning. Tugas utama Anda adalah membantu calon peserta kursus yang tertarik untuk membeli kelas/kursus di platform kami.
-
-PERATURAN SANGAT KETAT:
-1. JAWAB HANYA pertanyaan seputar Drastha Learning (kelas yang ditawarkan, cara pendaftaran/pembelian, harga, metode pembayaran, sertifikat kelulusan, masa aktif kelas, dan jam operasional CS).
-2. Jika pengguna meminta Anda menyelesaikan/membuatkan kode program, debugging, menjelaskan konsep pemrograman teknis secara mendalam (misal meminta Anda memecahkan algoritma atau membuat script kode), atau menanyakan topik di luar pembelian kursus di Drastha Learning, Anda WAJIB MENOLAK secara halus. Contoh penolakan: 'Maaf, sebagai asisten support Drastha Learning, saya hanya dapat membantu menjawab pertanyaan seputar platform, informasi kelas, dan pembelian kursus kami. Untuk pertanyaan teknis/pemrograman, silakan diskusikan di forum diskusi kelas setelah Anda bergabung.'
-3. Bersikaplah ramah, santun, profesional, dan gunakan bahasa Indonesia yang baik. Jawab secara padat dan jelas untuk menghemat token.`
-            }
-          ]
-        },
-        generationConfig: {
-          maxOutputTokens: 250,
-          temperature: 0.7
-        }
-      })
+    const response = await window.axios.post('/api/gemini/chat', {
+      message: promptText
     });
 
-    const data = await response.json();
-    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
-      return data.candidates[0].content.parts[0].text;
+    if (response.data && response.data.reply) {
+      return response.data.reply;
     } else {
       console.warn("Format respon Gemini tidak terduga, menggunakan jawaban template.");
       return getTemplateAnswer(promptText);
     }
   } catch (error) {
-    console.error("Gagal memanggil Gemini API:", error);
+    console.error("Gagal memanggil Gemini API proxy:", error);
     return getTemplateAnswer(promptText);
   }
 };

@@ -5,6 +5,11 @@
 
     RewriteEngine On
 
+    # Block access to hidden files/directories (dotfiles) and return 404 Not Found
+    # Exclude .well-known directory (used for SSL verification and app links)
+    RewriteCond %{REQUEST_URI} !^/\.well-known/ [NC]
+    RewriteRule ^\..* - [R=404,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -22,4 +27,16 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Unset sensitive server and platform disclosing headers
+    Header always unset X-Powered-By
+    Header always unset Server
+    Header always unset platform
+    Header always unset panel
+    Header unset X-Powered-By
+    Header unset Server
+    Header unset platform
+    Header unset panel
 </IfModule>

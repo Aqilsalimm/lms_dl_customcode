@@ -36,9 +36,11 @@
         @php
             $copyProtection = \App\Models\Setting::where('key', 'copy_protection')->value('value');
             $isCopyProtectionEnabled = filter_var($copyProtection, FILTER_VALIDATE_BOOLEAN);
+            $isAdmin = auth()->check() && auth()->user()->role === 'admin';
+            $isLocal = app()->environment('local');
         @endphp
 
-        @if($isCopyProtectionEnabled)
+        @if($isCopyProtectionEnabled && !$isAdmin)
             <style>
                 body {
                     -webkit-user-select: none !important;
@@ -47,18 +49,42 @@
                     user-select: none !important;
                 }
             </style>
+            <noscript>
+                <style>
+                    body {
+                        display: none !important;
+                    }
+                </style>
+            </noscript>
             <script>
                 document.addEventListener('contextmenu', function(e) {
                     e.preventDefault();
                 });
                 document.addEventListener('keydown', function(e) {
+                    // Disable Ctrl+C, Ctrl+U, Ctrl+S, Ctrl+A
                     if (e.ctrlKey && (e.key === 'c' || e.key === 'C' || e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S' || e.key === 'a' || e.key === 'A')) {
                         e.preventDefault();
                     }
-                    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I'))) {
+                    // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+                    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I' || e.key === 'j' || e.key === 'J' || e.key === 'c' || e.key === 'C'))) {
                         e.preventDefault();
                     }
                 });
+
+                @if(!$isLocal)
+                // Anti-DevTools Debugger loop
+                (function() {
+                    const blockDevTools = function() {
+                        const before = new Date().getTime();
+                        debugger;
+                        const after = new Date().getTime();
+                        if (after - before > 100) {
+                            document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:Montserrat,sans-serif;font-size:18px;color:#ef4444;background:#f8fafc;font-weight:bold;">Akses ditolak. Silakan tutup Developer Tools untuk melihat konten.</div>';
+                        }
+                    };
+                    setInterval(blockDevTools, 1000);
+                })();
+                @endif
             </script>
         @endif
     </head>
