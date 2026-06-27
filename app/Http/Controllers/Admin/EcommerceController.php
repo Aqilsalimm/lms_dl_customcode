@@ -241,6 +241,8 @@ class EcommerceController extends Controller
         ];
 
         $settings = [];
+        $sensitiveKeys = ['midtrans_server_key', 'midtrans_client_key'];
+
         foreach ($keys as $key) {
             $dbSetting = \App\Models\Setting::where('key', $key)->first();
             
@@ -257,7 +259,11 @@ class EcommerceController extends Controller
             } elseif ($key === 'abandoned_cart_email_body') {
                 $settings[$key] = $dbSetting ? $dbSetting->value : "Halo {student_name},\n\nKami melihat Anda meninggalkan kelas berikut di keranjang belanja Anda:\n{course_names}\n\nJangan biarkan semangat belajar Anda padam! Klik tautan berikut untuk melanjutkan checkout Anda:\n{checkout_link}\n\nSalam Hangat,\nTim Drastha Learning";
             } else {
-                $settings[$key] = $dbSetting ? $dbSetting->value : '';
+                $value = $dbSetting ? $dbSetting->value : '';
+                if (in_array($key, $sensitiveKeys) && !empty($value)) {
+                    $value = $this->maskApiKey($value);
+                }
+                $settings[$key] = $value;
             }
         }
 
@@ -285,12 +291,37 @@ class EcommerceController extends Controller
         ]);
 
         foreach ($validated as $key => $value) {
+            if ($this->isMaskedValue($value)) {
+                continue;
+            }
             \App\Models\Setting::updateOrCreate(
                 ['key' => $key],
                 ['value' => is_bool($value) ? ($value ? '1' : '0') : $value]
             );
         }
 
-        return redirect()->back()->with('success', 'Pengaturan e-commerce berhasil diperbarui.');
+        return redirect()->back()->with('success', 'Pengaturan e-Commerce berhasil diperbarui.');
+    }
+
+    /**
+     * Mask API keys to protect sensitive credentials from exposing on the client side
+     */
+    private function maskApiKey(?string $key): string
+    {
+        if (empty($key)) {
+            return '';
+        }
+        if (strlen($key) <= 8) {
+            return '********';
+        }
+        return substr($key, 0, 4) . str_repeat('*', strlen($key) - 8) . substr($key, -4);
+    }
+
+    /**
+     * Check if a setting value is a masked placeholder
+     */
+    private function isMaskedValue($value): bool
+    {
+        return is_string($value) && str_contains($value, '*');
     }
 }

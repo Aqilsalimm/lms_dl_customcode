@@ -457,6 +457,21 @@ class DashboardController extends Controller
 
         $settings = \App\Models\Setting::pluck('value', 'key')->toArray();
 
+        $sensitiveKeys = [
+            'midtrans_server_key',
+            'midtrans_client_key',
+            'xendit_secret_key',
+            'xendit_public_key',
+            'google_client_secret',
+            'google_client_id',
+            'brevo_api_key'
+        ];
+        foreach ($sensitiveKeys as $key) {
+            if (isset($settings[$key])) {
+                $settings[$key] = $this->maskApiKey($settings[$key]);
+            }
+        }
+
         return Inertia::render('Dashboard/Admin/Settings', [
             'settings' => $settings
         ]);
@@ -475,6 +490,9 @@ class DashboardController extends Controller
         $settingsData = $request->input('settings', []);
         
         foreach ($settingsData as $key => $value) {
+            if ($this->isMaskedValue($value)) {
+                continue;
+            }
             \App\Models\Setting::updateOrCreate(
                 ['key' => $key],
                 ['value' => is_array($value) ? json_encode($value) : $value]
@@ -482,6 +500,28 @@ class DashboardController extends Controller
         }
 
         return redirect()->back()->with('success', 'Settings updated successfully.');
+    }
+
+    /**
+     * Mask API keys to protect sensitive credentials from exposing on the client side
+     */
+    private function maskApiKey(?string $key): string
+    {
+        if (empty($key)) {
+            return '';
+        }
+        if (strlen($key) <= 8) {
+            return '********';
+        }
+        return substr($key, 0, 4) . str_repeat('*', strlen($key) - 8) . substr($key, -4);
+    }
+
+    /**
+     * Check if a setting value is a masked placeholder
+     */
+    private function isMaskedValue($value): bool
+    {
+        return is_string($value) && str_contains($value, '*');
     }
 
     /**

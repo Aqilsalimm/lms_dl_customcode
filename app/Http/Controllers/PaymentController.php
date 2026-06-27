@@ -179,6 +179,34 @@ class PaymentController extends Controller
             return response()->json(['message' => 'Test notification received successfully'], 200);
         }
 
+        // Verify Midtrans Signature Key to prevent spoofing/tampering
+        $serverKey = \App\Models\Setting::where('key', 'midtrans_server_key')->value('value');
+        if (empty($serverKey)) {
+            $serverKey = config('midtrans.server_key');
+        }
+
+        $isLocalPlaceholder = empty($serverKey) || str_contains($serverKey, 'placeholder');
+
+        if (!$isLocalPlaceholder) {
+            $statusCode = $payload['status_code'] ?? '';
+            $grossAmount = $payload['gross_amount'] ?? '';
+            $signatureKeyReceived = $payload['signature_key'] ?? '';
+
+            // Format of signature key: SHA512(order_id + status_code + gross_amount + server_key)
+            $input = $orderIdField . $statusCode . $grossAmount . $serverKey;
+            $signatureKeyCalculated = hash('sha512', $input);
+
+            if ($signatureKeyReceived !== $signatureKeyCalculated) {
+                logger()->warning('Midtrans Webhook: Signature Key Verification Failed.', [
+                    'received' => $signatureKeyReceived,
+                    'calculated' => $signatureKeyCalculated
+                ]);
+                return response()->json(['message' => 'Invalid signature key'], 403);
+            }
+        } else {
+            logger()->info('Midtrans Webhook: Bypassing signature verification in development (placeholder server key).');
+        }
+
         // Extract order ID from "DRSTH-{id}-{timestamp}"
         $parts = explode('-', $orderIdField);
         if (count($parts) < 2) {
