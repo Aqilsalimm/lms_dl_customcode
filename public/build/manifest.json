@@ -202,14 +202,16 @@
     ]
   },
   "resources/js/Pages/Auth/LoginOtp.vue": {
-    "file": "assets/LoginOtp-DoLCKZ7W.js",
+    "file": "assets/LoginOtp-Bn8Z7Qt2.js",
     "name": "LoginOtp",
     "src": "resources/js/Pages/Auth/LoginOtp.vue",
     "isDynamicEntry": true,
     "imports": [
-      "_vendor-core-DpIFdsji.js",
-      "_vendor-lucide-D-RyysuX.js",
-      "_GuestLayout-9F8RORF5.js"
+      "__plugin-vue_export-helper-1r9tKl2A.js",
+      "_vendor-core-DpIFdsji.js"
+    ],
+    "css": [
+      "assets/LoginOtp-C4xdCg6W.css"
     ]
   },
   "resources/js/Pages/Auth/ProfileSetup.vue": {
@@ -791,7 +793,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-tfgSSPCc.js",
+    "file": "assets/app-Bww0iMR0.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
