@@ -20,6 +20,44 @@ watch(() => page.url, () => {
   isSidebarOpen.value = false;
 });
 
+// Global success/error flash message SweetAlert2 notifications
+watch(
+  () => page.props.flash,
+  (flash) => {
+    if (flash && flash.success) {
+      Swal.fire({
+        title: page.props.translations?.success || 'Berhasil',
+        text: flash.success,
+        icon: 'success',
+        confirmButtonText: 'OK',
+        buttonsStyling: false,
+        customClass: {
+          popup: 'rounded-[2rem] p-8 border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white text-slate-800 font-sans select-none',
+          title: 'text-xl font-extrabold text-[#1A2B49] mb-2',
+          htmlContainer: 'text-sm font-semibold text-slate-500 leading-relaxed my-4',
+          confirmButton: 'bg-[#264790] hover:bg-[#1A2B49] text-white font-black px-8 py-3 rounded-full text-xs shadow-md transition-all outline-none focus:ring-4 focus:ring-[#264790]/20 active:scale-95 cursor-pointer',
+        }
+      });
+    }
+    if (flash && flash.error) {
+      Swal.fire({
+        title: page.props.translations?.attention || 'Perhatian',
+        text: flash.error,
+        icon: 'error',
+        confirmButtonText: 'OK',
+        buttonsStyling: false,
+        customClass: {
+          popup: 'rounded-[2rem] p-8 border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white text-slate-800 font-sans select-none',
+          title: 'text-xl font-extrabold text-[#1A2B49] mb-2',
+          htmlContainer: 'text-sm font-semibold text-slate-500 leading-relaxed my-4',
+          confirmButton: 'bg-[#264790] hover:bg-[#1A2B49] text-white font-black px-8 py-3 rounded-full text-xs shadow-md transition-all outline-none focus:ring-4 focus:ring-[#264790]/20 active:scale-95 cursor-pointer',
+        }
+      });
+    }
+  },
+  { deep: true, immediate: true }
+);
+
 const handleLogout = () => {
   Swal.fire({
     title: page.props.translations?.confirm_logout || 'Konfirmasi Keluar',

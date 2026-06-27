@@ -121,7 +121,7 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
         session()->forget(['login_otp_email', 'login_otp_remember']);
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended(route('dashboard', absolute: false))->with('success', 'Selamat datang kembali!');
     }
 
     /**

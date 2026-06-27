@@ -250,7 +250,6 @@ const handleSignIn = () => {
     onSuccess: () => {
       isLoginModalOpen.value = false;
       loginForm.reset();
-      alert('Selamat datang kembali!');
     },
     onError: (errors) => {
       let errMsg = Object.values(errors).join('\n');
