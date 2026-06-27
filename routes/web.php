@@ -196,6 +196,7 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::get('/checkout/resume/{order}', [CartController::class, 'resumeCheckout'])->name('checkout.resume');
     Route::get('/orders/{order}/invoice', [PaymentController::class, 'downloadInvoice'])->name('orders.invoice');
     Route::get('/courses/{course:slug}/learn', [CourseController::class, 'learn'])->middleware('active.subscription')->name('courses.learn');
+    Route::get('/courses/{course:slug}/lessons/{lesson}/content', [CourseController::class, 'getLessonContent'])->middleware('active.subscription')->name('courses.lessons.content');
     Route::post('/courses/{course:slug}/lessons/{lesson}/toggle-complete', [CourseController::class, 'toggleLessonComplete'])->name('courses.lessons.complete');
     Route::post('/courses/{course:slug}/quizzes/{quiz}/toggle-complete', [CourseController::class, 'toggleQuizComplete'])->name('courses.quizzes.complete');
     Route::post('/courses/{course:slug}/lessons/{lesson}/log-progress', [CourseController::class, 'logProgress'])->name('courses.lessons.log-progress');

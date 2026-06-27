@@ -48,6 +48,10 @@ const props = defineProps({
   dbCompletedAt: {
     type: String,
     default: null
+  },
+  decryptionKey: {
+    type: String,
+    required: true
   }
 });
 
@@ -175,9 +179,98 @@ const stopProgressLogging = () => {
   }
 };
 
-watch(activeLesson, (newLesson) => {
+// Local content cache and loading state
+const lessonContentCache = ref({});
+const isLoadingContent = ref(false);
+
+// Native Web Crypto API AES-256-CBC Decryption Helper
+const decryptContent = async (ciphertextBase64, ivHex, secretKeyStr) => {
+  try {
+    const keyBytes = new Uint8Array(secretKeyStr.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    const ivBytes = new Uint8Array(ivHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+    
+    const cryptoKey = await window.crypto.subtle.importKey(
+      "raw",
+      keyBytes,
+      { name: "AES-CBC" },
+      false,
+      ["decrypt"]
+    );
+    
+    const binaryString = window.atob(ciphertextBase64);
+    const ciphertextBytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      ciphertextBytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    const decryptedBuffer = await window.crypto.subtle.decrypt(
+      { name: "AES-CBC", iv: ivBytes },
+      cryptoKey,
+      ciphertextBytes
+    );
+    
+    const decoder = new TextDecoder();
+    return decoder.decode(decryptedBuffer);
+  } catch (e) {
+    console.error("Gagal melakukan dekripsi materi:", e);
+    return null;
+  }
+};
+
+// Fetch and decrypt lesson content
+const fetchLessonContent = async (lessonId) => {
+  if (!lessonId) return;
+  isLoadingContent.value = true;
+  try {
+    const res = await axios.get(`/courses/${props.course.slug}/lessons/${lessonId}/content`);
+    if (res.data && res.data.ciphertext) {
+      const decryptedStr = await decryptContent(res.data.ciphertext, res.data.iv, props.decryptionKey);
+      if (decryptedStr) {
+        const decryptedData = JSON.parse(decryptedStr);
+        // Save to cache
+        lessonContentCache.value[lessonId] = decryptedData;
+        
+        // If the user hasn't switched to another lesson, apply it
+        if (activeLesson.value && activeLesson.value.id === lessonId) {
+          activeLesson.value = {
+            ...activeLesson.value,
+            video_url: decryptedData.video_url,
+            slide_url: decryptedData.slide_url,
+            content: decryptedData.content,
+            slide_content: decryptedData.slide_content,
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Gagal memuat materi pelajaran:", err);
+  } finally {
+    isLoadingContent.value = false;
+  }
+};
+
+watch(activeLesson, (newLesson, oldLesson) => {
   if (newLesson) {
+    // If it is the exact same lesson ID, ignore to prevent infinite loop
+    if (oldLesson && newLesson.id === oldLesson.id) {
+      return;
+    }
+
     startProgressLogging();
+    
+    // Lazy load and decrypt content if not cached
+    if (lessonContentCache.value[newLesson.id]) {
+      const cached = lessonContentCache.value[newLesson.id];
+      activeLesson.value = {
+        ...newLesson,
+        video_url: cached.video_url,
+        slide_url: cached.slide_url,
+        content: cached.content,
+        slide_content: cached.slide_content,
+      };
+    } else {
+      fetchLessonContent(newLesson.id);
+    }
   } else {
     stopProgressLogging();
   }
@@ -844,8 +937,17 @@ const Logo = () => {
 
           <!-- A. LESSON COMPONENT PLAYER -->
           <div v-if="activeLesson && (course.course_type !== 'live_class' || !course.start_date || timeRemaining <= 0)" class="flex flex-col gap-6">
+            <!-- Loading Screen while decrypting payload -->
+            <div v-if="isLoadingContent" class="w-full aspect-video rounded-3xl bg-slate-900 border border-slate-950 shadow-lg flex flex-col items-center justify-center text-slate-400 gap-4">
+              <svg class="animate-spin h-8 w-8 text-[#44A6D9]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span class="text-sm font-semibold tracking-wide">Mengambil materi secara aman...</span>
+            </div>
+
             <!-- Canva / Google Slides Player Frame -->
-            <div v-if="activeLessonType === 'slides'" class="w-full">
+            <div v-else-if="activeLessonType === 'slides'" class="w-full">
               <div v-if="getEmbedUrl" class="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border border-slate-200 bg-slate-50 relative">
                 <iframe 
                   :src="getEmbedUrl"
@@ -1009,7 +1111,10 @@ const Logo = () => {
 
               <!-- Tab Content: About -->
               <div v-else class="text-slate-500 font-medium text-xs sm:text-sm leading-relaxed whitespace-pre-line">
-                {{ activeLessonType === 'ppt' ? (activeLesson?.content && activeLesson?.content.startsWith('{') ? JSON.parse(activeLesson.content).summary : activeLesson?.content) : activeLesson?.content || 'Materi video panduan untuk mempersiapkan tools pemrograman yang mendukung pembelajaran secara terstruktur.' }}
+                <span v-if="isLoadingContent" class="text-slate-400 italic">Memuat penjelasan materi...</span>
+                <span v-else>
+                  {{ activeLessonType === 'ppt' ? (activeLesson?.content && activeLesson?.content.startsWith('{') ? JSON.parse(activeLesson.content).summary : activeLesson?.content) : activeLesson?.content || 'Materi video panduan untuk mempersiapkan tools pemrograman yang mendukung pembelajaran secara terstruktur.' }}
+                </span>
               </div>
 
               <!-- QnA Discussion Section -->

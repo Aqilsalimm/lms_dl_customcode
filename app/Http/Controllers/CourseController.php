@@ -70,7 +70,16 @@ class CourseController extends Controller
 
         $course = Course::where('slug', $slug)
             ->where('status', 'published')
-            ->with(['category', 'tags', 'instructor', 'modules.lessons', 'modules.quizzes.questions', 'reviews.user'])
+            ->with([
+                'category',
+                'tags',
+                'instructor',
+                'modules.lessons' => function ($query) {
+                    $query->select('id', 'module_id', 'title', 'duration_minutes', 'sort_order');
+                },
+                'modules.quizzes.questions',
+                'reviews.user'
+            ])
             ->firstOrFail();
 
         // Check if current user is enrolled and wishlisted
@@ -114,6 +123,12 @@ class CourseController extends Controller
             ->with(['category', 'tags', 'instructor', 'modules.lessons', 'modules.quizzes.questions'])
             ->firstOrFail();
 
+        $course->modules->each(function ($module) {
+            $module->lessons->each(function ($lesson) {
+                $lesson->makeHidden(['content', 'video_url', 'slide_url', 'slide_content']);
+            });
+        });
+
         // 3. Authorization check (is Enrolled or is Instructor of course or is Admin)
         $user = auth()->user();
         $isAuthor = $course->instructor_id === $user->id;
@@ -146,12 +161,20 @@ class CourseController extends Controller
             FILTER_VALIDATE_BOOLEAN
         );
 
+        // Generate or retrieve session-bound decryption key
+        $decryptionKey = session('lesson_decryption_key');
+        if (!$decryptionKey) {
+            $decryptionKey = bin2hex(random_bytes(32)); // 64 hex characters (256-bit key)
+            session(['lesson_decryption_key' => $decryptionKey]);
+        }
+
         return Inertia::render('Courses/Learn', [
             'course' => $course,
             'spotlightMode' => $spotlightMode,
             'dbCompletedLessons' => $completedLessons,
             'dbCompletedQuizzes' => $completedQuizzes,
             'dbCompletedAt' => $completedAt,
+            'decryptionKey' => $decryptionKey,
         ]);
     }
 
@@ -347,6 +370,62 @@ class CourseController extends Controller
             'settings' => $settings,
             'completedAt' => $enrollment ? $enrollment->completed_at : now()->toDateTimeString(),
             'studentName' => $user->name,
+        ]);
+    }
+
+    /**
+     * Get encrypted lesson content dynamically
+     */
+    public function getLessonContent(string $slug, string $lessonId)
+    {
+        if (!auth()->check()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        $course = Course::where('slug', $slug)->where('status', 'published')->firstOrFail();
+        $lesson = \App\Models\Lesson::where('id', $lessonId)
+            ->whereIn('module_id', $course->modules()->pluck('id'))
+            ->firstOrFail();
+
+        $user = auth()->user();
+        $isAuthor = $course->instructor_id === $user->id;
+        
+        $allowAccessWithoutEnroll = filter_var(
+            \App\Models\Setting::where('key', 'course_content_access')->value('value'),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
+        $isAuthorized = $user->hasEnrolled($course->id) || 
+            $isAuthor || 
+            ($allowAccessWithoutEnroll && ($user->isAdmin() || $user->isInstructor())) ||
+            (!$allowAccessWithoutEnroll && $user->isAdmin());
+
+        if (!$isAuthorized) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $decryptionKey = session('lesson_decryption_key');
+        if (!$decryptionKey) {
+            return response()->json(['error' => 'Decryption session expired. Please reload page.'], 400);
+        }
+
+        $data = [
+            'video_url' => $lesson->video_url,
+            'slide_url' => $lesson->slide_url,
+            'content' => $lesson->content,
+            'slide_content' => $lesson->slide_content,
+        ];
+
+        $jsonData = json_encode($data);
+        $method = 'aes-256-cbc';
+        $key = hash('sha256', $decryptionKey, true);
+        $ivLength = openssl_cipher_iv_length($method);
+        $iv = openssl_random_pseudo_bytes($ivLength);
+        $ciphertext = openssl_encrypt($jsonData, $method, $key, OPENSSL_RAW_DATA, $iv);
+
+        return response()->json([
+            'ciphertext' => base64_encode($ciphertext),
+            'iv' => bin2hex($iv)
         ]);
     }
 }
