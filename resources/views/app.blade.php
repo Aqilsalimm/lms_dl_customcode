@@ -32,8 +32,10 @@
         @php
             $user = auth()->user();
         @endphp
-        @if($user && ($user->isAdmin() || $user->isInstructor()))
-            @routes
+        @if($user && $user->isAdmin())
+            @routes('admin')
+        @elseif($user && $user->isInstructor())
+            @routes('instructor')
         @elseif($user)
             @routes('student')
         @else
