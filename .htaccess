@@ -1,0 +1,29 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine on
+    
+    # 1. Block access directly to sensitive directories and return 403 Forbidden
+    RedirectMatch 403 /\.(git|github|vscode|sixth)/
+    RedirectMatch 403 /vendor/
+    RedirectMatch 403 /storage/
+    RedirectMatch 403 /app/
+    RedirectMatch 403 /bootstrap/
+    RedirectMatch 403 /config/
+    RedirectMatch 403 /database/
+    RedirectMatch 403 /resources/
+    RedirectMatch 403 /routes/
+    RedirectMatch 403 /tests/
+    RedirectMatch 403 /node_modules/
+    
+    # 2. Block access directly to sensitive files
+    RedirectMatch 403 /\.(env|gitignore|gitattributes|editorconfig|npmrc|phpunit)$
+    RedirectMatch 403 /composer\.(json|lock)$
+    RedirectMatch 403 /package\.(json|lock)$
+    RedirectMatch 403 /vite\.config\.js$
+    RedirectMatch 403 /tailwind\.config\.js$
+    RedirectMatch 403 /postcss\.config\.js$
+    RedirectMatch 403 /artisan$
+    
+    # 3. Redirect everything else to public/
+    RewriteRule ^$ public/ [L]
+    RewriteRule ((?s).*) public/$1 [L]
+</IfModule>
