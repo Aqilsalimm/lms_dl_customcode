@@ -71,8 +71,8 @@ Route::post('/dashboard/payment-profile', [\App\Http\Controllers\Instructor\Paym
 use App\Http\Controllers\Auth\OtpController;
 
 // OTP routes
-Route::post('/otp/send', [OtpController::class, 'send'])->name('otp.send');
-Route::post('/otp/verify', [OtpController::class, 'verify'])->name('otp.verify');
+Route::post('/otp/send', [OtpController::class, 'send'])->name('otp.send')->middleware('throttle:3,1');
+Route::post('/otp/verify', [OtpController::class, 'verify'])->name('otp.verify')->middleware('throttle:5,1');
 
 use App\Http\Controllers\BillingController;
 Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middleware(['auth'])->name('billing.suspended');
