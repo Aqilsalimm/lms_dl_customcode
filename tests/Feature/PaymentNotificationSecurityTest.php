@@ -404,4 +404,22 @@ class PaymentNotificationSecurityTest extends TestCase
         ])->get('/');
         $response->assertStatus(200);
     }
+
+    /**
+     * Test CORS preflight (OPTIONS) request does not allow arbitrary origins
+     */
+    public function test_cors_preflight_request_does_not_allow_all_origins()
+    {
+        $response = $this->call('OPTIONS', '/api/gemini/chat', [], [], [], [
+            'HTTP_ORIGIN' => 'https://evil.com',
+            'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST'
+        ]);
+
+        $response->assertStatus(204);
+        
+        $allowOrigin = $response->headers->get('Access-Control-Allow-Origin');
+        $this->assertNotEquals('*', $allowOrigin);
+        $this->assertNotEquals('https://evil.com', $allowOrigin);
+    }
 }
+
