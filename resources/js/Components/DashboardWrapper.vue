@@ -161,8 +161,19 @@ const activeAdminAccordion = ref(getInitialAccordion());
       <!-- User Info & Mobile Menu Button -->
       <div class="flex items-center justify-between w-full md:w-auto gap-5">
         <div class="flex items-center gap-5">
-          <div class="w-20 h-20 rounded-full bg-[#264790] text-white flex items-center justify-center text-3xl font-extrabold shadow-md shrink-0">
-            {{ getInitials(user.name) }}
+          <div class="w-20 h-20 rounded-full overflow-hidden shrink-0 shadow-md">
+            <img 
+              v-if="user.photo"
+              :src="'/storage/' + user.photo" 
+              :alt="user.name"
+              class="w-full h-full object-cover"
+            />
+            <div 
+              v-else
+              class="w-full h-full bg-[#264790] text-white flex items-center justify-center text-3xl font-extrabold"
+            >
+              {{ getInitials(user.name) }}
+            </div>
           </div>
           <div>
             <h2 class="text-2xl font-extrabold text-[#1A2B49] flex items-center gap-2">
