@@ -80,4 +80,16 @@ class ZiggySecurityTest extends TestCase
         $response->assertSee('course-builder.index');
         $response->assertSee('dashboard.users.manage');
     }
+
+    public function test_security_headers_are_present_on_404_responses()
+    {
+        $response = $this->get('/this-route-does-not-exist');
+        $response->assertStatus(404);
+
+        $response->assertHeader('X-Frame-Options', 'DENY');
+        $response->assertHeader('X-Content-Type-Options', 'nosniff');
+        $response->assertHeader('X-XSS-Protection', '1; mode=block');
+        $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $response->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    }
 }

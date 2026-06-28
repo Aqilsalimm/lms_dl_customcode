@@ -20,8 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
             return '/?auth_timeout=1';
         });
 
+        $middleware->append(\App\Http\Middleware\SecurityHeadersMiddleware::class);
+
         $middleware->web(append: [
-            \App\Http\Middleware\SecurityHeadersMiddleware::class,
             \App\Http\Middleware\CheckMaintenanceMode::class,
             \App\Http\Middleware\LicenseMiddleware::class,
             \Illuminate\Session\Middleware\AuthenticateSession::class,

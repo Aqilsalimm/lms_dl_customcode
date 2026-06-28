@@ -44,33 +44,31 @@ class SecurityHeadersMiddleware
      */
     private function applyHeaders(Response $response, Request $request): Response
     {
-        if (method_exists($response, 'header')) {
-            // Remove X-Powered-By from Laravel/Symfony response headers
-            $response->headers->remove('X-Powered-By');
-            $response->headers->remove('x-powered-by');
+        // Remove X-Powered-By from Laravel/Symfony response headers
+        $response->headers->remove('X-Powered-By');
+        $response->headers->remove('x-powered-by');
 
-            $response->header('X-Frame-Options', 'DENY');
-            $response->header('X-Content-Type-Options', 'nosniff');
-            $response->header('X-XSS-Protection', '1; mode=block');
-            $response->header('Referrer-Policy', 'strict-origin-when-cross-origin');
-            $response->header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-            
-            // Only apply HSTS if secure (HTTPS) request
-            if ($request->secure()) {
-                $response->header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-            }
-
-            // Stricter but functional Content Security Policy (CSP)
-            $csp = "default-src 'self'; "
-                 . "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://app.sandbox.midtrans.com https://app.midtrans.com; "
-                 . "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-                 . "img-src 'self' data: https: blob:; "
-                 . "font-src 'self' data: https://fonts.gstatic.com; "
-                 . "frame-src 'self' https://app.sandbox.midtrans.com https://app.midtrans.com; "
-                 . "connect-src 'self' https://app.sandbox.midtrans.com https://app.midtrans.com https://api.sandbox.midtrans.com https://api.midtrans.com;";
-            
-            $response->header('Content-Security-Policy', $csp);
+        $response->headers->set('X-Frame-Options', 'DENY');
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set('X-XSS-Protection', '1; mode=block');
+        $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+        
+        // Only apply HSTS if secure (HTTPS) request
+        if ($request->secure()) {
+            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
         }
+
+        // Stricter but functional Content Security Policy (CSP)
+        $csp = "default-src 'self'; "
+             . "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://app.sandbox.midtrans.com https://app.midtrans.com; "
+             . "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+             . "img-src 'self' data: https: blob:; "
+             . "font-src 'self' data: https://fonts.gstatic.com; "
+             . "frame-src 'self' https://app.sandbox.midtrans.com https://app.midtrans.com; "
+             . "connect-src 'self' https://app.sandbox.midtrans.com https://app.midtrans.com https://api.sandbox.midtrans.com https://api.midtrans.com;";
+        
+        $response->headers->set('Content-Security-Policy', $csp);
 
         return $response;
     }
