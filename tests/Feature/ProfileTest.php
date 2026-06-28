@@ -96,4 +96,41 @@ class ProfileTest extends TestCase
 
         $this->assertNotNull($user->fresh());
     }
+
+    public function test_profile_photo_can_be_uploaded_and_is_stored()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $user = User::factory()->create();
+
+        $file = \Illuminate\Http\UploadedFile::fake()->image('avatar.jpg');
+
+        $response = $this->actingAs($user)->post('/profile/photo', [
+            'photo' => $file,
+        ]);
+
+        $response->assertRedirect();
+        $user->refresh();
+
+        $this->assertNotNull($user->photo);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($user->photo);
+    }
+
+    public function test_dashboard_page_has_user_photo_in_shared_props()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $user = User::factory()->create();
+
+        $file = \Illuminate\Http\UploadedFile::fake()->image('avatar.jpg');
+
+        $this->actingAs($user)->post('/profile/photo', [
+            'photo' => $file,
+        ]);
+
+        $response = $this->actingAs($user)->get('/dashboard');
+        $response->assertOk();
+
+        $page = $response->original->getData()['page'] ?? null;
+        $this->assertNotNull($page);
+        $this->assertEquals($user->fresh()->photo, $page['props']['auth']['user']['photo']);
+    }
 }

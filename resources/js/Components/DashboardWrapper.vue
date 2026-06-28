@@ -163,21 +163,21 @@ const activeAdminAccordion = ref(getInitialAccordion());
         <div class="flex items-center gap-5">
           <div class="w-20 h-20 rounded-full overflow-hidden shrink-0 shadow-md">
             <img 
-              v-if="user.photo"
-              :src="'/storage/' + user.photo" 
-              :alt="user.name"
+              v-if="$page.props.auth.user?.photo"
+              :src="'/storage/' + $page.props.auth.user.photo" 
+              :alt="$page.props.auth.user.name"
               class="w-full h-full object-cover"
             />
             <div 
               v-else
               class="w-full h-full bg-[#264790] text-white flex items-center justify-center text-3xl font-extrabold"
             >
-              {{ getInitials(user.name) }}
+              {{ getInitials($page.props.auth.user?.name) }}
             </div>
           </div>
           <div>
             <h2 class="text-2xl font-extrabold text-[#1A2B49] flex items-center gap-2">
-              {{ user.name }}
+              {{ $page.props.auth.user?.name }}
               <ShieldCheck v-if="role === 'admin'" :size="20" class="text-[#44A6D9]" />
             </h2>
             <!-- Golden Stars -->
