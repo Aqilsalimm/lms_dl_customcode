@@ -29,7 +29,16 @@
         <link rel="icon" type="image/png" href="/images/logo/logo_dl.png" />
 
         <!-- Scripts -->
-        @routes
+        @php
+            $user = auth()->user();
+        @endphp
+        @if($user && ($user->isAdmin() || $user->isInstructor()))
+            @routes
+        @elseif($user)
+            @routes('student')
+        @else
+            @routes('public')
+        @endif
         @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
         @inertiaHead
 

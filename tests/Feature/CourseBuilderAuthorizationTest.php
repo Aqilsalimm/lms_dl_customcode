@@ -307,4 +307,39 @@ class CourseBuilderAuthorizationTest extends TestCase
         $this->assertNotEmpty($learnQuestions);
         $this->assertArrayNotHasKey('correct_option_index', $learnQuestions[0]);
     }
+
+    public function test_ziggy_routes_are_filtered_by_role()
+    {
+        // 1. Guest access should only see public routes in the HTML view output
+        $response = $this->get('/');
+        $response->assertStatus(200);
+        $html = $response->getContent();
+        
+        // Assert we see public routes in Ziggy config
+        $this->assertStringContainsString('courses.show', $html);
+        $this->assertStringContainsString('login', $html);
+        
+        // Assert we DO NOT see admin or course-builder routes
+        $this->assertStringNotContainsString('dashboard.settings.course-builder.courses', $html);
+        $this->assertStringNotContainsString('dashboard.users.manage', $html);
+
+        // 2. Student access
+        $student = User::factory()->create(['role' => 'student']);
+        $response = $this->actingAs($student)->get('/');
+        $response->assertStatus(200);
+        $html = $response->getContent();
+        
+        $this->assertStringContainsString('dashboard.enrolled-courses', $html);
+        $this->assertStringNotContainsString('dashboard.settings.course-builder.courses', $html);
+        $this->assertStringNotContainsString('dashboard.users.manage', $html);
+
+        // 3. Admin access
+        $admin = User::factory()->create(['role' => 'admin']);
+        $response = $this->actingAs($admin)->get('/');
+        $response->assertStatus(200);
+        $html = $response->getContent();
+        
+        $this->assertStringContainsString('dashboard.settings.course-builder.courses', $html);
+        $this->assertStringContainsString('dashboard.users.manage', $html);
+    }
 }
