@@ -342,4 +342,28 @@ class CourseBuilderAuthorizationTest extends TestCase
         $this->assertStringContainsString('dashboard.settings.course-builder.courses', $html);
         $this->assertStringContainsString('dashboard.users.manage', $html);
     }
+
+    public function test_security_headers_are_present_on_successful_responses()
+    {
+        $response = $this->get('/');
+        $response->assertStatus(200);
+        $response->assertHeader('X-Frame-Options', 'DENY');
+        $response->assertHeader('X-Content-Type-Options', 'nosniff');
+        $response->assertHeader('X-XSS-Protection', '1; mode=block');
+        $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    }
+
+    public function test_security_headers_are_present_on_blocked_user_agents()
+    {
+        $response = $this->withHeaders([
+            'User-Agent' => 'curl/7.68.0',
+            'X-Test-Force-UA-Block' => '1'
+        ])->get('/');
+        
+        $response->assertStatus(404);
+        $response->assertHeader('X-Frame-Options', 'DENY');
+        $response->assertHeader('X-Content-Type-Options', 'nosniff');
+        $response->assertHeader('X-XSS-Protection', '1; mode=block');
+        $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    }
 }

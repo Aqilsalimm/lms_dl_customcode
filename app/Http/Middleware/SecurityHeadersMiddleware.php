@@ -15,22 +15,35 @@ class SecurityHeadersMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Block command-line tools and scrapers to prevent direct page scraping/crawling
-        if (!app()->environment('testing') || $request->headers->has('X-Test-Force-UA-Block')) {
-            $userAgent = $request->header('User-Agent');
-            if (empty($userAgent) || preg_match('/(curl|wget|python|guzzle|httpclient|postman)/i', $userAgent)) {
-                abort(404);
-            }
-        }
-
         // Programmatically remove X-Powered-By from global PHP headers
         if (function_exists('header_remove')) {
             header_remove('X-Powered-By');
             header_remove('x-powered-by');
         }
 
+        // Block command-line tools and scrapers to prevent direct page scraping/crawling
+        if (!app()->environment('testing') || $request->headers->has('X-Test-Force-UA-Block')) {
+            $userAgent = $request->header('User-Agent');
+            if (empty($userAgent) || preg_match('/(curl|wget|python|guzzle|httpclient|postman)/i', $userAgent)) {
+                $response = response('Not Found', 404);
+                return $this->applyHeaders($response, $request);
+            }
+        }
+
         $response = $next($request);
 
+        return $this->applyHeaders($response, $request);
+    }
+
+    /**
+     * Apply security headers to the response.
+     *
+     * @param  \Symfony\Component\HttpFoundation\Response  $response
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    private function applyHeaders(Response $response, Request $request): Response
+    {
         if (method_exists($response, 'header')) {
             // Remove X-Powered-By from Laravel/Symfony response headers
             $response->headers->remove('X-Powered-By');
