@@ -8,3 +8,5 @@ Disallow: /payment/
 Disallow: /course-builder/
 Disallow: /checkout/
 Disallow: /cart/
+
+Sitemap: https://drasthalearning.com/sitemap.xml
