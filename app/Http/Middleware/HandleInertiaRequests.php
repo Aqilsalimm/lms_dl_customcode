@@ -53,24 +53,41 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Get public settings, filtering out any sensitive backend keys
+     * Get public settings, filtering out any sensitive backend keys using a strict whitelist
      */
     private function getPublicSettings(): array
     {
         $settings = \App\Models\Setting::pluck('value', 'key')->toArray();
         
-        $sensitiveKeys = [
-            'midtrans_server_key',
-            'xendit_secret_key',
-            'brevo_api_key',
-            'google_client_secret',
-            'license_key',
+        $publicKeys = [
+            'site_name',
+            'course_logo',
+            'course_columns',
+            'instructor_list_layout',
+            'blog_template',
+            'enable_otp',
+            'enable_native_ppt',
+            'native_ppt_access',
+            'allowed_blog_instructors',
+            'pagination_rows',
+            'midtrans_client_key',
+            'midtrans_sandbox_mode',
+            'enable_marketplace',
+            'become_instructor_button',
+            'instructor_publish_course',
+            'instructor_trash_course',
+            'instructor_change_author',
+            'dashboard_page',
+            'terms_page',
+            'privacy_page',
+            'primary_color',
+            'primary_hover_color',
+            'text_color',
+            'gray_color',
+            'border_color',
+            'text_color_hover',
         ];
         
-        foreach ($sensitiveKeys as $key) {
-            unset($settings[$key]);
-        }
-        
-        return $settings;
+        return array_intersect_key($settings, array_flip($publicKeys));
     }
 }
