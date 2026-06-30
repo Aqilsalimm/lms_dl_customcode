@@ -25,6 +25,13 @@ const photoPreviewUrl = ref(null);
 const handlePhotoChange = (e) => {
   const file = e.target.files[0];
   if (file) {
+    if (file.size > 1024 * 1024) {
+      alert('Ukuran file foto profil maksimal adalah 1MB.');
+      e.target.value = '';
+      form.photo = null;
+      photoPreviewUrl.value = null;
+      return;
+    }
     form.photo = file;
     photoPreviewUrl.value = URL.createObjectURL(file);
   } else {
@@ -108,10 +115,13 @@ const handleStep3Continue = () => {
       form.reset('password', 'password_confirmation');
     },
     onError: (errors) => {
-      // If server returns validation errors, move back to step 1 so they can fix them
-      step.value = 1;
       let errMsg = Object.values(errors).join('\n');
       alert('Registrasi gagal:\n' + errMsg);
+      if (errors.photo) {
+        step.value = 3;
+      } else {
+        step.value = 1;
+      }
     }
   });
 };

@@ -37,6 +37,8 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => 'required|string|in:student,instructor',
             'photo' => 'nullable|image|max:1024',
+        ], [
+            'photo.max' => 'Ukuran file foto profil maksimal adalah 1MB.',
         ]);
 
         $photoPath = null;

@@ -243,7 +243,7 @@
     ]
   },
   "resources/js/Pages/Auth/Register.vue": {
-    "file": "assets/Register-CQ45qzKk.js",
+    "file": "assets/Register-DlSAfVSM.js",
     "name": "Register",
     "src": "resources/js/Pages/Auth/Register.vue",
     "isDynamicEntry": true,
@@ -253,7 +253,7 @@
       "_vendor-lucide-CIudo9Ra.js"
     ],
     "css": [
-      "assets/Register-CP_IxWCQ.css"
+      "assets/Register-BR9HzrRG.css"
     ]
   },
   "resources/js/Pages/Auth/ResetPassword.vue": {
@@ -809,7 +809,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-Cmvwewo0.js",
+    "file": "assets/app-Cns0JHCZ.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
