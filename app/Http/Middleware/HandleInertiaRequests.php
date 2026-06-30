@@ -49,6 +49,22 @@ class HandleInertiaRequests extends Middleware
                 'error' => $request->session()->get('error'),
                 'logout_message' => $request->session()->get('logout_message'),
             ],
+            'ziggy' => function () use ($request) {
+                $user = $request->user();
+                $group = 'public';
+                if ($user) {
+                    if ($user->isAdmin()) {
+                        $group = 'admin';
+                    } elseif ($user->isInstructor()) {
+                        $group = 'instructor';
+                    } else {
+                        $group = 'student';
+                    }
+                }
+                return array_merge((new \Tighten\Ziggy\Ziggy($group))->toArray(), [
+                    'location' => $request->url(),
+                ]);
+            },
         ];
     }
 

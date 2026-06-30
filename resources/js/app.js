@@ -1,7 +1,7 @@
 import '../css/app.css';
 import './bootstrap';
 
-import { createInertiaApp, usePage } from '@inertiajs/vue3';
+import { createInertiaApp, usePage, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
@@ -48,6 +48,16 @@ createInertiaApp({
             import.meta.glob('./Pages/**/*.vue'),
         ),
     setup({ el, App, props, plugin }) {
+        if (props.initialPage.props.ziggy) {
+            window.Ziggy = props.initialPage.props.ziggy;
+        }
+
+        router.on('navigate', (event) => {
+            if (event.detail.page.props.ziggy) {
+                window.Ziggy = event.detail.page.props.ziggy;
+            }
+        });
+
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue);
