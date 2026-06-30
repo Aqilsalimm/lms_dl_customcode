@@ -327,14 +327,9 @@ const applyPresetColors = (presetName) => {
   }
 };
 
-const showSuccessModal = ref(false);
-
 const saveSettings = () => {
   form.post(route('dashboard.settings.update'), {
     preserveScroll: true,
-    onSuccess: () => {
-      showSuccessModal.value = true;
-    }
   });
 };
 
@@ -2269,40 +2264,9 @@ const triggerTestNotification = (eventType, role) => {
 
     </div>
 
-    <!-- Beautiful Center Alert Modal (SweetAlert-style) -->
-    <Transition name="fade-scale">
-      <div v-if="showSuccessModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-md p-4" @click.self="showSuccessModal = false">
-        <div class="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center transform transition-all duration-300 scale-100 relative overflow-hidden">
-          <div class="absolute -top-10 -right-10 w-32 h-32 bg-emerald-50 rounded-full blur-2xl opacity-60"></div>
-          <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-50 rounded-full blur-2xl opacity-60"></div>
-          
-          <div class="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-6 border-4 border-emerald-100 shadow-sm">
-            <svg class="w-10 h-10 text-emerald-500 animate-pulse" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          
-          <h3 class="text-2xl font-black text-slate-800 tracking-tight">Saved Successfully!</h3>
-          <p class="text-slate-500 mt-2.5 text-sm font-semibold leading-relaxed px-2">Your system configurations have been updated and synced with the database.</p>
-          
-          <button @click="showSuccessModal = false" class="mt-8 w-full bg-slate-900 hover:bg-slate-800 active:bg-black text-white font-extrabold py-3.5 px-6 rounded-2xl shadow-xl transition-all text-xs tracking-wider uppercase">
-            Great, Thanks!
-          </button>
-        </div>
-      </div>
-    </Transition>
+
   </DashboardWrapper>
 </template>
 
 <style scoped>
-.fade-scale-enter-active,
-.fade-scale-leave-active {
-  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.fade-scale-enter-from,
-.fade-scale-leave-to {
-  opacity: 0;
-  transform: scale(0.92);
-}
 </style>

@@ -497,18 +497,14 @@
     ]
   },
   "resources/js/Pages/Dashboard/Admin/Settings.vue": {
-    "file": "assets/Settings-BgW5VCq3.js",
+    "file": "assets/Settings-CTSk7tpe.js",
     "name": "Settings",
     "src": "resources/js/Pages/Dashboard/Admin/Settings.vue",
     "isDynamicEntry": true,
     "imports": [
-      "__plugin-vue_export-helper-1r9tKl2A.js",
       "_vendor-core-DpIFdsji.js",
       "_vendor-lucide-CIudo9Ra.js",
       "_DashboardWrapper-DE_0LDHD.js"
-    ],
-    "css": [
-      "assets/Settings-pjGlkr9m.css"
     ]
   },
   "resources/js/Pages/Dashboard/Admin/UserManage.vue": {
@@ -795,7 +791,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-KLU_iGp0.js",
+    "file": "assets/app-dfO8rfOG.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -856,7 +852,7 @@
       "resources/js/Pages/Welcome.vue"
     ],
     "css": [
-      "assets/app-BoMmnRHP.css"
+      "assets/app-BVa51gdn.css"
     ]
   }
 }
