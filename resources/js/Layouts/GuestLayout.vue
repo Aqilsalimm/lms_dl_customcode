@@ -681,7 +681,13 @@ const Logo = () => {
                   <EyeOff v-else :size="16" />
                 </button>
               </div>
-              <a href="#" class="self-end text-xs font-bold text-slate-400 hover:text-[#264790] transition-colors mt-1">{{ $t('forgot_password') || 'Lupa Password?' }}</a>
+              <Link 
+                :href="route('password.request')" 
+                @click="isLoginModalOpen = false"
+                class="self-end text-xs font-bold text-slate-400 hover:text-[#264790] transition-colors mt-1"
+              >
+                {{ $t('forgot_password') || 'Lupa Password?' }}
+              </Link>
             </div>
 
             <!-- Sign In solid CTA button -->
