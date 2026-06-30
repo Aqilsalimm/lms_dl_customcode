@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
@@ -75,6 +76,12 @@ class NewPasswordController extends Controller
         // Clean up temporary session data
         session()->forget(['reset_password_token', 'reset_password_email', 'reset_password_verified_at']);
 
-        return redirect()->route('login')->with('status', 'Password Anda berhasil diperbarui. Silakan masuk kembali dengan password baru Anda.');
+        // Log the user in directly
+        Auth::login($user);
+        
+        $request->session()->regenerate();
+
+        return redirect()->intended(route('dashboard', absolute: false))
+            ->with('success', 'Password Anda berhasil diperbarui. Anda telah masuk ke akun Anda.');
     }
 }

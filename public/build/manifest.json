@@ -179,17 +179,16 @@
     ]
   },
   "resources/js/Pages/Auth/ForgotPassword.vue": {
-    "file": "assets/ForgotPassword-B39P8ldC.js",
+    "file": "assets/ForgotPassword-tXoHJejU.js",
     "name": "ForgotPassword",
     "src": "resources/js/Pages/Auth/ForgotPassword.vue",
     "isDynamicEntry": true,
     "imports": [
       "__plugin-vue_export-helper-1r9tKl2A.js",
-      "_vendor-core-DpIFdsji.js",
-      "_GuestLayout-B5Vb1wuR.js"
+      "_vendor-core-DpIFdsji.js"
     ],
     "css": [
-      "assets/ForgotPassword-aK5TgClZ.css"
+      "assets/ForgotPassword-B2BkrLdl.css"
     ]
   },
   "resources/js/Pages/Auth/ForgotPasswordOtp.vue": {
@@ -257,18 +256,17 @@
     ]
   },
   "resources/js/Pages/Auth/ResetPassword.vue": {
-    "file": "assets/ResetPassword-BwlLi1gU.js",
+    "file": "assets/ResetPassword-DbaU66Hg.js",
     "name": "ResetPassword",
     "src": "resources/js/Pages/Auth/ResetPassword.vue",
     "isDynamicEntry": true,
     "imports": [
       "__plugin-vue_export-helper-1r9tKl2A.js",
       "_vendor-core-DpIFdsji.js",
-      "_vendor-lucide-CIudo9Ra.js",
-      "_GuestLayout-B5Vb1wuR.js"
+      "_vendor-lucide-CIudo9Ra.js"
     ],
     "css": [
-      "assets/ResetPassword-C9DG_yUB.css"
+      "assets/ResetPassword-DZbHil3N.css"
     ]
   },
   "resources/js/Pages/Auth/VerifyEmail.vue": {
@@ -809,7 +807,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-Cns0JHCZ.js",
+    "file": "assets/app-DFu8mEaM.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
