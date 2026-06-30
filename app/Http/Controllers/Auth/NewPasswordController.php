@@ -26,8 +26,8 @@ class NewPasswordController extends Controller
         $sessionEmail = session('reset_password_email');
         $verifiedAt = session('reset_password_verified_at');
 
-        // Tighten security by verifying session token, email, and 10-minute validity
-        if (!$sessionToken || $sessionToken !== $token || !$sessionEmail || !$verifiedAt || $verifiedAt->addMinutes(10)->isPast()) {
+        // Tighten security by verifying session token, email, and 10-minute validity (600 seconds)
+        if (!$sessionToken || $sessionToken !== $token || !$sessionEmail || !$verifiedAt || (time() - (int)$verifiedAt) > 600) {
             session()->forget(['reset_password_token', 'reset_password_email', 'reset_password_verified_at']);
             return redirect()->route('password.request')->with('status', 'Token verifikasi tidak valid atau telah kadaluarsa. Silakan ajukan ulang permintaan.');
         }
@@ -50,7 +50,7 @@ class NewPasswordController extends Controller
         $verifiedAt = session('reset_password_verified_at');
 
         // Security check on form submission
-        if (!$sessionToken || $sessionToken !== $request->token || !$sessionEmail || $sessionEmail !== $request->email || !$verifiedAt || $verifiedAt->addMinutes(10)->isPast()) {
+        if (!$sessionToken || $sessionToken !== $request->token || !$sessionEmail || $sessionEmail !== $request->email || !$verifiedAt || (time() - (int)$verifiedAt) > 600) {
             session()->forget(['reset_password_token', 'reset_password_email', 'reset_password_verified_at']);
             throw ValidationException::withMessages([
                 'email' => ['Permintaan reset password tidak valid atau telah kadaluarsa. Silakan ajukan ulang.'],

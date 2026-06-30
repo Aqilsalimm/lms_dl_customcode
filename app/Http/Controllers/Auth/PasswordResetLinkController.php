@@ -144,7 +144,7 @@ class PasswordResetLinkController extends Controller
         $token = Str::random(40);
         session([
             'reset_password_token' => $token,
-            'reset_password_verified_at' => now(),
+            'reset_password_verified_at' => now()->timestamp,
         ]);
 
         return redirect()->route('password.reset', ['token' => $token, 'email' => $email]);
