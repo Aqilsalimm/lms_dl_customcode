@@ -12,11 +12,14 @@ class Subscription extends Model
         'status',
         'start_date',
         'next_billing_date',
+        'is_gifted',
+        'gifted_by',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'next_billing_date' => 'date',
+        'is_gifted' => 'boolean',
     ];
 
     public function user()

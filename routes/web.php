@@ -228,6 +228,10 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     
     // E-Commerce & Engagement: Review
     Route::post('/courses/{slug}/reviews', [\App\Http\Controllers\ReviewController::class, 'store'])->name('reviews.store');
+
+    // Admin/Instructor Course Gifting Routes
+    Route::get('/dashboard/students/search', [\App\Http\Controllers\CourseGiftController::class, 'searchStudents'])->name('dashboard.students.search');
+    Route::post('/dashboard/courses/{course}/gift', [\App\Http\Controllers\CourseGiftController::class, 'gift'])->name('dashboard.courses.gift');
 });
 
 // Shopping Cart Public Routes
