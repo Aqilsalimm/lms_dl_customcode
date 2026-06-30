@@ -5,12 +5,12 @@ return [
         'public' => [
             'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'password.request', 'password.email', 'password.reset', 'password.store', 'password.update', 'password.confirm', 'otp.send', 'otp.verify',
             'courses.index', 'courses.show', 'cart.index', 'cart.add', 'cart.remove', 'cart.clear',
-            'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat',
+            'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat', 'logout',
         ],
         'student' => [
             'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'password.request', 'password.email', 'password.reset', 'password.store', 'password.update', 'password.confirm', 'otp.send', 'otp.verify',
             'courses.index', 'courses.show', 'cart.index', 'cart.add', 'cart.remove', 'cart.clear',
-            'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat',
+            'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat', 'logout',
             'dashboard', 'dashboard.enrolled-courses', 'dashboard.learning-progress', 'dashboard.reviews',
             'dashboard.quiz-attempts', 'dashboard.wishlist', 'dashboard.order-history', 'dashboard.qa',
             'wishlist.toggle', 'reviews.store', 'reviews.destroy', 'profile.edit', 'profile.update',
@@ -20,13 +20,13 @@ return [
             'courses.learn', 'courses.lessons.content', 'courses.lessons.complete', 'courses.quizzes.complete',
             'courses.lessons.log-progress', 'notifications.read', 'notifications.read-all',
             'discussions.lesson', 'discussions.store', 'discussions.resolve', 'courses.certificate',
-            'payment.validate-coupon', 'billing.suspended',
+            'payment.validate-coupon', 'billing.suspended', 'verification.send',
         ],
         'instructor' => [
             // Student base
             'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'password.request', 'password.email', 'password.reset', 'password.store', 'password.update', 'password.confirm', 'otp.send', 'otp.verify',
             'courses.index', 'courses.show', 'cart.index', 'cart.add', 'cart.remove', 'cart.clear',
-            'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat',
+            'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat', 'logout',
             'dashboard', 'dashboard.enrolled-courses', 'dashboard.learning-progress', 'dashboard.reviews',
             'dashboard.quiz-attempts', 'dashboard.wishlist', 'dashboard.order-history', 'dashboard.qa',
             'wishlist.toggle', 'reviews.store', 'reviews.destroy', 'profile.edit', 'profile.update',
@@ -36,7 +36,7 @@ return [
             'courses.learn', 'courses.lessons.content', 'courses.lessons.complete', 'courses.quizzes.complete',
             'courses.lessons.log-progress', 'notifications.read', 'notifications.read-all',
             'discussions.lesson', 'discussions.store', 'discussions.resolve', 'courses.certificate',
-            'payment.validate-coupon', 'billing.suspended',
+            'payment.validate-coupon', 'billing.suspended', 'verification.send',
             // Instructor specific
             'course-builder.index', 'course-builder.metadata', 'course-builder.store', 'course-builder.build', 'course-builder.update', 'course-builder.destroy', 'course-builder.import',
             'course-builder.modules.store', 'course-builder.modules.update', 'course-builder.modules.destroy',
@@ -56,7 +56,7 @@ return [
             // Instructor base
             'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'password.request', 'password.email', 'password.reset', 'password.store', 'password.update', 'password.confirm', 'otp.send', 'otp.verify',
             'courses.index', 'courses.show', 'cart.index', 'cart.add', 'cart.remove', 'cart.clear',
-            'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat',
+            'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat', 'logout',
             'dashboard', 'dashboard.enrolled-courses', 'dashboard.learning-progress', 'dashboard.reviews',
             'dashboard.quiz-attempts', 'dashboard.wishlist', 'dashboard.order-history', 'dashboard.qa',
             'wishlist.toggle', 'reviews.store', 'reviews.destroy', 'profile.edit', 'profile.update',
@@ -66,7 +66,7 @@ return [
             'courses.learn', 'courses.lessons.content', 'courses.lessons.complete', 'courses.quizzes.complete',
             'courses.lessons.log-progress', 'notifications.read', 'notifications.read-all',
             'discussions.lesson', 'discussions.store', 'discussions.resolve', 'courses.certificate',
-            'payment.validate-coupon', 'billing.suspended',
+            'payment.validate-coupon', 'billing.suspended', 'verification.send',
             'course-builder.index', 'course-builder.metadata', 'course-builder.store', 'course-builder.build', 'course-builder.update', 'course-builder.destroy', 'course-builder.import',
             'course-builder.modules.store', 'course-builder.modules.update', 'course-builder.modules.destroy',
             'course-builder.lessons.store', 'course-builder.lessons.update', 'course-builder.lessons.destroy',
@@ -90,7 +90,7 @@ return [
             'dashboard.settings.course-builder.tags.store', 'dashboard.settings.course-builder.tags.update', 'dashboard.settings.course-builder.tags.destroy',
             'dashboard.settings.course-builder.download-template', 'dashboard.settings.course-builder.import', 'dashboard.settings.course-builder.courses',
             'dashboard.settings.course-builder.download-quiz-template', 'dashboard.settings.course-builder.import-quiz',
-            'blogs.approve', 'dashboard.settings.blog.approve-settings', 'dashboard.settings.blog.reject-settings',
+            'blogs.approve', 'dashboard.settings.blog.approve-settings', 'dashboard.settings.blog.reject-settings', 'notifications.test-trigger',
         ],
     ],
 ];
