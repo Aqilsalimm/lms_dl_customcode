@@ -69,8 +69,14 @@ class OtpController extends \App\Http\Controllers\Controller
         // Mark as used
         $otp->update(['used' => true]);
 
-        // Redirect to step 3 of registration (front‑end will handle routing)
-        return redirect()->back()->with('otp_verified', true);
+        // Log in the user
+        $user = User::find($otp->user_id);
+        if ($user) {
+            auth()->login($user);
+        }
+
+        // Redirect to dashboard
+        return redirect()->route('dashboard');
     }
 }
 ?>
