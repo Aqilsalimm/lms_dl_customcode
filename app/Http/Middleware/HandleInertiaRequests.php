@@ -19,7 +19,25 @@ class HandleInertiaRequests extends Middleware
      */
     public function version(Request $request): ?string
     {
+        if (file_exists($manifestPath = public_path('build/manifest.json'))) {
+            return md5_file($manifestPath);
+        }
         return parent::version($request);
+    }
+
+    /**
+     * Handle the incoming request.
+     */
+    public function handle(Request $request, \Closure $next)
+    {
+        $response = parent::handle($request, $next);
+
+        // Prevent browser caching of dynamic Inertia HTML/JSON responses to avoid blank pages and stale asset versions
+        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
+
+        return $response;
     }
 
     /**
