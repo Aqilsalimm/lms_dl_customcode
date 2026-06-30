@@ -48,8 +48,8 @@ class AuthenticatedSessionController extends Controller
             'login_otp_remember' => $request->boolean('remember'),
         ]);
 
-        // Generate a 6-digit OTP code
-        $code = random_int(100000, 999999);
+        // Generate a 6-digit OTP code (static '111111' in local mode, random otherwise)
+        $code = app()->environment('local') ? 111111 : random_int(100000, 999999);
 
         // Store OTP in database
         Otp::create([
@@ -136,8 +136,8 @@ class AuthenticatedSessionController extends Controller
 
         $user = User::where('email', $email)->firstOrFail();
 
-        // Generate new OTP
-        $code = random_int(100000, 999999);
+        // Generate new OTP (static '111111' in local mode, random otherwise)
+        $code = app()->environment('local') ? 111111 : random_int(100000, 999999);
 
         Otp::create([
             'user_id' => $user->id,

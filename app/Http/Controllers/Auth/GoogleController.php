@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Http\RedirectResponse;
@@ -55,7 +56,7 @@ class GoogleController extends Controller
         $user = User::where('google_id', $googleUser->getId())->first();
 
         if (!$user) {
-            // Check if user exists by email
+            // Check if user exists by email (preventing duplicates and linking manual registration accounts)
             $user = User::where('email', $googleUser->getEmail())->first();
 
             if ($user) {
@@ -106,13 +107,33 @@ class GoogleController extends Controller
             }
         }
 
-        Auth::login($user, true);
+        // --- ENFORCE OTP VERIFICATION FLOW ---
+        // Store OTP details in the new guest session
+        session([
+            'login_otp_email' => $user->email,
+            'login_otp_remember' => true,
+        ]);
+
+        // Generate a 6-digit OTP code (static '111111' in local mode, random otherwise)
+        $code = app()->environment('local') ? 111111 : random_int(100000, 999999);
+
+        // Store OTP in database
+        \App\Models\Otp::create([
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'otp_code' => (string) $code,
+            'expires_at' => now()->addMinutes(10),
+            'used' => false,
+        ]);
+
+        // Send OTP email
+        Mail::to($user->email)->send(new \App\Mail\OtpMail($code));
 
         return view('auth.google-callback', [
             'authData' => [
                 'success' => true,
                 'user' => $user,
-                'redirect_url' => route('dashboard', absolute: false)
+                'redirect_url' => route('login.otp', absolute: false)
             ]
         ]);
     }
