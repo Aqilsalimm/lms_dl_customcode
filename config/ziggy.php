@@ -3,12 +3,12 @@
 return [
     'groups' => [
         'public' => [
-            'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'password.request', 'password.email', 'password.reset', 'password.store', 'password.update', 'password.confirm', 'otp.send', 'otp.verify',
+            'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'password.request', 'password.email', 'password.otp', 'password.otp.verify', 'password.otp.resend', 'password.reset', 'password.store', 'password.update', 'password.confirm', 'otp.send', 'otp.verify',
             'courses.index', 'courses.show', 'cart.index', 'cart.add', 'cart.remove', 'cart.clear',
             'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat', 'logout', 'auth.google', 'auth.google.callback',
         ],
         'student' => [
-            'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'password.request', 'password.email', 'password.reset', 'password.store', 'password.update', 'password.confirm', 'otp.send', 'otp.verify',
+            'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'password.request', 'password.email', 'password.otp', 'password.otp.verify', 'password.otp.resend', 'password.reset', 'password.store', 'password.update', 'password.confirm', 'otp.send', 'otp.verify',
             'courses.index', 'courses.show', 'cart.index', 'cart.add', 'cart.remove', 'cart.clear',
             'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat', 'logout', 'auth.google', 'auth.google.callback',
             'dashboard', 'dashboard.enrolled-courses', 'dashboard.learning-progress', 'dashboard.reviews',
@@ -24,7 +24,7 @@ return [
         ],
         'instructor' => [
             // Student base
-            'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'password.request', 'password.email', 'password.reset', 'password.store', 'password.update', 'password.confirm', 'otp.send', 'otp.verify',
+            'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'password.request', 'password.email', 'password.otp', 'password.otp.verify', 'password.otp.resend', 'password.reset', 'password.store', 'password.update', 'password.confirm', 'otp.send', 'otp.verify',
             'courses.index', 'courses.show', 'cart.index', 'cart.add', 'cart.remove', 'cart.clear',
             'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat', 'logout', 'auth.google', 'auth.google.callback',
             'dashboard', 'dashboard.enrolled-courses', 'dashboard.learning-progress', 'dashboard.reviews',
@@ -54,7 +54,7 @@ return [
         ],
         'admin' => [
             // Instructor base
-            'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'password.request', 'password.email', 'password.reset', 'password.store', 'password.update', 'password.confirm', 'otp.send', 'otp.verify',
+            'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'password.request', 'password.email', 'password.otp', 'password.otp.verify', 'password.otp.resend', 'password.reset', 'password.store', 'password.update', 'password.confirm', 'otp.send', 'otp.verify',
             'courses.index', 'courses.show', 'cart.index', 'cart.add', 'cart.remove', 'cart.clear',
             'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat', 'logout', 'auth.google', 'auth.google.callback',
             'dashboard', 'dashboard.enrolled-courses', 'dashboard.learning-progress', 'dashboard.reviews',
