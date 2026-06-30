@@ -3,12 +3,12 @@
 return [
     'groups' => [
         'public' => [
-            'login', 'login.otp', 'register', 'forgot-password', 'reset-password', 'otp.send', 'otp.verify',
+            'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'forgot-password', 'reset-password', 'otp.send', 'otp.verify',
             'courses.index', 'courses.show', 'cart.index', 'cart.add', 'cart.remove', 'cart.clear',
             'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat',
         ],
         'student' => [
-            'login', 'login.otp', 'register', 'forgot-password', 'reset-password', 'otp.send', 'otp.verify',
+            'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'forgot-password', 'reset-password', 'otp.send', 'otp.verify',
             'courses.index', 'courses.show', 'cart.index', 'cart.add', 'cart.remove', 'cart.clear',
             'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat',
             'dashboard', 'dashboard.enrolled-courses', 'dashboard.learning-progress', 'dashboard.reviews',
@@ -24,7 +24,7 @@ return [
         ],
         'instructor' => [
             // Student base
-            'login', 'login.otp', 'register', 'forgot-password', 'reset-password', 'otp.send', 'otp.verify',
+            'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'forgot-password', 'reset-password', 'otp.send', 'otp.verify',
             'courses.index', 'courses.show', 'cart.index', 'cart.add', 'cart.remove', 'cart.clear',
             'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat',
             'dashboard', 'dashboard.enrolled-courses', 'dashboard.learning-progress', 'dashboard.reviews',
@@ -49,10 +49,12 @@ return [
             'dashboard.qna',
             'blogs.store', 'blogs.update', 'blogs.destroy',
             'dashboard.settings.blog', 'dashboard.settings.blog.update', 'dashboard.settings.blog.upload-image',
+            // Gifting
+            'dashboard.students.search', 'dashboard.courses.gift',
         ],
         'admin' => [
             // Instructor base
-            'login', 'login.otp', 'register', 'forgot-password', 'reset-password', 'otp.send', 'otp.verify',
+            'login', 'login.otp', 'login.otp.verify', 'login.otp.resend', 'register', 'forgot-password', 'reset-password', 'otp.send', 'otp.verify',
             'courses.index', 'courses.show', 'cart.index', 'cart.add', 'cart.remove', 'cart.clear',
             'blogs.index', 'blogs.show', 'language.switch', 'api.gemini.chat',
             'dashboard', 'dashboard.enrolled-courses', 'dashboard.learning-progress', 'dashboard.reviews',
@@ -76,6 +78,8 @@ return [
             'dashboard.qna',
             'blogs.store', 'blogs.update', 'blogs.destroy',
             'dashboard.settings.blog', 'dashboard.settings.blog.update', 'dashboard.settings.blog.upload-image',
+            // Gifting
+            'dashboard.students.search', 'dashboard.courses.gift',
             // Admin specific
             'dashboard.users.manage', 'dashboard.users.approve', 'dashboard.users.reject', 'dashboard.users.role', 'dashboard.users.export',
             'dashboard.settings', 'dashboard.settings.update',
