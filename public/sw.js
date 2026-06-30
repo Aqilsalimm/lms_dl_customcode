@@ -1,4 +1,4 @@
-const CACHE_NAME = 'drastha-lms-v2';
+const CACHE_NAME = 'drastha-lms-v3';
 const PRECACHE_ASSETS = [
     '/',
     '/favicon.ico',
@@ -35,6 +35,20 @@ self.addEventListener('fetch', e => {
         return;
     }
 
+    // Bypass Service Worker caching/interception completely for dynamic, auth, dashboard, and Inertia routes
+    if (
+        url.pathname.startsWith('/dashboard') ||
+        url.pathname.startsWith('/login') ||
+        url.pathname.startsWith('/register') ||
+        url.pathname.startsWith('/forgot-password') ||
+        url.pathname.startsWith('/reset-password') ||
+        url.pathname.startsWith('/api') ||
+        e.request.headers.has('x-inertia') ||
+        (e.request.headers.get('accept') && e.request.headers.get('accept').includes('json'))
+    ) {
+        return; // Let the browser handle it directly via normal network requests
+    }
+
     // Static assets: Stale-While-Revalidate (Cache First, fetch & update in background)
     if (
         url.pathname.includes('/build/assets/') ||
@@ -63,20 +77,12 @@ self.addEventListener('fetch', e => {
         return;
     }
 
-    // HTML/Navigation requests: Network First, fallback to Cache, then root
+    // Dynamic HTML/Navigation requests: always fetch from network, DO NOT cache in Service Worker
     e.respondWith(
-        fetch(e.request)
-            .then(networkResponse => {
-                if (networkResponse.status === 200) {
-                    const responseClone = networkResponse.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(e.request, responseClone));
-                }
-                return networkResponse;
-            })
-            .catch(() => {
-                return caches.match(e.request).then(cachedResponse => {
-                    return cachedResponse || caches.match('/');
-                });
-            })
+        fetch(e.request).catch(() => {
+            return caches.match(e.request).then(cachedResponse => {
+                return cachedResponse || caches.match('/');
+            });
+        })
     );
 });

@@ -59,6 +59,13 @@ class SecurityHeadersMiddleware
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
         }
 
+        // Prevent browser caching for auth, login, and dashboard pages to avoid stale state and blank pages
+        if ($request->is('dashboard*') || $request->is('login*') || $request->is('register*') || $request->is('forgot-password*') || $request->is('reset-password*') || $request->user()) {
+            $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0');
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
+        }
+
         // Stricter but functional Content Security Policy (CSP)
         $csp = "default-src 'self'; "
              . "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://app.sandbox.midtrans.com https://app.midtrans.com; "
