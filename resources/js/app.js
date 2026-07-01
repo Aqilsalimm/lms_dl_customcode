@@ -48,19 +48,101 @@ createInertiaApp({
             import.meta.glob('./Pages/**/*.vue'),
         ),
     setup({ el, App, props, plugin }) {
+        const updateZiggy = (newZiggy) => {
+            if (!newZiggy) return;
+
+            // 1. Update global Ziggy constant in-place if it exists
+            if (typeof Ziggy !== 'undefined') {
+                if (Ziggy.routes && newZiggy.routes) {
+                    // Prune old routes that are not in the new routes definition
+                    Object.keys(Ziggy.routes).forEach(key => {
+                        if (!newZiggy.routes[key]) {
+                            delete Ziggy.routes[key];
+                        }
+                    });
+                    // Merge new routes
+                    Object.assign(Ziggy.routes, newZiggy.routes);
+                }
+                if (Ziggy.defaults && newZiggy.defaults) {
+                    Object.assign(Ziggy.defaults, newZiggy.defaults);
+                }
+                if (newZiggy.url) Ziggy.url = newZiggy.url;
+                if (newZiggy.port) Ziggy.port = newZiggy.port;
+                if (newZiggy.location) Ziggy.location = newZiggy.location;
+            }
+
+            // 2. Update window.Ziggy in-place if it exists, or initialize it
+            if (typeof window !== 'undefined' && window.Ziggy) {
+                if (window.Ziggy.routes && newZiggy.routes) {
+                    Object.keys(window.Ziggy.routes).forEach(key => {
+                        if (!newZiggy.routes[key]) {
+                            delete window.Ziggy.routes[key];
+                        }
+                    });
+                    Object.assign(window.Ziggy.routes, newZiggy.routes);
+                }
+                if (window.Ziggy.defaults && newZiggy.defaults) {
+                    Object.assign(window.Ziggy.defaults, newZiggy.defaults);
+                }
+                if (newZiggy.url) window.Ziggy.url = newZiggy.url;
+                if (newZiggy.port) window.Ziggy.port = newZiggy.port;
+                if (newZiggy.location) window.Ziggy.location = newZiggy.location;
+            } else if (typeof window !== 'undefined') {
+                window.Ziggy = newZiggy;
+            }
+        };
+
         if (props.initialPage.props.ziggy) {
-            window.Ziggy = props.initialPage.props.ziggy;
+            updateZiggy(props.initialPage.props.ziggy);
         }
+
+        router.on('success', (event) => {
+            if (event.detail.page.props.ziggy) {
+                updateZiggy(event.detail.page.props.ziggy);
+            }
+        });
 
         router.on('navigate', (event) => {
             if (event.detail.page.props.ziggy) {
-                window.Ziggy = event.detail.page.props.ziggy;
+                updateZiggy(event.detail.page.props.ziggy);
             }
         });
+
+        // Wrap the global route helper to dynamically update Ziggy configuration from Inertia page props
+        if (typeof window !== 'undefined' && window.route) {
+            const originalRoute = window.route;
+            window.route = (name, params, absolute, config) => {
+                try {
+                    const latestZiggy = usePage().props.ziggy;
+                    if (latestZiggy) {
+                        updateZiggy(latestZiggy);
+                    }
+                } catch (e) {
+                    // Fallback
+                }
+                return originalRoute(name, params, absolute, config);
+            };
+        }
 
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue);
+
+        // Wrap Vue global route helper and provided route helper
+        const originalVueRoute = app.config.globalProperties.route;
+        if (originalVueRoute) {
+            const wrappedRoute = (name, params, absolute, config) => {
+                try {
+                    const latestZiggy = usePage().props.ziggy;
+                    if (latestZiggy) {
+                        updateZiggy(latestZiggy);
+                    }
+                } catch (e) {}
+                return originalVueRoute(name, params, absolute, config);
+            };
+            app.config.globalProperties.route = wrappedRoute;
+            app.provide('route', wrappedRoute);
+        }
 
         // Global translation helper dynamically fetching from active page props
         app.config.globalProperties.$t = (key) => {
