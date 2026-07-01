@@ -120,7 +120,12 @@ createInertiaApp({
                 } catch (e) {
                     // Fallback
                 }
-                return originalRoute(name, params, absolute, config);
+                try {
+                    return originalRoute(name, params, absolute, config);
+                } catch (e) {
+                    console.warn(`Ziggy route helper warning: route '${name}' not found. Falling back to '#'.`, e);
+                    return '#';
+                }
             };
         }
 
@@ -138,7 +143,12 @@ createInertiaApp({
                         updateZiggy(latestZiggy);
                     }
                 } catch (e) {}
-                return originalVueRoute(name, params, absolute, config);
+                try {
+                    return originalVueRoute(name, params, absolute, config);
+                } catch (e) {
+                    console.warn(`Ziggy Vue helper warning: route '${name}' not found. Falling back to '#'.`, e);
+                    return '#';
+                }
             };
             app.config.globalProperties.route = wrappedRoute;
             app.provide('route', wrappedRoute);

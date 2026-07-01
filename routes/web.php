@@ -35,7 +35,7 @@ Route::get('/', function () {
 
 // Dashboard Route pointing to DashboardController
 Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth'])
     ->name('dashboard');
 
 Route::get('/dashboard/enrolled-courses', [DashboardController::class, 'enrolledCourses'])
