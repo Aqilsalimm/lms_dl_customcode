@@ -56,7 +56,7 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'status' => $request->role === 'instructor' ? 'pending' : 'active',
-            'photo' => $photoPath ? '/storage/' . $photoPath : null,
+            'photo' => $photoPath ? $photoPath : null,
         ]);
 
         event(new Registered($user));
