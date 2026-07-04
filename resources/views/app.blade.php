@@ -6,6 +6,42 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
+        <!-- SEO Meta Tags -->
+        <meta name="description" content="Drastha Learning adalah platform LMS interaktif yang menyediakan berbagai kursus pemrograman, IT, audit akuntansi, dan sains secara terstruktur dengan bimbingan mentor profesional." />
+        
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="https://drasthalearning.com/">
+        <meta property="og:title" content="Drastha Learning - Platform Belajar & Kursus IT Terarah">
+        <meta property="og:description" content="Platform LMS interaktif yang menyediakan berbagai kursus pemrograman, IT, akuntansi, dan sains secara terstruktur.">
+        <meta property="og:image" content="https://drasthalearning.com/images/logo/logo_dl.png">
+
+        <!-- Twitter -->
+        <meta property="twitter:card" content="summary_large_image">
+        <meta property="twitter:url" content="https://drasthalearning.com/">
+        <meta property="twitter:title" content="Drastha Learning - Platform Belajar & Kursus IT Terarah">
+        <meta property="twitter:description" content="Platform LMS interaktif yang menyediakan berbagai kursus pemrograman, IT, akuntansi, dan sains secara terstruktur.">
+        <meta property="twitter:image" content="https://drasthalearning.com/images/logo/logo_dl.png">
+
+        <!-- Schema Markup (JSON-LD) -->
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "EducationalOrganization",
+          "name": "Drastha Learning",
+          "url": "https://drasthalearning.com",
+          "logo": "https://drasthalearning.com/images/logo/logo_dl.png",
+          "sameAs": [
+            "https://www.instagram.com/drasthalearning"
+          ],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+62-812-3485-9768",
+            "contactType": "customer support"
+          }
+        }
+        </script>
+
         <!-- PWA Meta Tags -->
         <link rel="manifest" href="/manifest.json">
         <meta name="theme-color" content="#264790">

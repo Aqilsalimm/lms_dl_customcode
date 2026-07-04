@@ -292,7 +292,10 @@ const rightFeatures = computed(() => [
 </script>
 
 <template>
-    <Head title="Beranda | Drastha Learning" />
+    <Head>
+        <title>Drastha Learning - Platform Belajar & Kursus IT Terarah</title>
+        <meta name="description" content="Drastha Learning adalah platform LMS interaktif yang menyediakan berbagai kursus pemrograman, IT, audit akuntansi, dan sains secara terstruktur dengan bimbingan mentor profesional." />
+    </Head>
     
     <GuestLayout>
       <!-- MAIN CONTENT -->
