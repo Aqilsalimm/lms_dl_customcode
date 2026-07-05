@@ -18,6 +18,9 @@ use Inertia\Inertia;
 
 Route::get('/language/{locale}', [LocalizationController::class, 'switchLanguage'])->name('language.switch');
 
+// Redirect old WordPress or indexed paths to homepage
+Route::redirect('/admission', '/', 301);
+
 Route::get('/', function () {
     $courses = Course::where('status', 'published')
         ->with(['category', 'instructor'])
