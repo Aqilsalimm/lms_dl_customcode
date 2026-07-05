@@ -38,7 +38,7 @@ window.alert = (message) => {
     });
 };
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Drastha Learning';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,

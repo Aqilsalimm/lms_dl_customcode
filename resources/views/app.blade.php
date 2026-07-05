@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        <title inertia>{{ config('app.name', 'Drastha Learning') }}</title>
 
         <!-- SEO Meta Tags -->
         <meta name="description" content="Drastha Learning adalah platform LMS interaktif yang menyediakan berbagai kursus pemrograman, IT, audit akuntansi, dan sains secara terstruktur dengan bimbingan mentor profesional." />
@@ -26,8 +26,8 @@
         <!-- Schema Markup (JSON-LD) -->
         <script type="application/ld+json">
         {
-          "@context": "https://schema.org",
-          "@type": "EducationalOrganization",
+          "@@context": "https://schema.org",
+          "@@type": "EducationalOrganization",
           "name": "Drastha Learning",
           "url": "https://drasthalearning.com",
           "logo": "https://drasthalearning.com/images/logo/logo_dl.png",
@@ -35,7 +35,7 @@
             "https://www.instagram.com/drasthalearning"
           ],
           "contactPoint": {
-            "@type": "ContactPoint",
+            "@@type": "ContactPoint",
             "telephone": "+62-812-3485-9768",
             "contactType": "customer support"
           }
