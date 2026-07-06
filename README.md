@@ -143,4 +143,4 @@ git pull origin main
 ```
 
 ---
-*Drastha LMS dibangun dan dikembangkan dengan dedikasi tinggi untuk menyajikan solusi e-learning terbaik di kelasnya.*
+*Fully Created by : Aqilsalimm*
