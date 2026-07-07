@@ -107,33 +107,64 @@ class GoogleController extends Controller
             }
         }
 
-        // --- ENFORCE OTP VERIFICATION FLOW ---
-        // Store OTP details in the new guest session
-        session([
-            'login_otp_email' => $user->email,
-            'login_otp_remember' => true,
-        ]);
+        // --- DYNAMIC OTP VERIFICATION FLOW ---
+        $twoFactorEnabled = filter_var(\App\Models\Setting::where('key', 'two_factor_auth_enabled')->value('value') ?? 'false', FILTER_VALIDATE_BOOLEAN);
 
-        // Generate a 6-digit OTP code (static '111111' in local mode, random otherwise)
-        $code = app()->environment('local') ? 111111 : random_int(100000, 999999);
+        if ($twoFactorEnabled) {
+            $twoFactorLocationsRaw = \App\Models\Setting::where('key', 'two_factor_auth_locations')->value('value');
+            $twoFactorLocations = [];
+            if ($twoFactorLocationsRaw) {
+                try {
+                    $twoFactorLocations = json_decode($twoFactorLocationsRaw, true) ?? [];
+                } catch (\Exception $e) {}
+            }
 
-        // Store OTP in database
-        \App\Models\Otp::create([
-            'user_id' => $user->id,
-            'email' => $user->email,
-            'otp_code' => (string) $code,
-            'expires_at' => now()->addMinutes(10),
-            'used' => false,
-        ]);
+            $userRoleMapped = $user->role;
+            if ($userRoleMapped === 'instructor') {
+                $userRoleMapped = 'tutor';
+            }
 
-        // Send OTP email
-        Mail::to($user->email)->send(new \App\Mail\OtpMail($code));
+            if (empty($twoFactorLocations) || in_array($userRoleMapped, $twoFactorLocations)) {
+                // Store OTP details in the new guest session
+                session([
+                    'login_otp_email' => $user->email,
+                    'login_otp_remember' => true,
+                ]);
+
+                // Generate a 6-digit OTP code (static '111111' in local mode, random otherwise)
+                $code = app()->environment('local') ? 111111 : random_int(100000, 999999);
+
+                // Store OTP in database
+                \App\Models\Otp::create([
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'otp_code' => (string) $code,
+                    'expires_at' => now()->addMinutes(10),
+                    'used' => false,
+                ]);
+
+                // Send OTP email
+                Mail::to($user->email)->send(new \App\Mail\OtpMail($code));
+
+                return view('auth.google-callback', [
+                    'authData' => [
+                        'success' => true,
+                        'user' => $user,
+                        'redirect_url' => route('login.otp', absolute: false)
+                    ]
+                ]);
+            }
+        }
+
+        // If 2FA is disabled or doesn't apply to this user's role:
+        // Log the user in directly and redirect to dashboard
+        Auth::login($user, true);
 
         return view('auth.google-callback', [
             'authData' => [
                 'success' => true,
                 'user' => $user,
-                'redirect_url' => route('login.otp', absolute: false)
+                'redirect_url' => route('dashboard', absolute: false)
             ]
         ]);
     }

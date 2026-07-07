@@ -10,6 +10,23 @@ class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        \App\Models\Setting::create([
+            'key' => 'two_factor_auth_enabled',
+            'value' => 'true',
+            'group' => 'authentication'
+        ]);
+
+        \App\Models\Setting::create([
+            'key' => 'two_factor_auth_locations',
+            'value' => json_encode(['student', 'tutor', 'admin']),
+            'group' => 'authentication'
+        ]);
+    }
+
     public function test_login_screen_can_be_rendered(): void
     {
         $response = $this->get('/login');

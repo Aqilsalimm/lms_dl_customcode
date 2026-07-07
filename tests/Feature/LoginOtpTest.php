@@ -13,6 +13,23 @@ class LoginOtpTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        \App\Models\Setting::create([
+            'key' => 'two_factor_auth_enabled',
+            'value' => 'true',
+            'group' => 'authentication'
+        ]);
+
+        \App\Models\Setting::create([
+            'key' => 'two_factor_auth_locations',
+            'value' => json_encode(['student', 'tutor', 'admin']),
+            'group' => 'authentication'
+        ]);
+    }
+
     /**
      * Test that user is redirected to login/otp and an email is sent on correct credentials.
      */
@@ -176,5 +193,37 @@ class LoginOtpTest extends TestCase
             'email' => $user->email,
             'used' => false,
         ]);
+    }
+
+    /**
+     * Test that user is authenticated and redirected directly to dashboard when 2FA is disabled.
+     */
+    public function test_user_login_without_2fa_redirects_directly_to_dashboard()
+    {
+        Mail::fake();
+
+        // 1. Disable 2FA in settings
+        \App\Models\Setting::where('key', 'two_factor_auth_enabled')->update(['value' => 'false']);
+
+        // 2. Create a user
+        $user = User::factory()->create([
+            'email' => 'testuser@drasthalearning.com',
+            'password' => bcrypt('password123'),
+        ]);
+
+        // 3. Post credentials to login
+        $response = $this->post('/login', [
+            'email' => 'testuser@drasthalearning.com',
+            'password' => 'password123',
+        ]);
+
+        // 4. Assert redirect directly to dashboard
+        $response->assertRedirect('/dashboard');
+
+        // 5. Assert user is authenticated
+        $this->assertAuthenticatedAs($user);
+
+        // 6. Assert no OTP mail was sent
+        Mail::assertNotSent(OtpMail::class);
     }
 }

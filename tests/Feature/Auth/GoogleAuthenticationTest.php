@@ -136,4 +136,45 @@ class GoogleAuthenticationTest extends TestCase
         $response->assertViewIs('auth.google-callback');
         $this->assertTrue($response['authData']['success']);
     }
+
+    public function test_google_callback_with_2fa_enabled_redirects_to_otp(): void
+    {
+        // 1. Enable 2FA in settings
+        \App\Models\Setting::create([
+            'key' => 'two_factor_auth_enabled',
+            'value' => 'true',
+            'group' => 'authentication'
+        ]);
+
+        \App\Models\Setting::create([
+            'key' => 'two_factor_auth_locations',
+            'value' => json_encode(['student', 'tutor', 'admin']),
+            'group' => 'authentication'
+        ]);
+
+        $googleUser = $this->createMock(SocialiteUser::class);
+        $googleUser->method('getId')->willReturn('123456');
+        $googleUser->method('getEmail')->willReturn('newuser@example.com');
+        $googleUser->method('getName')->willReturn('New Google User');
+        $googleUser->method('getAvatar')->willReturn('https://avatar.url');
+        $googleUser->token = 'google-token-123';
+
+        $provider = $this->createMock(\Laravel\Socialite\Two\GoogleProvider::class);
+        $provider->method('user')->willReturn($googleUser);
+
+        Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
+
+        $response = $this->get(route('auth.google.callback'));
+
+        // Assert user was created but NOT authenticated (guest due to 2FA redirect)
+        $this->assertDatabaseHas('users', [
+            'email' => 'newuser@example.com',
+            'google_id' => '123456',
+        ]);
+        $this->assertGuest();
+
+        $response->assertViewIs('auth.google-callback');
+        $this->assertTrue($response['authData']['success']);
+        $this->assertEquals(route('login.otp', absolute: false), $response['authData']['redirect_url']);
+    }
 }

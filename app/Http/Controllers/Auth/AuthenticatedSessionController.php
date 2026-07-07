@@ -37,33 +37,61 @@ class AuthenticatedSessionController extends Controller
 
         $user = Auth::user();
 
-        // Enforce OTP verification by logging out immediately
-        Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        // Check if 2FA is enabled dynamically from settings table
+        $twoFactorEnabled = filter_var(\App\Models\Setting::where('key', 'two_factor_auth_enabled')->value('value') ?? 'false', FILTER_VALIDATE_BOOLEAN);
 
-        // Store OTP details in the new guest session
-        session([
-            'login_otp_email' => $user->email,
-            'login_otp_remember' => $request->boolean('remember'),
-        ]);
+        if ($twoFactorEnabled) {
+            // Get roles where 2FA is enforced
+            $twoFactorLocationsRaw = \App\Models\Setting::where('key', 'two_factor_auth_locations')->value('value');
+            $twoFactorLocations = [];
+            if ($twoFactorLocationsRaw) {
+                try {
+                    $twoFactorLocations = json_decode($twoFactorLocationsRaw, true) ?? [];
+                } catch (\Exception $e) {}
+            }
 
-        // Generate a 6-digit OTP code (static '111111' in local mode, random otherwise)
-        $code = app()->environment('local') ? 111111 : random_int(100000, 999999);
+            // Map user role group (Settings UI uses 'admin', 'tutor', 'student')
+            // DB roles are 'admin', 'instructor', 'student'
+            $userRoleMapped = $user->role;
+            if ($userRoleMapped === 'instructor') {
+                $userRoleMapped = 'tutor';
+            }
 
-        // Store OTP in database
-        Otp::create([
-            'user_id' => $user->id,
-            'email' => $user->email,
-            'otp_code' => (string) $code,
-            'expires_at' => now()->addMinutes(10),
-            'used' => false,
-        ]);
+            if (empty($twoFactorLocations) || in_array($userRoleMapped, $twoFactorLocations)) {
+                // Enforce OTP verification by logging out immediately
+                Auth::guard('web')->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
 
-        // Send OTP email
-        Mail::to($user->email)->send(new OtpMail($code));
+                // Store OTP details in the new guest session
+                session([
+                    'login_otp_email' => $user->email,
+                    'login_otp_remember' => $request->boolean('remember'),
+                ]);
 
-        return redirect()->route('login.otp');
+                // Generate a 6-digit OTP code (static '111111' in local mode, random otherwise)
+                $code = app()->environment('local') ? 111111 : random_int(100000, 999999);
+
+                // Store OTP in database
+                Otp::create([
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'otp_code' => (string) $code,
+                    'expires_at' => now()->addMinutes(10),
+                    'used' => false,
+                ]);
+
+                // Send OTP email
+                Mail::to($user->email)->send(new OtpMail($code));
+
+                return redirect()->route('login.otp');
+            }
+        }
+
+        // If 2FA is disabled or doesn't apply to this user's role:
+        // Regenerate session and proceed directly to dashboard
+        $request->session()->regenerate();
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 
     /**
