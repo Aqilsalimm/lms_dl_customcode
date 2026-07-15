@@ -12,6 +12,7 @@ use Illuminate\Notifications\Notifiable;
 
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 #[Fillable(['name', 'email', 'password', 'role', 'status', 'photo', 'google_id', 'google_token'])]
 #[Hidden(['password', 'remember_token'])]
@@ -83,6 +84,31 @@ class User extends Authenticatable
     public function paymentProfile(): HasOne
     {
         return $this->hasOne(InstructorPaymentProfile::class);
+    }
+
+    /**
+     * Ebooks purchased by the user.
+     */
+    public function purchasedEbooks(): BelongsToMany
+    {
+        return $this->belongsToMany(Ebook::class, 'user_ebooks', 'user_id', 'ebook_id')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Ebooks published/authored by this user.
+     */
+    public function publishedEbooks(): HasMany
+    {
+        return $this->hasMany(Ebook::class, 'user_id');
+    }
+
+    /**
+     * Transactions made by the user for ebooks.
+     */
+    public function ebookTransactions(): HasMany
+    {
+        return $this->hasMany(EbookTransaction::class, 'user_id');
     }
 
     // Check enrollment helper

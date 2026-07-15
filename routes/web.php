@@ -11,6 +11,7 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\DiscussionController;
 use App\Http\Controllers\LocalizationController;
+use App\Http\Controllers\EbookFileController;
 use App\Models\Course;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -81,6 +82,10 @@ use App\Http\Controllers\BillingController;
 Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middleware(['auth'])->name('billing.suspended');
 
     Route::middleware('auth')->group(function () {
+    // E-Book Security & File routes
+    Route::get('/ebooks/{ebook:slug}/view', [EbookFileController::class, 'view'])->name('ebooks.view');
+    Route::get('/ebooks/{ebook:slug}/download', [EbookFileController::class, 'download'])->name('ebooks.download');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
