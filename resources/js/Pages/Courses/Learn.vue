@@ -658,7 +658,7 @@ const Logo = () => {
         <!-- SIDEBAR SYLLABUS: Left Column -->
         <div 
           :class="isSidebarOpen ? 'w-full lg:max-w-[32%] flex' : 'hidden lg:hidden'"
-          class="flex-col gap-5 shrink-0 transition-all duration-300 w-full"
+          class="flex-col gap-5 shrink-0 transition-all duration-300 w-full lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-2"
         >
           
           <!-- Sidebar Toggle Header -->
@@ -678,7 +678,7 @@ const Logo = () => {
           </div>
 
           <!-- Modules Accordion List -->
-          <div class="flex flex-col gap-4 max-h-[80vh] overflow-y-auto pr-1">
+          <div class="flex flex-col gap-4 w-full">
             
             <!-- Certificate Panel in Sidebar -->
             <div 
