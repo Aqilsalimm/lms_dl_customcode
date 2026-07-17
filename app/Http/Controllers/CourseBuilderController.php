@@ -114,12 +114,21 @@ class CourseBuilderController extends Controller
             abort(403);
         }
 
-        $course->load([
-            'category', 
-            'tags', 
-            'modules.lessons', 
-            'modules.quizzes.questions'
-        ]);
+        if ($course->course_type === 'async') {
+            $course->load([
+                'category', 
+                'tags', 
+                'modules.lessons', 
+                'modules.quizzes.questions'
+            ]);
+        } else {
+            $course->load([
+                'category', 
+                'tags', 
+                'modules.lessons',
+                'assessments.questions'
+            ]);
+        }
 
         return Inertia::render('Dashboard/Instructor/CourseBuilder', [
             'course' => $course,

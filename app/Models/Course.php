@@ -120,4 +120,12 @@ class Course extends Model
     {
         return $this->hasMany(Review::class);
     }
+
+    /**
+     * Get all assessments (pre-test and post-test) for this course/workshop.
+     */
+    public function assessments(): HasMany
+    {
+        return $this->hasMany(WorkshopAssessment::class);
+    }
 }

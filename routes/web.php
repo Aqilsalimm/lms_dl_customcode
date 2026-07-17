@@ -184,6 +184,12 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
         Route::post('/quizzes/{quiz}/questions', [CourseBuilderController::class, 'addQuestion'])->name('questions.store');
         Route::put('/questions/{question}', [CourseBuilderController::class, 'updateQuestion'])->name('questions.update');
         Route::delete('/questions/{question}', [CourseBuilderController::class, 'deleteQuestion'])->name('questions.destroy');
+
+        // Workshop Assessments
+        Route::post('/courses/{course}/assessments', [\App\Http\Controllers\WorkshopAssessmentController::class, 'storeOrUpdate'])->name('assessments.store');
+        Route::post('/assessments/{assessment}/questions', [\App\Http\Controllers\WorkshopAssessmentController::class, 'addQuestion'])->name('assessments.questions.store');
+        Route::put('/assessment-questions/{question}', [\App\Http\Controllers\WorkshopAssessmentController::class, 'updateQuestion'])->name('assessments.questions.update');
+        Route::delete('/assessment-questions/{question}', [\App\Http\Controllers\WorkshopAssessmentController::class, 'deleteQuestion'])->name('assessments.questions.destroy');
     });
 
     // Bundle Builder Routes
@@ -240,6 +246,11 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     // Admin/Instructor Course Gifting Routes
     Route::get('/dashboard/students/search', [\App\Http\Controllers\CourseGiftController::class, 'searchStudents'])->name('dashboard.students.search');
     Route::post('/dashboard/courses/{course}/gift', [\App\Http\Controllers\CourseGiftController::class, 'gift'])->name('dashboard.courses.gift');
+
+    // Workshop Assessment Activities (Student/Enrolled)
+    Route::post('/assessments/{assessment}/start', [\App\Http\Controllers\WorkshopAssessmentController::class, 'startAttempt'])->name('assessments.start');
+    Route::post('/attempts/{attempt}/submit', [\App\Http\Controllers\WorkshopAssessmentController::class, 'submitAttempt'])->name('attempts.submit');
+    Route::get('/courses/{course}/live-link', [\App\Http\Controllers\WorkshopAssessmentController::class, 'getLiveMeetingLink'])->name('courses.live-link');
 });
 
 // Shopping Cart Public Routes
