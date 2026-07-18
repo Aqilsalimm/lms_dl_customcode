@@ -387,4 +387,199 @@ class WorkshopAssessmentTest extends TestCase
         $response->assertStatus(403);
         $response->assertJsonFragment(['message' => 'Tes ini sudah ditutup.']);
     }
+
+    /**
+     * Test student cannot retake if they have already passed in a previous attempt.
+     */
+    public function test_student_blocked_from_retaking_if_already_passed(): void
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = Course::create([
+            'title' => 'Live Class',
+            'course_type' => 'live_class',
+            'instructor_id' => $instructor->id,
+            'price' => 100000,
+            'level' => 'Umum',
+            'status' => 'published',
+        ]);
+
+        $assessment = WorkshopAssessment::create([
+            'course_id' => $course->id,
+            'type' => 'pre_test',
+            'title' => 'Pre-test Fisika',
+            'passing_score' => 60,
+            'max_attempts' => 3,
+            'is_published' => true,
+        ]);
+
+        // Passed attempt
+        WorkshopAssessmentAttempt::create([
+            'assessment_id' => $assessment->id,
+            'user_id' => $student->id,
+            'status' => 'completed',
+            'total_score' => 80,
+            'is_passed' => true,
+            'attempt_number' => 1,
+            'completed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($student)
+            ->post(route('assessments.start', $assessment->id));
+
+        $response->assertStatus(403);
+        $response->assertJsonFragment(['message' => 'Anda sudah lulus tes ini dan tidak perlu mengulangnya.']);
+    }
+
+    /**
+     * Test student is blocked from starting a new attempt if the maximum attempts are exceeded.
+     */
+    public function test_student_blocked_from_retaking_if_max_attempts_exceeded(): void
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = Course::create([
+            'title' => 'Live Class',
+            'course_type' => 'live_class',
+            'instructor_id' => $instructor->id,
+            'price' => 100000,
+            'level' => 'Umum',
+            'status' => 'published',
+        ]);
+
+        $assessment = WorkshopAssessment::create([
+            'course_id' => $course->id,
+            'type' => 'pre_test',
+            'title' => 'Pre-test Fisika',
+            'passing_score' => 60,
+            'max_attempts' => 2,
+            'is_published' => true,
+        ]);
+
+        // 2 failed attempts
+        WorkshopAssessmentAttempt::create([
+            'assessment_id' => $assessment->id,
+            'user_id' => $student->id,
+            'status' => 'completed',
+            'total_score' => 40,
+            'is_passed' => false,
+            'attempt_number' => 1,
+            'completed_at' => now(),
+        ]);
+
+        WorkshopAssessmentAttempt::create([
+            'assessment_id' => $assessment->id,
+            'user_id' => $student->id,
+            'status' => 'completed',
+            'total_score' => 50,
+            'is_passed' => false,
+            'attempt_number' => 2,
+            'completed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($student)
+            ->post(route('assessments.start', $assessment->id));
+
+        $response->assertStatus(403);
+        $response->assertJsonFragment(['message' => 'Batas maksimal percobaan pengerjaan tes ini sudah habis.']);
+    }
+
+    /**
+     * Test student can retake if maximum attempts are not exceeded.
+     */
+    public function test_student_can_retake_if_max_attempts_not_exceeded(): void
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = Course::create([
+            'title' => 'Live Class',
+            'course_type' => 'live_class',
+            'instructor_id' => $instructor->id,
+            'price' => 100000,
+            'level' => 'Umum',
+            'status' => 'published',
+        ]);
+
+        $assessment = WorkshopAssessment::create([
+            'course_id' => $course->id,
+            'type' => 'pre_test',
+            'title' => 'Pre-test Fisika',
+            'passing_score' => 60,
+            'max_attempts' => 2,
+            'is_published' => true,
+        ]);
+
+        // 1 failed attempt
+        WorkshopAssessmentAttempt::create([
+            'assessment_id' => $assessment->id,
+            'user_id' => $student->id,
+            'status' => 'completed',
+            'total_score' => 40,
+            'is_passed' => false,
+            'attempt_number' => 1,
+            'completed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($student)
+            ->post(route('assessments.start', $assessment->id));
+
+        $response->assertStatus(200);
+        $response->assertJsonFragment([
+            'message' => 'Attempt started successfully',
+        ]);
+        $this->assertEquals(2, $response->json('attempt.attempt_number'));
+    }
+
+    /**
+     * Test student can retake unlimited times if max_attempts is set to 0.
+     */
+    public function test_student_can_retake_unlimited_times_if_max_attempts_is_zero(): void
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $student = User::factory()->create(['role' => 'student']);
+        $course = Course::create([
+            'title' => 'Live Class',
+            'course_type' => 'live_class',
+            'instructor_id' => $instructor->id,
+            'price' => 100000,
+            'level' => 'Umum',
+            'status' => 'published',
+        ]);
+
+        $assessment = WorkshopAssessment::create([
+            'course_id' => $course->id,
+            'type' => 'pre_test',
+            'title' => 'Pre-test Fisika',
+            'passing_score' => 60,
+            'max_attempts' => 0, // unlimited
+            'is_published' => true,
+        ]);
+
+        // 2 failed attempts
+        WorkshopAssessmentAttempt::create([
+            'assessment_id' => $assessment->id,
+            'user_id' => $student->id,
+            'status' => 'completed',
+            'total_score' => 40,
+            'is_passed' => false,
+            'attempt_number' => 1,
+            'completed_at' => now(),
+        ]);
+
+        WorkshopAssessmentAttempt::create([
+            'assessment_id' => $assessment->id,
+            'user_id' => $student->id,
+            'status' => 'completed',
+            'total_score' => 50,
+            'is_passed' => false,
+            'attempt_number' => 2,
+            'completed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($student)
+            ->post(route('assessments.start', $assessment->id));
+
+        $response->assertStatus(200);
+        $this->assertEquals(3, $response->json('attempt.attempt_number'));
+    }
 }

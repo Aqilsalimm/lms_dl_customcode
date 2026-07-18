@@ -26,6 +26,7 @@ return new class extends Migration
             // Pengaturan teknis
             $table->integer('duration_minutes')->nullable(); // Batas waktu pengerjaan
             $table->integer('passing_score')->default(0); // Nilai minimum (KKM) untuk lulus
+            $table->integer('max_attempts')->default(1); // Batas maksimal percobaan (0 = unlimited)
             $table->boolean('is_published')->default(false); // Status aktif/draft dari builder
             
             // Waktu pengerjaan/akses

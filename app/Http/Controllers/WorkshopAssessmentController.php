@@ -36,6 +36,7 @@ class WorkshopAssessmentController extends Controller
             'description' => 'nullable|string',
             'duration_minutes' => 'nullable|integer|min:1',
             'passing_score' => 'nullable|integer|min:0|max:100',
+            'max_attempts' => 'nullable|integer|min:0',
             'is_published' => 'nullable|boolean',
             'start_time' => 'nullable|date',
             'end_time' => 'nullable|date|after_or_equal:start_time',
@@ -48,6 +49,7 @@ class WorkshopAssessmentController extends Controller
                 'description' => $request->description,
                 'duration_minutes' => $request->duration_minutes,
                 'passing_score' => $request->passing_score ?? 0,
+                'max_attempts' => $request->max_attempts ?? 1,
                 'is_published' => $request->is_published ?? false,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time,
@@ -152,18 +154,43 @@ class WorkshopAssessmentController extends Controller
             return response()->json(['message' => 'Tes ini sudah ditutup.'], 403);
         }
 
-        // Check if user has already taken it
-        $existing = $assessment->attempts()->where('user_id', $user->id)->first();
-        if ($existing) {
+        // 1. Cek Status Kelulusan: Jika peserta sudah pernah lulus di percobaan sebelumnya, cegah ambil tes lagi.
+        $hasPassed = $assessment->attempts()
+            ->where('user_id', $user->id)
+            ->where('is_passed', true)
+            ->exists();
+
+        if ($hasPassed) {
+            return response()->json(['message' => 'Anda sudah lulus tes ini dan tidak perlu mengulangnya.'], 403);
+        }
+
+        // Cek jika ada pengerjaan yang sedang berlangsung
+        $inProgress = $assessment->attempts()
+            ->where('user_id', $user->id)
+            ->where('status', 'in_progress')
+            ->first();
+
+        if ($inProgress) {
             return response()->json([
-                'message' => 'Attempt already created',
-                'attempt' => $existing,
+                'message' => 'Attempt already in progress',
+                'attempt' => $inProgress,
             ]);
         }
 
+        // 2. Cek Kuota Percobaan: Hitung jumlah percobaan yang sudah dilakukan
+        $attemptCount = $assessment->attempts()
+            ->where('user_id', $user->id)
+            ->count();
+
+        if ($assessment->max_attempts > 0 && $attemptCount >= $assessment->max_attempts) {
+            return response()->json(['message' => 'Batas maksimal percobaan pengerjaan tes ini sudah habis.'], 403);
+        }
+
+        // 3. Mulai Sesi Baru: Set attempt_number = attemptCount + 1
         $attempt = $assessment->attempts()->create([
             'user_id' => $user->id,
             'status' => 'in_progress',
+            'attempt_number' => $attemptCount + 1,
             'started_at' => $now,
         ]);
 

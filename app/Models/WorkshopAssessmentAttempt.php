@@ -14,6 +14,7 @@ class WorkshopAssessmentAttempt extends Model
         'status',
         'total_score',
         'is_passed',
+        'attempt_number',
         'started_at',
         'completed_at',
     ];
@@ -21,6 +22,7 @@ class WorkshopAssessmentAttempt extends Model
     protected $casts = [
         'total_score' => 'float',
         'is_passed' => 'boolean',
+        'attempt_number' => 'integer',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
     ];

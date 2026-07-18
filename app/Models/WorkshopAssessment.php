@@ -15,6 +15,7 @@ class WorkshopAssessment extends Model
         'description',
         'duration_minutes',
         'passing_score',
+        'max_attempts',
         'is_published',
         'start_time',
         'end_time',
@@ -23,6 +24,7 @@ class WorkshopAssessment extends Model
     protected $casts = [
         'duration_minutes' => 'integer',
         'passing_score' => 'integer',
+        'max_attempts' => 'integer',
         'is_published' => 'boolean',
         'start_time' => 'datetime',
         'end_time' => 'datetime',
