@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('modules', function (Blueprint $table) {
-            $table->boolean('enable_assessment')->default(true)->after('material_file_path');
+            $table->boolean('enable_assessment')->default(true);
         });
     }
 
