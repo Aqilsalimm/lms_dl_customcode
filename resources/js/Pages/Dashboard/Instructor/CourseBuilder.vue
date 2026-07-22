@@ -31,12 +31,21 @@ import {
 } from 'lucide-vue-next';
 import axios from 'axios';
 import RichTextEditor from '@/Components/RichTextEditor.vue';
+import TestBuilder from '@/Components/TestBuilder.vue';
 
 const props = defineProps({
   course: Object,
   categories: Array,
   tags: Array,
   courses: Array
+});
+
+const initialPreTest = computed(() => {
+  return props.course.assessments?.find(a => a.type === 'pre_test') || null;
+});
+
+const initialPostTest = computed(() => {
+  return props.course.assessments?.find(a => a.type === 'post_test') || null;
 });
 
 const page = usePage();
@@ -552,9 +561,29 @@ const navigateToStep = (step) => {
 // --- MODULE CRUD ---
 const openModuleModal = (module = null) => {
   if (module) {
-    moduleForm.value = { id: module.id, title: module.title };
+    moduleForm.value = { 
+      id: module.id, 
+      title: module.title,
+      meeting_url: module.meeting_url || '',
+      start_date: module.start_date ? (module.start_date.includes('T') ? module.start_date.substring(0, 16) : module.start_date.replace(' ', 'T').substring(0, 16)) : '',
+      end_date: module.end_date ? (module.end_date.includes('T') ? module.end_date.substring(0, 16) : module.end_date.replace(' ', 'T').substring(0, 16)) : '',
+      recording_url: module.recording_url || '',
+      material_file: null,
+      material_file_path: module.material_file_path || null,
+      enable_assessment: module.enable_assessment !== undefined ? Boolean(module.enable_assessment) : true
+    };
   } else {
-    moduleForm.value = { id: null, title: '' };
+    moduleForm.value = { 
+      id: null, 
+      title: '',
+      meeting_url: '',
+      start_date: '',
+      end_date: '',
+      recording_url: '',
+      material_file: null,
+      material_file_path: null,
+      enable_assessment: true
+    };
   }
   currentModal.value = 'module';
 };
@@ -562,26 +591,45 @@ const openModuleModal = (module = null) => {
 const saveModule = () => {
   if (isSaving.value) return;
   isSaving.value = true;
+
+  const formData = new FormData();
   if (moduleForm.value.id) {
-    axios.put(`/course-builder/modules/${moduleForm.value.id}`, { title: moduleForm.value.title })
-      .then(res => {
-        const idx = modules.value.findIndex(m => m.id === moduleForm.value.id);
-        modules.value[idx].title = res.data.module.title;
-        currentModal.value = '';
-      })
-      .finally(() => {
-        isSaving.value = false;
-      });
-  } else {
-    axios.post(`/course-builder/courses/${props.course.id}/modules`, { title: moduleForm.value.title })
-      .then(res => {
-        modules.value.push({ ...res.data.module, lessons: [], quizzes: [] });
-        currentModal.value = '';
-      })
-      .finally(() => {
-        isSaving.value = false;
-      });
+    formData.append('_method', 'PUT');
   }
+  formData.append('title', moduleForm.value.title);
+  formData.append('meeting_url', moduleForm.value.meeting_url || '');
+  formData.append('start_date', moduleForm.value.start_date || '');
+  formData.append('end_date', moduleForm.value.end_date || '');
+  formData.append('recording_url', moduleForm.value.recording_url || '');
+  formData.append('enable_assessment', moduleForm.value.enable_assessment ? '1' : '0');
+  if (moduleForm.value.material_file instanceof File) {
+    formData.append('material_file', moduleForm.value.material_file);
+  }
+
+  const url = moduleForm.value.id
+    ? `/course-builder/modules/${moduleForm.value.id}`
+    : `/course-builder/courses/${props.course.id}/modules`;
+
+  axios.post(url, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+    .then(res => {
+      if (moduleForm.value.id) {
+        const idx = modules.value.findIndex(m => m.id === moduleForm.value.id);
+        if (idx !== -1) {
+          modules.value[idx] = { ...modules.value[idx], ...res.data.module };
+        }
+      } else {
+        modules.value.push({ ...res.data.module, lessons: [], quizzes: [], assessments: [] });
+      }
+      currentModal.value = '';
+    })
+    .catch(() => {
+      showCustomAlert('Gagal', 'Gagal menyimpan bab.', 'error');
+    })
+    .finally(() => {
+      isSaving.value = false;
+    });
 };
 
 const deleteModule = (moduleId) => {
@@ -683,8 +731,8 @@ const openLessonModal = (module, lesson = null) => {
       title: '', 
       content: '', 
       featured_image: null,
-      lesson_type: 'video',
-      video_type: 'upload',
+      lesson_type: form.value.course_type === 'live_class' ? 'slides' : 'video',
+      video_type: form.value.course_type === 'live_class' ? 'url' : 'upload',
       video_url: '', 
       slides_url: '',
       playback_time: { hour: 0, min: 0, sec: 0 },
@@ -1299,18 +1347,18 @@ const startQuizImport = () => {
       <div class="flex flex-col md:flex-row items-center justify-between gap-4 py-2">
         
         <!-- Back Button -->
-        <div class="flex items-center gap-3 self-start md:self-auto">
+        <div class="flex items-center gap-3 self-start md:self-auto flex-shrink-0">
           <Link 
             :href="route('course-builder.index')"
             class="p-2 border-2 border-slate-100 hover:bg-slate-50 rounded-full text-slate-500 hover:text-[#1A2B49] transition-all"
           >
             <ArrowLeft :size="16" />
           </Link>
-          <span class="text-xl font-extrabold text-[#1A2B49] tracking-tight">Course Builder</span>
+          <span class="text-xl font-extrabold text-[#1A2B49] tracking-tight whitespace-nowrap">Course Builder</span>
         </div>
 
         <!-- 3 Steps Indicator -->
-        <div class="flex items-center gap-2 md:gap-4 select-none">
+        <div class="flex items-center gap-2 md:gap-4 select-none flex-shrink-0">
           <button 
             @click="navigateToStep(1)"
             class="flex items-center gap-2 px-1 focus:outline-none group"
@@ -1322,7 +1370,7 @@ const startQuizImport = () => {
             ]" class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all">
               1
             </span>
-            <span :class="currentStep === 1 ? 'text-[#1A2B49] font-extrabold' : 'text-slate-400 font-bold'" class="text-sm transition-all">
+            <span :class="currentStep === 1 ? 'text-[#1A2B49] font-extrabold' : 'text-slate-400 font-bold'" class="text-sm transition-all whitespace-nowrap">
               1. Basics
             </span>
           </button>
@@ -1340,7 +1388,7 @@ const startQuizImport = () => {
             ]" class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all">
               2
             </span>
-            <span :class="currentStep === 2 ? 'text-[#1A2B49] font-extrabold' : 'text-slate-400 font-bold'" class="text-sm transition-all">
+            <span :class="currentStep === 2 ? 'text-[#1A2B49] font-extrabold' : 'text-slate-400 font-bold'" class="text-sm transition-all whitespace-nowrap">
               2. Curriculum
             </span>
           </button>
@@ -1358,16 +1406,16 @@ const startQuizImport = () => {
             ]" class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all">
               3
             </span>
-            <span :class="currentStep === 3 ? 'text-[#1A2B49] font-extrabold' : 'text-slate-400 font-bold'" class="text-sm transition-all">
+            <span :class="currentStep === 3 ? 'text-[#1A2B49] font-extrabold' : 'text-slate-400 font-bold'" class="text-sm transition-all whitespace-nowrap">
               3. Additional
             </span>
           </button>
         </div>
 
         <!-- Header Actions -->
-        <div class="flex items-center gap-3 self-end md:self-auto">
+        <div class="flex items-center gap-3 self-end md:self-auto flex-shrink-0">
           <a 
-            :href="`/courses/${course.slug}`" 
+            :href="`/courses/${course.slug || course.id}?preview=true`" 
             target="_blank"
             class="px-5 py-2.5 rounded-full border-2 border-slate-200 hover:border-slate-300 bg-white font-bold text-xs text-slate-600 hover:text-slate-800 transition-all flex items-center gap-1.5"
           >
@@ -2020,192 +2068,207 @@ const startQuizImport = () => {
         </div>
 
         <!-- STEP 2: CURRICULUM BUILDER -->
-        <div v-if="currentStep === 2" class="bg-white rounded-3xl p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100">
-          
-          <!-- CTA Header -->
-          <div class="flex items-center justify-between mb-8">
-            <h3 class="text-lg font-extrabold text-[#1A2B49] flex items-center gap-2">
-              <Layout :size="20" class="text-[#264790]" /> Struktur Silabus Kelas
-            </h3>
-            <button 
-              @click="openModuleModal()"
-              class="bg-white hover:bg-slate-50 text-[#264790] border border-[#264790]/20 px-4.5 py-2.5 rounded-full font-bold text-xs shadow-sm transition-colors flex items-center gap-1.5"
-            >
-              <PlusCircle :size="16" /> Tambah Bab Baru
-            </button>
-          </div>
-
-          <!-- Modules Outline -->
-          <div class="flex flex-col gap-6">
-            <div 
-              v-for="(mod, modIndex) in modules" 
-              :key="mod.id" 
-              class="bg-white rounded-2xl p-6 border border-slate-150 shadow-sm"
-            >
+        <!-- STEP 2: CURRICULUM BUILDER -->
+        <!-- STEP 2: CURRICULUM BUILDER -->
+        <div v-if="currentStep === 2" class="w-full flex flex-col gap-8">
+          <!-- Syllabus Card (For both Async & Live) -->
+          <div class="bg-white rounded-3xl p-6 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100">
               
-              <!-- Module Header -->
-              <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
-                <div class="flex items-center gap-3">
-                  <span class="w-7 h-7 rounded-lg bg-indigo-50 text-[#264790] flex items-center justify-center text-xs font-bold">
-                    {{ modIndex + 1 }}
-                  </span>
-                  <h4 class="font-extrabold text-base text-[#1A2B49]">{{ mod.title }}</h4>
-                </div>
-                <div class="flex items-center gap-2">
-                  <button @click="openModuleModal(mod)" class="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition-colors">
-                    <Edit :size="16" />
-                  </button>
-                  <button @click="deleteModule(mod.id)" :disabled="isSaving" class="p-2 hover:bg-rose-50 rounded-xl text-slate-400 hover:text-rose-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    <Trash2 :size="16" />
-                  </button>
-                </div>
+              <!-- CTA Header -->
+              <div class="flex items-center justify-between mb-8">
+                <h3 class="text-lg font-extrabold text-[#1A2B49] flex items-center gap-2">
+                  <Layout :size="20" class="text-[#264790]" /> Struktur Silabus Kelas
+                </h3>
+                <button 
+                  @click="openModuleModal()"
+                  class="bg-white hover:bg-slate-50 text-[#264790] border border-[#264790]/20 px-4.5 py-2.5 rounded-full font-bold text-xs shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  <PlusCircle :size="16" /> Tambah Bab Baru
+                </button>
               </div>
 
-              <!-- Module Content Grid (Lessons & Quizzes) -->
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                <!-- Lessons Column -->
-                <div class="bg-slate-50/50 rounded-2xl p-5 border border-slate-100/50">
-                  <div class="flex items-center justify-between mb-4">
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Materi & Tugas ({{ mod.lessons?.length || 0 }})</span>
+              <!-- Modules Outline -->
+              <div class="flex flex-col gap-6">
+                <div 
+                  v-for="(mod, modIndex) in modules" 
+                  :key="mod.id" 
+                  class="bg-white rounded-2xl p-6 border border-slate-150 shadow-sm"
+                >
+                  
+                  <!-- Module Header -->
+                  <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
                     <div class="flex items-center gap-3">
-                      <button @click="openLessonModal(mod)" class="text-[10px] font-bold text-[#264790] hover:text-[#44A6D9] flex items-center gap-1">
-                        <Plus :size="10" /> Sesi
+                      <span class="w-7 h-7 rounded-lg bg-indigo-50 text-[#264790] flex items-center justify-center text-xs font-bold">
+                        {{ modIndex + 1 }}
+                      </span>
+                      <h4 class="font-extrabold text-base text-[#1A2B49]">{{ mod.title }}</h4>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button @click="openModuleModal(mod)" class="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-600 transition-colors">
+                        <Edit :size="16" />
                       </button>
-                      <button @click="openAssignmentModal(mod)" class="text-[10px] font-bold text-purple-600 hover:text-purple-700 flex items-center gap-1">
-                        <Plus :size="10" /> Tugas
+                      <button @click="deleteModule(mod.id)" :disabled="isSaving" class="p-2 hover:bg-rose-50 rounded-xl text-slate-400 hover:text-rose-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <Trash2 :size="16" />
                       </button>
                     </div>
                   </div>
 
-                  <div class="flex flex-col gap-3">
-                    <div 
-                      v-for="les in mod.lessons" 
-                      :key="les.id"
-                      class="bg-white p-3.5 rounded-2xl border border-slate-100 flex items-center justify-between hover:border-slate-200 transition-colors"
-                    >
-                      <div class="flex items-center gap-3">
-                        <Video v-if="!les.content || !les.content.startsWith('{') || JSON.parse(les.content).type === 'video'" :size="16" class="text-[#264790]" />
-                        <Presentation v-else-if="JSON.parse(les.content).type === 'ppt'" :size="16" class="text-emerald-600" />
-                        <FileText v-else-if="JSON.parse(les.content).type === 'slides'" :size="16" class="text-amber-500" />
-                        <FileText v-else-if="JSON.parse(les.content).type === 'assignment'" :size="16" class="text-purple-600" />
-                        <BookOpen v-else :size="16" class="text-slate-400" />
-                        <div>
-                          <div class="font-bold text-xs text-[#1A2B49]">{{ les.title }}</div>
-                          <div class="text-[10px] text-slate-400 font-semibold flex items-center gap-1.5 mt-0.5">
-                            <span v-if="(!les.content || !les.content.startsWith('{')) || (les.content.startsWith('{') && JSON.parse(les.content).type !== 'assignment')">{{ les.duration_minutes }} Menit</span>
-                            <span v-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'ppt'" class="px-1.5 py-0.5 bg-emerald-50 text-emerald-650 text-[8px] font-bold rounded">PPT Manual</span>
-                            <span v-else-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'slides'" class="px-1.5 py-0.5 bg-amber-50 text-amber-600 text-[8px] font-bold rounded">Canva / Slides</span>
-                            <span v-else-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'assignment'" class="px-1.5 py-0.5 bg-purple-50 text-purple-600 text-[8px] font-bold rounded">Assignment</span>
-                            <span v-else class="px-1.5 py-0.5 bg-indigo-50 text-[#264790] text-[8px] font-bold rounded">Video</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div class="flex items-center gap-1.5">
-                        <button v-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'assignment'" @click="openAssignmentModal(mod, les)" class="p-1 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-slate-600">
-                          <Edit :size="14" />
-                        </button>
-                        <button v-else @click="openLessonModal(mod, les)" class="p-1 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-slate-600">
-                          <Edit :size="14" />
-                        </button>
-                        <button @click="deleteLesson(mod, les.id)" :disabled="isSaving" class="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 disabled:opacity-50 disabled:cursor-not-allowed">
-                          <Trash :size="14" />
-                        </button>
-                      </div>
-                    </div>
+                  <!-- Module Content Grid (Lessons & Quizzes) -->
+                  <div class="grid grid-cols-1 gap-6" :class="form.course_type !== 'live_class' ? 'lg:grid-cols-2' : ''">
                     
-                    <div v-if="!mod.lessons || mod.lessons.length === 0" class="text-center py-4 text-xs font-semibold text-slate-400">
-                      Belum ada materi pembelajaran atau tugas.
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Quizzes Column -->
-                <div class="bg-slate-50/50 rounded-2xl p-5 border border-slate-100/50">
-                  <div class="flex items-center justify-between mb-4">
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Evaluasi Kuis ({{ mod.quizzes?.length || 0 }})</span>
-                    <button @click="openQuizModal(mod)" class="text-xs font-bold text-[#264790] hover:text-[#44A6D9] flex items-center gap-1">
-                      <Plus :size="12" /> Tambah Kuis
-                    </button>
-                  </div>
-
-                  <div class="flex flex-col gap-3">
-                    <div 
-                      v-for="qz in mod.quizzes" 
-                      :key="qz.id"
-                      class="bg-white p-3.5 rounded-2xl border border-slate-100 flex flex-col gap-3 hover:border-slate-200 transition-colors"
-                    >
-                      <div class="flex items-center justify-between">
+                    <!-- Lessons Column -->
+                    <div class="bg-slate-50/50 rounded-2xl p-5 border border-slate-100/50">
+                      <div class="flex items-center justify-between mb-4">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ form.course_type === 'live_class' ? 'Materi Pembelajaran' : 'Materi & Tugas' }} ({{ mod.lessons?.length || 0 }})</span>
                         <div class="flex items-center gap-3">
-                          <HelpCircle :size="16" class="text-amber-500" />
-                          <div>
-                            <div class="font-bold text-xs text-[#1A2B49]">{{ qz.title }}</div>
-                            <div class="text-[10px] text-slate-400 font-medium">{{ qz.time_limit_minutes }} Menit • {{ qz.questions?.length || 0 }} Pertanyaan</div>
-                          </div>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                          <button @click="openQuizSettingsModal(mod, qz)" class="p-1 hover:bg-amber-50 rounded-lg text-slate-400 hover:text-amber-600" title="Quiz Settings">
-                            <Settings :size="14" />
+                          <button @click="openLessonModal(mod)" class="text-[10px] font-bold text-[#264790] hover:text-[#44A6D9] flex items-center gap-1">
+                            <Plus :size="10" /> {{ form.course_type === 'live_class' ? 'Tambah Materi' : 'Sesi' }}
                           </button>
-                          <button @click="openQuizModal(mod, qz)" class="p-1 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-slate-600" title="Edit Quiz Basic Settings">
-                            <Edit :size="14" />
-                          </button>
-                          <button @click="deleteQuiz(mod, qz.id)" :disabled="isSaving" class="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 disabled:opacity-50 disabled:cursor-not-allowed" title="Delete Quiz">
-                            <Trash :size="14" />
+                          <button v-if="form.course_type !== 'live_class'" @click="openAssignmentModal(mod)" class="text-[10px] font-bold text-purple-600 hover:text-purple-700 flex items-center gap-1">
+                            <Plus :size="10" /> Tugas
                           </button>
                         </div>
                       </div>
 
-                      <!-- Sub-question list inside quiz -->
-                      <div class="bg-slate-50 p-3 rounded-xl flex flex-col gap-2">
-                        <div class="flex items-center justify-between border-b border-slate-100 pb-1.5 mb-1.5">
-                          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pertanyaan Kuis</span>
-                          <button @click="openQuestionModal(qz)" class="text-[10px] font-bold text-[#264790] hover:text-[#264790] flex items-center gap-0.5">
-                            <Plus :size="10" /> Tambah Soal
-                          </button>
+                      <div class="flex flex-col gap-3">
+                        <div 
+                          v-for="les in mod.lessons" 
+                          :key="les.id"
+                          class="bg-white p-3.5 rounded-2xl border border-slate-100 flex items-center justify-between hover:border-slate-200 transition-colors"
+                        >
+                          <div class="flex items-center gap-3">
+                            <Video v-if="(!les.content || !les.content.startsWith('{') || JSON.parse(les.content).type === 'video') && form.course_type !== 'live_class'" :size="16" class="text-[#264790]" />
+                            <Presentation v-else-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'ppt'" :size="16" class="text-emerald-600" />
+                            <FileText v-else-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'slides'" :size="16" class="text-amber-500" />
+                            <FileText v-else-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'assignment'" :size="16" class="text-purple-600" />
+                            <BookOpen v-else :size="16" class="text-slate-400" />
+                            <div>
+                              <div class="font-bold text-xs text-[#1A2B49]">{{ les.title }}</div>
+                              <div class="text-[10px] text-slate-400 font-semibold flex items-center gap-1.5 mt-0.5">
+                                <span v-if="((!les.content || !les.content.startsWith('{')) || (les.content.startsWith('{') && JSON.parse(les.content).type !== 'assignment')) && form.course_type !== 'live_class'">{{ les.duration_minutes }} Menit</span>
+                                <span v-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'ppt'" class="px-1.5 py-0.5 bg-emerald-50 text-emerald-650 text-[8px] font-bold rounded">PPT Manual</span>
+                                <span v-else-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'slides'" class="px-1.5 py-0.5 bg-amber-50 text-amber-600 text-[8px] font-bold rounded">{{ form.course_type === 'live_class' ? 'Materi Unduhan' : 'Canva / Slides' }}</span>
+                                <span v-else-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'assignment'" class="px-1.5 py-0.5 bg-purple-50 text-purple-600 text-[8px] font-bold rounded">Assignment</span>
+                                <span v-else-if="form.course_type !== 'live_class'" class="px-1.5 py-0.5 bg-indigo-50 text-[#264790] text-[8px] font-bold rounded">Video</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="flex items-center gap-1.5">
+                            <button v-if="les.content && les.content.startsWith('{') && JSON.parse(les.content).type === 'assignment'" @click="openAssignmentModal(mod, les)" class="p-1 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-slate-600">
+                              <Edit :size="14" />
+                            </button>
+                            <button v-else @click="openLessonModal(mod, les)" class="p-1 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-slate-600">
+                              <Edit :size="14" />
+                            </button>
+                            <button @click="deleteLesson(mod, les.id)" :disabled="isSaving" class="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                              <Trash :size="14" />
+                            </button>
+                          </div>
                         </div>
                         
-                        <div v-for="(qst, qstIdx) in qz.questions" :key="qst.id" class="flex items-center justify-between text-xs text-[#1A2B49] font-medium p-1.5 bg-white rounded-lg border border-slate-100 gap-2">
-                          <div class="flex items-center gap-2 flex-1 min-w-0">
-                            <span class="line-clamp-1 shrink-0 text-slate-400">{{ qstIdx + 1 }}.</span>
-                            <span class="line-clamp-1 flex-1">{{ qst.question_text }}</span>
-                            <span v-if="qst.options && qst.options[0] === '[TRUE_FALSE]'" class="px-1.5 py-0.5 bg-indigo-50 text-[#264790] text-[8px] font-bold rounded shrink-0">True/False</span>
-                            <span v-else-if="qst.options && qst.options[0] === '[ESSAY]'" class="px-1.5 py-0.5 bg-purple-50 text-purple-600 text-[8px] font-bold rounded shrink-0">Esai</span>
-                            <span v-else-if="qst.options && qst.options[0] === '[MATH_FORMULA]'" class="px-1.5 py-0.5 bg-amber-50 text-amber-600 text-[8px] font-bold rounded shrink-0">Matematika</span>
-                            <span v-else class="px-1.5 py-0.5 bg-slate-50 text-slate-500 text-[8px] font-bold rounded shrink-0">Pilihan Ganda</span>
-                          </div>
-                          <div class="flex items-center gap-1 shrink-0">
-                            <button @click="openQuestionModal(qz, qst)" class="p-0.5 hover:bg-slate-50 text-slate-400 hover:text-slate-600"><Edit :size="10" /></button>
-                            <button @click="deleteQuestion(qz, qst.id)" :disabled="isSaving" class="p-0.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 disabled:opacity-50 disabled:cursor-not-allowed"><Trash :size="10" /></button>
-                          </div>
-                        </div>
-                        <div v-if="!qz.questions || qz.questions.length === 0" class="text-center py-2 text-[10px] text-slate-400 font-semibold">
-                          Belum ada pertanyaan dibuat.
+                        <div v-if="!mod.lessons || mod.lessons.length === 0" class="text-center py-4 text-xs font-semibold text-slate-400">
+                          Belum ada materi pembelajaran atau tugas.
                         </div>
                       </div>
                     </div>
 
-                    <div v-if="!mod.quizzes || mod.quizzes.length === 0" class="text-center py-4 text-xs font-semibold text-slate-400">
-                      Belum ada evaluasi kuis.
-                    </div>
-                  </div>
-                </div>
+                    <!-- Quizzes Column -->
+                    <div v-if="form.course_type !== 'live_class'" class="bg-slate-50/50 rounded-2xl p-5 border border-slate-100/50">
+                      <div class="flex items-center justify-between mb-4">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Evaluasi Kuis ({{ mod.quizzes?.length || 0 }})</span>
+                        <button @click="openQuizModal(mod)" class="text-xs font-bold text-[#264790] hover:text-[#44A6D9] flex items-center gap-1">
+                          <Plus :size="12" /> Tambah Kuis
+                        </button>
+                      </div>
 
+                      <div class="flex flex-col gap-3">
+                        <div 
+                          v-for="qz in mod.quizzes" 
+                          :key="qz.id"
+                          class="bg-white p-3.5 rounded-2xl border border-slate-100 flex flex-col gap-3 hover:border-slate-200 transition-colors"
+                        >
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                              <HelpCircle :size="16" class="text-amber-500" />
+                              <div>
+                                <div class="font-bold text-xs text-[#1A2B49]">{{ qz.title }}</div>
+                                <div class="text-[10px] text-slate-400 font-medium">{{ qz.time_limit_minutes }} Menit • {{ qz.questions?.length || 0 }} Pertanyaan</div>
+                              </div>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                              <button @click="openQuizSettingsModal(mod, qz)" class="p-1 hover:bg-amber-50 rounded-lg text-slate-400 hover:text-amber-600" title="Quiz Settings">
+                                <Settings :size="14" />
+                              </button>
+                              <button @click="openQuizModal(mod, qz)" class="p-1 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-slate-600" title="Edit Quiz Basic Settings">
+                                <Edit :size="14" />
+                              </button>
+                              <button @click="deleteQuiz(mod, qz.id)" :disabled="isSaving" class="p-1 hover:bg-rose-50 rounded-lg text-slate-400 hover:text-rose-600 disabled:opacity-50 disabled:cursor-not-allowed" title="Delete Quiz">
+                                <Trash :size="14" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <!-- Sub-question list inside quiz -->
+                          <div class="bg-slate-50 p-3 rounded-xl flex flex-col gap-2">
+                            <div class="flex items-center justify-between border-b border-slate-100 pb-1.5 mb-1.5">
+                              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pertanyaan Kuis</span>
+                              <button @click="openQuestionModal(qz)" class="text-[10px] font-bold text-[#264790] hover:text-[#264790] flex items-center gap-0.5">
+                                <Plus :size="10" /> Tambah Soal
+                              </button>
+                            </div>
+                            
+                            <div v-for="(qst, qstIdx) in qz.questions" :key="qst.id" class="flex items-center justify-between text-xs text-[#1A2B49] font-medium p-1.5 bg-white rounded-lg border border-slate-100 gap-2">
+                              <div class="flex items-center gap-2 flex-1 min-w-0">
+                                <span class="line-clamp-1 shrink-0 text-slate-400">{{ qstIdx + 1 }}.</span>
+                                <span class="line-clamp-1 flex-1">{{ qst.question_text }}</span>
+                                <span v-if="qst.options && qst.options[0] === '[TRUE_FALSE]'" class="px-1.5 py-0.5 bg-indigo-50 text-[#264790] text-[8px] font-bold rounded shrink-0">True/False</span>
+                                <span v-else-if="qst.options && qst.options[0] === '[ESSAY]'" class="px-1.5 py-0.5 bg-purple-50 text-purple-600 text-[8px] font-bold rounded shrink-0">Esai</span>
+                                <span v-else-if="qst.options && qst.options[0] === '[MATH_FORMULA]'" class="px-1.5 py-0.5 bg-amber-50 text-amber-600 text-[8px] font-bold rounded shrink-0">Matematika</span>
+                                <span v-else class="px-1.5 py-0.5 bg-slate-50 text-slate-500 text-[8px] font-bold rounded shrink-0">Pilihan Ganda</span>
+                              </div>
+                              <div class="flex items-center gap-1 shrink-0">
+                                <button @click="openQuestionModal(qz, qst)" class="p-0.5 hover:bg-slate-50 text-slate-400 hover:text-slate-600"><Edit :size="10" /></button>
+                                <button @click="deleteQuestion(qz, qst.id)" :disabled="isSaving" class="p-0.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 disabled:opacity-50 disabled:cursor-not-allowed"><Trash :size="10" /></button>
+                              </div>
+                            </div>
+                            <div v-if="!qz.questions || qz.questions.length === 0" class="text-center py-2 text-[10px] text-slate-400 font-semibold">
+                              Belum ada pertanyaan dibuat.
+                            </div>
+                          </div>
+                        </div>
+
+                        <div v-if="!mod.quizzes || mod.quizzes.length === 0" class="text-center py-4 text-xs font-semibold text-slate-400">
+                          Belum ada evaluasi kuis.
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <!-- Per-Module TestBuilder (Only for Live Class) -->
+                  <div v-if="form.course_type === 'live_class' && mod.enable_assessment !== false">
+                    <TestBuilder 
+                      :course-id="course.id"
+                      :module-id="mod.id"
+                      :initial-pre-test="mod.assessments?.find(a => a.type === 'pre_test')"
+                      :initial-post-test="mod.assessments?.find(a => a.type === 'post_test')"
+                    />
+                  </div>
+
+                </div>
+                
+                <div v-if="modules.length === 0" class="text-center py-12 bg-white rounded-3xl border border-slate-150 shadow-sm">
+                  <p class="text-slate-400 font-medium mb-4">Silabus kelas masih kosong.</p>
+                  <button 
+                    @click="openModuleModal()"
+                    class="bg-[#264790] hover:bg-[#44A6D9] text-white px-6 py-2.5 rounded-full font-bold text-xs shadow-sm transition-colors"
+                  >
+                    Mulai dengan Membuat Bab Pertama
+                  </button>
+                </div>
               </div>
 
             </div>
-            
-            <div v-if="modules.length === 0" class="text-center py-12 bg-white rounded-3xl border border-slate-150 shadow-sm">
-              <p class="text-slate-400 font-medium mb-4">Silabus kelas masih kosong.</p>
-              <button 
-                @click="openModuleModal()"
-                class="bg-[#264790] hover:bg-[#44A6D9] text-white px-6 py-2.5 rounded-full font-bold text-xs shadow-sm transition-colors"
-              >
-                Mulai dengan Membuat Bab Pertama
-              </button>
-            </div>
-          </div>
-
         </div>
 
         <!-- STEP 3: ADDITIONAL SETTINGS -->
@@ -2499,8 +2562,8 @@ const startQuizImport = () => {
               </div>
             </div>
 
-            <!-- SCHEDULE LIVE CLASS -->
-            <div class="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex flex-col gap-4">
+            <!-- SCHEDULE LIVE CLASS (Only for Async/Non-Live Class courses as legacy fallback) -->
+            <div v-if="form.course_type !== 'live_class'" class="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100 flex flex-col gap-4">
               <h3 class="text-sm font-extrabold text-[#1A2B49] uppercase tracking-wide">Schedule Live Class</h3>
 
               <div v-if="additionalForm.class_type === 'Online' || additionalForm.class_type === 'Hybrid'" class="flex flex-col gap-4">
@@ -2705,15 +2768,71 @@ const startQuizImport = () => {
 
     <!-- 1. MODULE MODAL -->
     <div v-if="currentModal === 'module'" class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-      <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative border border-slate-100">
+      <div class="bg-white rounded-3xl max-w-xl w-full p-8 shadow-2xl relative border border-slate-100 max-h-[90vh] overflow-y-auto">
         <button @click="currentModal = ''" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600"><X :size="20" /></button>
-        <h3 class="text-lg font-extrabold text-[#1A2B49] mb-5">{{ moduleForm.id ? 'Edit Bab' : 'Tambah Bab Baru' }}</h3>
+        <h3 class="text-lg font-extrabold text-[#1A2B49] mb-5">{{ moduleForm.id ? (form.course_type === 'live_class' ? 'Edit Sesi Live / Bab' : 'Edit Bab') : (form.course_type === 'live_class' ? 'Tambah Sesi Live Baru' : 'Tambah Bab Baru') }}</h3>
         <div class="flex flex-col gap-4">
           <div>
-            <label class="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Judul Bab</label>
-            <input v-model="moduleForm.title" type="text" placeholder="Contoh: Pengenalan Sintaks Dasar" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium" />
+            <label class="block text-slate-500 text-xs font-bold uppercase tracking-wider mb-2">Judul Bab / Sesi</label>
+            <input v-model="moduleForm.title" type="text" placeholder="Contoh: Sesi 1: Pengenalan Laravel & Setup Environment" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium" />
           </div>
-          <button @click="saveModule" :disabled="isSaving" class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3 rounded-2xl font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+
+          <!-- Live Session Settings for Live Class -->
+          <template v-if="form.course_type === 'live_class'">
+            <div class="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 space-y-3">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
+                <Video :size="14" class="text-indigo-600" /> Pengaturan Sesi Live
+              </h4>
+              
+              <div>
+                <label class="block text-slate-600 text-xs font-bold mb-1">Tautan Meeting (Zoom / Google Meet)</label>
+                <input v-model="moduleForm.meeting_url" type="text" placeholder="https://zoom.us/j/... atau https://meet.google.com/..." class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none text-xs text-[#1A2B49] font-medium" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-600 text-xs font-bold mb-1">Jadwal Sesi Mulai</label>
+                  <input v-model="moduleForm.start_date" type="datetime-local" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none text-xs text-[#1A2B49] font-medium" />
+                </div>
+                <div>
+                  <label class="block text-slate-600 text-xs font-bold mb-1">Perkiraan Selesai</label>
+                  <input v-model="moduleForm.end_date" type="datetime-local" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none text-xs text-[#1A2B49] font-medium" />
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-slate-600 text-xs font-bold mb-1">Tautan Rekaman Sesi (Recording URL)</label>
+                <input v-model="moduleForm.recording_url" type="text" placeholder="https://drive.google.com/... atau https://youtube.com/..." class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none text-xs text-[#1A2B49] font-medium" />
+              </div>
+
+              <div>
+                <label class="block text-slate-600 text-xs font-bold mb-1">Upload File Materi Pengantar (PDF/Slide/ZIP)</label>
+                <input @change="e => moduleForm.material_file = e.target.files[0]" type="file" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none text-xs text-slate-600 font-medium" />
+                <p v-if="moduleForm.material_file_path" class="text-[10px] text-emerald-600 font-bold mt-1">✓ Material Ter-upload: {{ moduleForm.material_file_path }}</p>
+              </div>
+
+              <!-- Toggle Aktifkan Test Builder -->
+              <div class="pt-3 border-t border-indigo-100/70 flex items-center justify-between">
+                <div>
+                  <label class="block text-slate-800 text-xs font-bold">Aktifkan Test Builder (Pre-Test & Post-Test)</label>
+                  <p class="text-[10px] text-slate-500 font-normal mt-0.5">Tampilkan evaluasi ujian khusus untuk bab/sesi live ini</p>
+                </div>
+                <button 
+                  type="button" 
+                  @click="moduleForm.enable_assessment = !moduleForm.enable_assessment"
+                  :class="moduleForm.enable_assessment ? 'bg-[#264790]' : 'bg-slate-200'"
+                  class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                >
+                  <span 
+                    :class="moduleForm.enable_assessment ? 'translate-x-5' : 'translate-x-0'"
+                    class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                  ></span>
+                </button>
+              </div>
+            </div>
+          </template>
+
+          <button @click="saveModule" :disabled="isSaving" class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3 rounded-2xl font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed mt-2">
             <RefreshCw v-if="isSaving" :size="16" class="animate-spin" />
             <Check v-else :size="16" />
             <span>{{ isSaving ? 'Menyimpan...' : 'Simpan Bab' }}</span>
@@ -2776,7 +2895,7 @@ const startQuizImport = () => {
               </div>
 
               <!-- Format Switcher -->
-              <div>
+              <div v-if="form.course_type !== 'live_class'">
                 <label class="block text-slate-700 text-sm font-medium mb-2">Format</label>
                 <div class="flex bg-slate-100 rounded p-1 gap-1">
                   <button @click="lessonForm.lesson_type = 'video'" :class="lessonForm.lesson_type === 'video' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:bg-slate-200'" class="flex-1 py-1.5 text-xs font-medium rounded transition-colors">Video</button>
@@ -2786,7 +2905,8 @@ const startQuizImport = () => {
               </div>
 
               <!-- Content Options based on Format -->
-              <div v-if="lessonForm.lesson_type === 'video'">
+              <div v-if="form.course_type !== 'live_class'">
+                <div v-if="lessonForm.lesson_type === 'video'">
                 <label class="block text-slate-700 text-sm font-medium mb-2">Video</label>
                 <div class="border border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center bg-white text-center">
                   <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3">
@@ -2966,9 +3086,10 @@ const startQuizImport = () => {
 
                 </div>
               </div>
+              </div>
 
               <!-- Video Playback Time -->
-              <div v-if="lessonForm.lesson_type === 'video'">
+              <div v-if="lessonForm.lesson_type === 'video' && form.course_type !== 'live_class'">
                 <label class="block text-slate-700 text-sm font-medium mb-2">Video Playback Time</label>
                 <div class="grid grid-cols-3 gap-2">
                   <div class="relative">
@@ -2995,7 +3116,7 @@ const startQuizImport = () => {
               </div>
 
               <!-- Lesson Preview Toggle -->
-              <div class="flex items-center justify-between border border-slate-200 rounded-md px-4 py-3 bg-white mt-auto">
+              <div v-if="form.course_type !== 'live_class'" class="flex items-center justify-between border border-slate-200 rounded-md px-4 py-3 bg-white mt-auto">
                 <div class="flex items-center gap-1.5">
                   <span class="text-sm font-medium text-slate-700">Lesson Preview</span>
                   <HelpCircle :size="14" class="text-slate-400" />
@@ -3770,6 +3891,19 @@ const startQuizImport = () => {
 .scale-enter-from, .scale-leave-to {
   transform: scale(0.9);
   opacity: 0;
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 /* Custom styles for rich text editor list formatting */

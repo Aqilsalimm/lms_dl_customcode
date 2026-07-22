@@ -57,9 +57,9 @@ class Course extends Model
     {
         parent::boot();
 
-        static::creating(function ($course) {
+        static::saving(function ($course) {
             if (empty($course->slug)) {
-                $course->slug = Str::slug($course->title) . '-' . Str::random(5);
+                $course->slug = Str::slug($course->title ?: 'course') . '-' . Str::random(5);
             }
         });
     }

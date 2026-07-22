@@ -8,7 +8,21 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Module extends Model
 {
-    protected $fillable = ['course_id', 'title', 'sort_order'];
+    protected $fillable = [
+        'course_id', 
+        'title', 
+        'sort_order',
+        'meeting_url',
+        'start_date',
+        'end_date',
+        'recording_url',
+        'material_file_path',
+        'enable_assessment',
+    ];
+
+    protected $casts = [
+        'enable_assessment' => 'boolean',
+    ];
 
     public function course(): BelongsTo
     {
@@ -23,5 +37,10 @@ class Module extends Model
     public function quizzes(): HasMany
     {
         return $this->hasMany(Quiz::class)->orderBy('sort_order');
+    }
+
+    public function assessments(): HasMany
+    {
+        return $this->hasMany(WorkshopAssessment::class);
     }
 }

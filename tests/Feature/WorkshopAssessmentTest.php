@@ -582,4 +582,100 @@ class WorkshopAssessmentTest extends TestCase
         $response->assertStatus(200);
         $this->assertEquals(3, $response->json('attempt.attempt_number'));
     }
+
+    /**
+     * Test instructor can bulk save pre-test and post-test configurations along with questions.
+     */
+    public function test_instructor_can_bulk_save_assessments(): void
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $course = Course::create([
+            'title' => 'Live Class Workshop',
+            'course_type' => 'live_class',
+            'instructor_id' => $instructor->id,
+            'price' => 150000,
+            'level' => 'Umum',
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($instructor);
+
+        $response = $this->post(route('course-builder.assessments.bulk-store', $course->id), [
+            'assessments' => [
+                [
+                    'type' => 'pre_test',
+                    'title' => 'Pre-Test Workshop A',
+                    'description' => 'Petunjuk Pre-Test',
+                    'duration_minutes' => 15,
+                    'passing_score' => 70,
+                    'max_attempts' => 2,
+                    'questions' => [
+                        [
+                            'question_text' => 'Soal Pre-Test 1',
+                            'options' => ['A', 'B', 'C', 'D'],
+                            'correct_answer' => 'A',
+                            'points' => 10,
+                        ]
+                    ]
+                ],
+                [
+                    'type' => 'post_test',
+                    'title' => 'Post-Test Workshop A',
+                    'description' => 'Petunjuk Post-Test',
+                    'duration_minutes' => 20,
+                    'passing_score' => 80,
+                    'max_attempts' => 1,
+                    'questions' => [
+                        [
+                            'question_text' => 'Soal Post-Test 1',
+                            'options' => ['A', 'B', 'C', 'D'],
+                            'correct_answer' => 'B',
+                            'points' => 20,
+                        ],
+                        [
+                            'question_text' => 'Soal Post-Test 2',
+                            'options' => ['True', 'False'],
+                            'correct_answer' => 'True',
+                            'points' => 30,
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+
+        $response->assertStatus(302); // Redirect back
+        $response->assertSessionHas('success');
+
+        // Assert database pre-test
+        $this->assertDatabaseHas('workshop_assessments', [
+            'course_id' => $course->id,
+            'type' => 'pre_test',
+            'title' => 'Pre-Test Workshop A',
+            'max_attempts' => 2,
+        ]);
+
+        $preTest = $course->assessments()->where('type', 'pre_test')->first();
+        $this->assertCount(1, $preTest->questions);
+        $this->assertDatabaseHas('workshop_assessment_questions', [
+            'assessment_id' => $preTest->id,
+            'question_text' => 'Soal Pre-Test 1',
+            'correct_answer' => 'A',
+        ]);
+
+        // Assert database post-test
+        $this->assertDatabaseHas('workshop_assessments', [
+            'course_id' => $course->id,
+            'type' => 'post_test',
+            'title' => 'Post-Test Workshop A',
+            'max_attempts' => 1,
+        ]);
+
+        $postTest = $course->assessments()->where('type', 'post_test')->first();
+        $this->assertCount(2, $postTest->questions);
+        $this->assertDatabaseHas('workshop_assessment_questions', [
+            'assessment_id' => $postTest->id,
+            'question_text' => 'Soal Post-Test 2',
+            'correct_answer' => 'True',
+        ]);
+    }
 }

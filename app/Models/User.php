@@ -14,12 +14,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+use NotificationChannels\WebPush\HasPushSubscriptions;
+
 #[Fillable(['name', 'email', 'password', 'role', 'status', 'photo', 'google_id', 'google_token'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasPushSubscriptions;
 
     /**
      * Get the attributes that should be cast.
@@ -129,5 +131,41 @@ class User extends Authenticatable
         }
 
         return true;
+    }
+
+    public function assessmentAttempts(): HasMany
+    {
+        return $this->hasMany(WorkshopAssessmentAttempt::class, 'user_id');
+    }
+
+    public function hasPassedAssessment($courseId, $assessmentType)
+    {
+        // Menggunakan whereHas untuk mengecek relasi secara efisien
+        return $this->assessmentAttempts()->whereHas('assessment', function ($query) use ($courseId, $assessmentType) {
+            $query->where('course_id', $courseId)
+                  ->where('type', $assessmentType);
+        })
+        ->where('is_passed', true) // Hanya mencari attempt yang statusnya lulus
+        ->exists(); // Mengembalikan boolean (true/false)
+    }
+
+    public function hasCompletedModuleAssessment($moduleId, $assessmentType): bool
+    {
+        return $this->assessmentAttempts()->whereHas('assessment', function ($query) use ($moduleId, $assessmentType) {
+            $query->where('module_id', $moduleId)
+                  ->where('type', $assessmentType);
+        })
+        ->where('status', 'completed')
+        ->exists();
+    }
+
+    public function hasPassedModuleAssessment($moduleId, $assessmentType): bool
+    {
+        return $this->assessmentAttempts()->whereHas('assessment', function ($query) use ($moduleId, $assessmentType) {
+            $query->where('module_id', $moduleId)
+                  ->where('type', $assessmentType);
+        })
+        ->where('is_passed', true)
+        ->exists();
     }
 }

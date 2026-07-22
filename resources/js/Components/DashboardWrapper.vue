@@ -437,6 +437,7 @@ const activeAdminAccordion = ref(getInitialAccordion());
                 <Link :href="route('dashboard.settings.course-builder') + '?tab=tags'" :class="page.url.includes('tab=tags') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">{{ $t('course_tags') || 'Tag Kursus' }}</Link>
                 <Link :href="route('dashboard.settings.course-builder') + '?tab=course-importer'" :class="page.url.includes('tab=course-importer') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Course Importer</Link>
                 <Link :href="route('dashboard.settings.course-builder') + '?tab=quiz-importer'" :class="page.url.includes('tab=quiz-importer') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Quiz Importer</Link>
+                <Link :href="route('dashboard.settings.course-builder') + '?tab=test-builder-settings'" :class="page.url.includes('tab=test-builder-settings') ? 'text-[#264790] font-bold' : 'text-slate-500 hover:text-[#264790]'" class="text-xs font-semibold py-2 transition-colors">Pengaturan Test Builder</Link>
               </div>
             </div>
 

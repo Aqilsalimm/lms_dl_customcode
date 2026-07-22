@@ -1,26 +1,53 @@
 <script setup>
 import DashboardWrapper from '@/Components/DashboardWrapper.vue';
-import { Head, useForm, router } from '@inertiajs/vue3';
+import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
 import axios from 'axios';
 import { 
   Folder, Tag, Plus, Trash2, Edit, Sliders, 
-  UploadCloud, Settings, Info, Save, X, Layers, Search
+  UploadCloud, Settings, Info, Save, X, Layers, Search, CheckSquare
 } from 'lucide-vue-next';
 
 const props = defineProps({
   categories: Array,
-  tags: Array
+  tags: Array,
+  testBuilderSettings: Object
 });
 
+const page = usePage();
+
 // Tab management
-const activeTab = ref(typeof window !== 'undefined' ? (new URLSearchParams(window.location.search).get('tab') || 'categories') : 'categories');
-const tabs = [
-  { id: 'categories', label: 'Kategori Kursus', icon: Folder },
-  { id: 'tags', label: 'Tag Kursus', icon: Tag },
-  { id: 'course-importer', label: 'Course Importer', icon: UploadCloud },
-  { id: 'quiz-importer', label: 'Quiz Importer', icon: Sliders }
-];
+const activeTab = ref('categories');
+
+watch(() => page.url, (newUrl) => {
+  if (newUrl) {
+    const search = newUrl.includes('?') ? newUrl.split('?')[1] : '';
+    const params = new URLSearchParams(search);
+    activeTab.value = params.get('tab') || 'categories';
+  }
+}, { immediate: true });
+
+// Test Builder Form
+const testBuilderForm = useForm({
+  pre_passing_score: props.testBuilderSettings?.pre_passing_score ?? 70,
+  post_passing_score: props.testBuilderSettings?.post_passing_score ?? 70,
+  default_duration: props.testBuilderSettings?.default_duration ?? 30,
+  default_max_attempts: props.testBuilderSettings?.default_max_attempts ?? 3,
+  auto_enable: props.testBuilderSettings?.auto_enable ?? true,
+  show_explanations: props.testBuilderSettings?.show_explanations ?? true,
+  enforce_prerequisites: props.testBuilderSettings?.enforce_prerequisites ?? true,
+});
+
+const isSavingTestBuilder = ref(false);
+
+const saveTestBuilderSettings = () => {
+  isSavingTestBuilder.value = true;
+  testBuilderForm.post(route('dashboard.settings.course-builder.test-builder.update'), {
+    onFinish: () => {
+      isSavingTestBuilder.value = false;
+    }
+  });
+};
 
 // Search filters
 const categorySearch = ref('');
@@ -735,6 +762,142 @@ const startQuizImport = () => {
                 class="border-b border-slate-800 pb-1.5 last:border-0 last:pb-0"
               ></div>
             </div>
+          </div>
+        </div>
+
+        <!-- 5. TEST BUILDER SETTINGS TAB -->
+        <div v-else-if="activeTab === 'test-builder-settings'" class="flex flex-col gap-6">
+          <div class="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm flex flex-col gap-6">
+            <div class="border-b border-slate-100 pb-4 flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-extrabold text-[#1A2B49]">Konfigurasi Evaluasi & Test Builder Global</h3>
+                <p class="text-xs text-slate-500 mt-1">Atur standar passing grade, durasi default, dan aturan evaluasi Pre-Test & Post-Test untuk seluruh sesi live kelas.</p>
+              </div>
+              <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-[#264790] flex items-center justify-center">
+                <CheckSquare :size="20" />
+              </div>
+            </div>
+
+            <form @submit.prevent="saveTestBuilderSettings" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Pre-Test Passing Score -->
+              <div class="flex flex-col gap-1.5">
+                <label class="block text-slate-700 text-xs font-bold uppercase tracking-wider">Nilai Kelulusan Pre-Test (%)</label>
+                <input 
+                  v-model="testBuilderForm.pre_passing_score" 
+                  type="number" min="0" max="100" 
+                  class="w-full border-2 border-slate-200 focus:border-[#264790] rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium text-sm" 
+                />
+                <p class="text-[10px] text-slate-400">Syarat nilai minimum untuk menyelesaikan asesmen awal (pre-test)</p>
+              </div>
+
+              <!-- Post-Test Passing Score -->
+              <div class="flex flex-col gap-1.5">
+                <label class="block text-slate-700 text-xs font-bold uppercase tracking-wider">Nilai Kelulusan Post-Test (%)</label>
+                <input 
+                  v-model="testBuilderForm.post_passing_score" 
+                  type="number" min="0" max="100" 
+                  class="w-full border-2 border-slate-200 focus:border-[#264790] rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium text-sm" 
+                />
+                <p class="text-[10px] text-slate-400">Syarat nilai minimum untuk membuka bab berikutnya / sertifikat</p>
+              </div>
+
+              <!-- Default Duration -->
+              <div class="flex flex-col gap-1.5">
+                <label class="block text-slate-700 text-xs font-bold uppercase tracking-wider">Durasi Default Ujian (Menit)</label>
+                <input 
+                  v-model="testBuilderForm.default_duration" 
+                  type="number" min="1" 
+                  class="w-full border-2 border-slate-200 focus:border-[#264790] rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium text-sm" 
+                />
+                <p class="text-[10px] text-slate-400">Estimasi alokasi waktu pengerjaan tes jika tidak diset secara khusus</p>
+              </div>
+
+              <!-- Default Max Attempts -->
+              <div class="flex flex-col gap-1.5">
+                <label class="block text-slate-700 text-xs font-bold uppercase tracking-wider">Batas Maksimal Percobaan (Attempts)</label>
+                <input 
+                  v-model="testBuilderForm.default_max_attempts" 
+                  type="number" min="1" 
+                  class="w-full border-2 border-slate-200 focus:border-[#264790] rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium text-sm" 
+                />
+                <p class="text-[10px] text-slate-400">Jumlah kesempatan ulang siswa dalam mengambil tes</p>
+              </div>
+
+              <!-- Auto Enable Assessment Toggle -->
+              <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-150 md:col-span-2">
+                <div>
+                  <label class="block text-slate-800 text-xs font-bold">Otomatis Aktifkan Test Builder untuk Sesi Baru</label>
+                  <p class="text-[10px] text-slate-500 font-normal mt-0.5 font-medium">Set toggle "Aktifkan Test Builder" secara otomatis dalam keadaan ON saat membuat bab/sesi live baru</p>
+                </div>
+                <button 
+                  type="button" 
+                  @click="testBuilderForm.auto_enable = !testBuilderForm.auto_enable"
+                  :class="testBuilderForm.auto_enable ? 'bg-[#264790]' : 'bg-slate-200'"
+                  class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                >
+                  <span 
+                    :class="testBuilderForm.auto_enable ? 'translate-x-5' : 'translate-x-0'"
+                    class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                  ></span>
+                </button>
+              </div>
+
+              <!-- Show Explanations Toggle -->
+              <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-150 md:col-span-2">
+                <div>
+                  <label class="block text-slate-800 text-xs font-bold">Tampilkan Pembahasan Kunci Jawaban Setelah Selesai</label>
+                  <p class="text-[10px] text-slate-500 font-normal mt-0.5 font-medium">Siswa dapat melihat kunci jawaban dan ringkasan pembahasan hasil pengerjaan tes</p>
+                </div>
+                <button 
+                  type="button" 
+                  @click="testBuilderForm.show_explanations = !testBuilderForm.show_explanations"
+                  :class="testBuilderForm.show_explanations ? 'bg-[#264790]' : 'bg-slate-200'"
+                  class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                >
+                  <span 
+                    :class="testBuilderForm.show_explanations ? 'translate-x-5' : 'translate-x-0'"
+                    class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                  ></span>
+                </button>
+              </div>
+
+              <!-- Enforce Prerequisites Toggle (Restricted vs Non-Restricted Mode) -->
+              <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-150 md:col-span-2">
+                <div>
+                  <label class="block text-slate-800 text-xs font-bold flex items-center gap-2">
+                    <span>Mode Restriksi Prasyarat Evaluasi (Restricted Mode)</span>
+                    <span :class="testBuilderForm.enforce_prerequisites ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase">
+                      {{ testBuilderForm.enforce_prerequisites ? 'Ketat (Restricted)' : 'Bebas (Off)' }}
+                    </span>
+                  </label>
+                  <p class="text-[10px] text-slate-500 font-normal mt-0.5 font-medium">
+                    ON (Ketat): Siswa wajib selesaikan Pre-Test untuk akses link live & wajib lulus Post-Test bab sebelumnya. <br />
+                    OFF (Bebas): Akses link live & navigasi antar bab dibuka tanpa terkunci prasyarat evaluasi.
+                  </p>
+                </div>
+                <button 
+                  type="button" 
+                  @click="testBuilderForm.enforce_prerequisites = !testBuilderForm.enforce_prerequisites"
+                  :class="testBuilderForm.enforce_prerequisites ? 'bg-[#264790]' : 'bg-slate-200'"
+                  class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                >
+                  <span 
+                    :class="testBuilderForm.enforce_prerequisites ? 'translate-x-5' : 'translate-x-0'"
+                    class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                  ></span>
+                </button>
+              </div>
+
+              <div class="md:col-span-2 flex justify-end mt-2">
+                <button 
+                  type="submit" 
+                  :disabled="isSavingTestBuilder"
+                  class="bg-[#264790] hover:bg-[#1f3a76] text-white px-8 py-3.5 rounded-2xl font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Save :size="16" /> {{ isSavingTestBuilder ? 'Menyimpan...' : 'Simpan Pengaturan Test Builder' }}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 

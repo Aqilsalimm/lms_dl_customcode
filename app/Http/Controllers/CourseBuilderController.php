@@ -126,6 +126,7 @@ class CourseBuilderController extends Controller
                 'category', 
                 'tags', 
                 'modules.lessons',
+                'modules.assessments.questions',
                 'assessments.questions'
             ]);
         }
@@ -265,31 +266,70 @@ class CourseBuilderController extends Controller
     public function addModule(Request $request, Course $course)
     {
         $this->validateCourseOwner($course);
-        $request->validate(['title' => 'required|string|max:255']);
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'meeting_url' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'recording_url' => 'nullable|string',
+            'material_file' => 'nullable|file|max:10240',
+            'enable_assessment' => 'nullable|boolean',
+        ]);
+
+        $materialFilePath = null;
+        if ($request->hasFile('material_file')) {
+            $materialFilePath = $request->file('material_file')->store('courses/materials', 'public');
+        }
 
         $sortOrder = $course->modules()->count();
 
         $module = Module::create([
             'course_id' => $course->id,
             'title' => $request->title,
-            'sort_order' => $sortOrder
+            'sort_order' => $sortOrder,
+            'meeting_url' => $request->meeting_url,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date,
+            'recording_url' => $request->recording_url,
+            'material_file_path' => $materialFilePath,
+            'enable_assessment' => $request->has('enable_assessment') ? filter_var($request->enable_assessment, FILTER_VALIDATE_BOOLEAN) : true,
         ]);
 
         return response()->json([
             'message' => 'Module added successfully',
-            'module' => $module
+            'module' => $module->load(['lessons', 'quizzes', 'assessments.questions'])
         ]);
     }
 
     public function updateModule(Request $request, Module $module)
     {
         $this->validateCourseOwner($module->course);
-        $request->validate(['title' => 'required|string|max:255']);
-        $module->update(['title' => $request->title]);
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'meeting_url' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'recording_url' => 'nullable|string',
+            'material_file' => 'nullable|file|max:10240',
+            'enable_assessment' => 'nullable|boolean',
+        ]);
+
+        $data = $request->only(['title', 'meeting_url', 'start_date', 'end_date', 'recording_url']);
+
+        if ($request->has('enable_assessment')) {
+            $data['enable_assessment'] = filter_var($request->enable_assessment, FILTER_VALIDATE_BOOLEAN);
+        }
+
+        if ($request->hasFile('material_file')) {
+            $path = $request->file('material_file')->store('courses/materials', 'public');
+            $data['material_file_path'] = $path;
+        }
+
+        $module->update($data);
 
         return response()->json([
             'message' => 'Module updated successfully',
-            'module' => $module
+            'module' => $module->load(['lessons', 'quizzes', 'assessments.questions'])
         ]);
     }
 

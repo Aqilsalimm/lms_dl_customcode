@@ -86,3 +86,65 @@ self.addEventListener('fetch', e => {
         })
     );
 });
+
+// Web Push Notification Event Listener
+self.addEventListener('push', e => {
+    if (!(self.Notification && self.Notification.permission === 'granted')) {
+        return;
+    }
+
+    let data = {};
+    if (e.data) {
+        try {
+            data = e.data.json();
+        } catch (err) {
+            data = { title: 'Drastha Learning', body: e.data.text() };
+        }
+    }
+
+    const title = data.title || '⏰ Pengingat Sesi Live Class';
+    const options = {
+        body: data.body || 'Sesi Live Class Anda akan segera dimulai.',
+        icon: data.icon || '/images/logo/logo_dl.png',
+        badge: '/images/logo/logo_dl.png',
+        data: data.data || { url: '/' },
+        vibrate: [100, 50, 100],
+        actions: data.actions || [
+            { action: 'open', title: 'Masuk Kelas' }
+        ]
+    };
+
+    e.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Notification Click Event Handler with Smart Window Management
+self.addEventListener('notificationclick', function(event) {
+    // 1. Segera tutup pop-up notifikasi agar tidak menggantung di layar OS
+    event.notification.close();
+
+    // 2. Ambil URL target yang disisipkan di payload (event 'push'), fallback ke /dashboard
+    const targetUrl = (event.notification.data && event.notification.data.url) 
+        ? event.notification.data.url 
+        : '/dashboard';
+
+    // 3. Logika "Window Management" (Mencegah membuka tab ganda)
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(windowClients) {
+            // Cek apakah user sudah membuka tab Drastha Learning
+            for (let i = 0; i < windowClients.length; i++) {
+                const client = windowClients[i];
+                
+                // Jika tab sudah terbuka di scope LMS kita, fokuskan tab tersebut dan navigasikan ke URL Live Class
+                if (client.url.includes(self.registration.scope) && 'focus' in client) {
+                    client.navigate(targetUrl); // Arahkan tab lama ke halaman baru
+                    return client.focus();      // Bawa tab tersebut ke depan layar
+                }
+            }
+
+            // Jika tidak ada tab yang terbuka, buka tab/jendela baru (sangat berguna untuk PWA iOS/Android)
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+        })
+    );
+});

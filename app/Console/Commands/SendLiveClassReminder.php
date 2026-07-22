@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Course;
 use App\Mail\LiveClassReminderMail;
+use App\Notifications\LiveClassReminder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
@@ -22,7 +23,7 @@ class SendLiveClassReminder extends Command
      *
      * @var string
      */
-    protected $description = 'Send email reminders to instructors 24 hours before their scheduled live class sessions';
+    protected $description = 'Dispatch queued email & web push reminders to enrolled students and instructors before live class sessions';
 
     /**
      * Execute the console command.
@@ -31,60 +32,109 @@ class SendLiveClassReminder extends Command
     {
         $this->info('Starting SendLiveClassReminder command...');
 
-        // Find live classes starting in the next 24 hours
+        $this->handleInstructor24hReminders();
+        $this->handleStudent1hReminders();
+
+        $this->info('SendLiveClassReminder command completed successfully.');
+        return 0;
+    }
+
+    /**
+     * Send email reminders to instructors 24 hours before their live class.
+     */
+    protected function handleInstructor24hReminders()
+    {
         $courses = Course::with('instructor')
             ->where('course_type', 'live_class')
             ->whereNotNull('start_date')
             ->whereBetween('start_date', [now(), now()->addHours(24)])
             ->get();
 
-        if ($courses->isEmpty()) {
-            $this->info('No live classes scheduled in the next 24 hours.');
-            return 0;
-        }
-
-        $sentCount = 0;
-
         foreach ($courses as $course) {
-            $about = [];
-            if ($course->about && str_starts_with($course->about, '{') && str_ends_with($course->about, '}')) {
-                try {
-                    $about = json_decode($course->about, true) ?: [];
-                } catch (\Exception $e) {}
-            }
+            $about = $this->parseAboutJson($course->about);
 
-            // Check if reminder was already sent
             if (!empty($about['live_class_reminder_sent'])) {
-                $this->info("Reminder already sent for course: {$course->title}");
                 continue;
             }
 
             $instructor = $course->instructor;
             if (!$instructor || !$instructor->email) {
-                $this->warn("No instructor email found for course: {$course->title}");
                 continue;
             }
 
             try {
-                // Send the mailable
                 Mail::to($instructor->email)->send(new LiveClassReminderMail($course));
 
-                // Mark as sent
                 $about['live_class_reminder_sent'] = true;
-                $course->update([
-                    'about' => json_encode($about)
-                ]);
+                $course->update(['about' => json_encode($about)]);
 
-                $this->info("Successfully sent reminder for course: {$course->title} to {$instructor->email}");
-                Log::info("Live class reminder sent for course: {$course->title} (ID: {$course->id}) to {$instructor->email}");
-                $sentCount++;
+                $this->info("Instructor reminder sent for course: {$course->title} to {$instructor->email}");
+                Log::info("Instructor live class reminder sent for course: {$course->title} (ID: {$course->id})");
             } catch (\Exception $e) {
-                $this->error("Failed to send reminder for course: {$course->title}. Error: " . $e->getMessage());
-                Log::error("Failed to send live class reminder for course: {$course->title} (ID: {$course->id}). Error: " . $e->getMessage());
+                $this->error("Failed to send instructor reminder for course: {$course->title}. Error: " . $e->getMessage());
             }
         }
+    }
 
-        $this->info("Completed. Sent {$sentCount} reminders.");
-        return 0;
+    /**
+     * Dispatch queued notification (Mail & WebPush) to students 1 hour before their live class.
+     */
+    protected function handleStudent1hReminders()
+    {
+        // Target live classes starting in the next 1 hour
+        $courses = Course::with('enrollments.user')
+            ->where('course_type', 'live_class')
+            ->whereNotNull('start_date')
+            ->whereBetween('start_date', [now(), now()->addHour()])
+            ->get();
+
+        foreach ($courses as $course) {
+            $about = $this->parseAboutJson($course->about);
+
+            if (!empty($about['live_class_student_reminder_sent'])) {
+                continue;
+            }
+
+            $dispatchedCount = 0;
+
+            foreach ($course->enrollments as $enrollment) {
+                $user = $enrollment->user;
+                if ($user) {
+                    // Dispatch queued notification to student (Queue Worker will send email via Brevo & WebPush)
+                    $user->notify(new LiveClassReminder($course));
+                    $dispatchedCount++;
+                }
+            }
+
+            // Also notify the instructor via the queued notification if desired
+            if ($course->instructor) {
+                $course->instructor->notify(new LiveClassReminder($course));
+                $dispatchedCount++;
+            }
+
+            $about['live_class_student_reminder_sent'] = true;
+            $course->update(['about' => json_encode($about)]);
+
+            $this->info("Dispatched {$dispatchedCount} queued student reminders for course: {$course->title}");
+            Log::info("Live class student reminders dispatched for course: {$course->title} (ID: {$course->id}) - Total: {$dispatchedCount}");
+        }
+    }
+
+    /**
+     * Helper to safely decode course about JSON attribute.
+     */
+    protected function parseAboutJson($aboutRaw): array
+    {
+        if (is_array($aboutRaw)) {
+            return $aboutRaw;
+        }
+
+        if (is_string($aboutRaw) && str_starts_with(trim($aboutRaw), '{')) {
+            try {
+                return json_decode($aboutRaw, true) ?: [];
+            } catch (\Exception $e) {}
+        }
+
+        return [];
     }
 }

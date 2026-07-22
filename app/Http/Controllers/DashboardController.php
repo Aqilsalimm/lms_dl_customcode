@@ -704,10 +704,51 @@ class DashboardController extends Controller
         $categories = Category::with('parent')->get();
         $tags = Tag::all();
 
+        $testBuilderSettings = [
+            'pre_passing_score' => (int) (\App\Models\Setting::where('key', 'test_builder_pre_passing_score')->value('value') ?: 70),
+            'post_passing_score' => (int) (\App\Models\Setting::where('key', 'test_builder_post_passing_score')->value('value') ?: 70),
+            'default_duration' => (int) (\App\Models\Setting::where('key', 'test_builder_default_duration')->value('value') ?: 30),
+            'default_max_attempts' => (int) (\App\Models\Setting::where('key', 'test_builder_default_max_attempts')->value('value') ?: 3),
+            'auto_enable' => filter_var(\App\Models\Setting::where('key', 'test_builder_auto_enable')->value('value') ?: 'true', FILTER_VALIDATE_BOOLEAN),
+            'show_explanations' => filter_var(\App\Models\Setting::where('key', 'test_builder_show_explanations')->value('value') ?: 'true', FILTER_VALIDATE_BOOLEAN),
+            'enforce_prerequisites' => filter_var(\App\Models\Setting::where('key', 'test_builder_enforce_prerequisites')->value('value') ?: 'true', FILTER_VALIDATE_BOOLEAN),
+        ];
+
         return Inertia::render('Dashboard/Admin/CourseBuilderSettings', [
             'categories' => $categories,
             'tags' => $tags,
+            'testBuilderSettings' => $testBuilderSettings,
         ]);
+    }
+
+    /**
+     * Update Test Builder global settings
+     */
+    public function updateTestBuilderSettings(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'pre_passing_score' => 'required|integer|min:0|max:100',
+            'post_passing_score' => 'required|integer|min:0|max:100',
+            'default_duration' => 'required|integer|min:1',
+            'default_max_attempts' => 'required|integer|min:1',
+            'auto_enable' => 'required|boolean',
+            'show_explanations' => 'required|boolean',
+            'enforce_prerequisites' => 'required|boolean',
+        ]);
+
+        \App\Models\Setting::updateOrCreate(['key' => 'test_builder_pre_passing_score'], ['value' => (string) $request->pre_passing_score]);
+        \App\Models\Setting::updateOrCreate(['key' => 'test_builder_post_passing_score'], ['value' => (string) $request->post_passing_score]);
+        \App\Models\Setting::updateOrCreate(['key' => 'test_builder_default_duration'], ['value' => (string) $request->default_duration]);
+        \App\Models\Setting::updateOrCreate(['key' => 'test_builder_default_max_attempts'], ['value' => (string) $request->default_max_attempts]);
+        \App\Models\Setting::updateOrCreate(['key' => 'test_builder_auto_enable'], ['value' => $request->auto_enable ? 'true' : 'false']);
+        \App\Models\Setting::updateOrCreate(['key' => 'test_builder_show_explanations'], ['value' => $request->show_explanations ? 'true' : 'false']);
+        \App\Models\Setting::updateOrCreate(['key' => 'test_builder_enforce_prerequisites'], ['value' => $request->enforce_prerequisites ? 'true' : 'false']);
+
+        return redirect()->back()->with('success', 'Pengaturan Test Builder berhasil diperbarui.');
     }
 
     /**

@@ -10,6 +10,7 @@ class WorkshopAssessment extends Model
 {
     protected $fillable = [
         'course_id',
+        'module_id',
         'type',
         'title',
         'description',
@@ -36,6 +37,14 @@ class WorkshopAssessment extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    /**
+     * Get the module (session) that owns this assessment.
+     */
+    public function module(): BelongsTo
+    {
+        return $this->belongsTo(Module::class);
     }
 
     /**

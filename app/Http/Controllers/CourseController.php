@@ -22,6 +22,11 @@ class CourseController extends Controller
 
         $query = Course::where('status', 'published')->with(['category', 'instructor']);
 
+        // Filter by Course Type (async / live_class)
+        if ($request->has('type') && !empty($request->type)) {
+            $query->where('course_type', $request->type);
+        }
+
         // Filter by Level (SD, SMP, SMA, Umum)
         if ($request->has('level') && $request->level !== 'Semua Kursus') {
             // Mapping friendly UI names to DB level column
@@ -52,7 +57,7 @@ class CourseController extends Controller
 
         return Inertia::render('Courses/Index', [
             'courses' => $courses,
-            'filters' => $request->only(['level', 'search', 'category']),
+            'filters' => $request->only(['level', 'search', 'category', 'type']),
             'categories' => Category::all()
         ]);
     }
@@ -68,9 +73,22 @@ class CourseController extends Controller
             return redirect()->to('/?login=true')->with('error', 'Please log in to view course details.');
         }
 
-        $course = Course::where('slug', $slug)
-            ->where('status', 'published')
-            ->with([
+        $query = Course::where(function ($q) use ($slug) {
+            $q->where('slug', $slug);
+            if (is_numeric($slug)) {
+                $q->orWhere('id', (int) $slug);
+            }
+        });
+
+        // Allow instructors and admins (or course author) to preview draft/pending courses
+        $user = auth()->user();
+        $isStaffOrAuthor = $user && ($user->isAdmin() || $user->isInstructor());
+
+        if (!$isStaffOrAuthor && !request()->has('preview')) {
+            $query->where('status', 'published');
+        }
+
+        $course = $query->with([
                 'category',
                 'tags',
                 'instructor',
@@ -78,7 +96,8 @@ class CourseController extends Controller
                     $query->select('id', 'module_id', 'title', 'duration_minutes', 'sort_order');
                 },
                 'modules.quizzes.questions',
-                'reviews.user'
+                'reviews.user',
+                'assessments'
             ])
             ->firstOrFail();
 
@@ -126,13 +145,31 @@ class CourseController extends Controller
             return redirect()->to('/?login=true');
         }
 
+        $user = auth()->user();
+
         // 2. Fetch course with published modules & lessons
-        $course = Course::where('slug', $slug)
-            ->where('status', 'published')
-            ->with(['category', 'tags', 'instructor', 'modules.lessons', 'modules.quizzes.questions'])
+        $query = Course::where(function ($q) use ($slug) {
+            $q->where('slug', $slug);
+            if (is_numeric($slug)) {
+                $q->orWhere('id', (int) $slug);
+            }
+        });
+
+        if (!$user->isAdmin() && !$user->isInstructor()) {
+            $query->where('status', 'published');
+        }
+
+        $course = $query->with(['category', 'tags', 'instructor', 'modules.lessons', 'modules.quizzes.questions', 'modules.assessments', 'assessments'])
             ->firstOrFail();
 
-        $course->modules->each(function ($module) {
+        $user = auth()->user();
+        $enforcePrerequisites = filter_var(
+            \App\Models\Setting::where('key', 'test_builder_enforce_prerequisites')->value('value') ?: 'true',
+            FILTER_VALIDATE_BOOLEAN
+        );
+        $previousModulePassed = true; // First module has no prerequisite restriction
+
+        $course->modules->each(function ($module) use ($user, &$previousModulePassed, $enforcePrerequisites) {
             $module->lessons->each(function ($lesson) {
                 $lesson->makeHidden(['content', 'video_url', 'slide_url', 'slide_content']);
             });
@@ -142,6 +179,20 @@ class CourseController extends Controller
                     $question->makeHidden(['correct_option_index']);
                 });
             });
+
+            // Calculate assessment status per module for live class
+            $preTest = $module->assessments->where('type', 'pre_test')->first();
+            $postTest = $module->assessments->where('type', 'post_test')->first();
+
+            $isPreCompleted = (!$enforcePrerequisites || $module->enable_assessment === false || !$preTest) ? true : $user->hasCompletedModuleAssessment($module->id, 'pre_test');
+            $isPostCompleted = (!$enforcePrerequisites || $module->enable_assessment === false || !$postTest) ? true : $user->hasPassedModuleAssessment($module->id, 'post_test');
+
+            $module->is_pre_completed = $isPreCompleted;
+            $module->is_post_completed = $isPostCompleted;
+            $module->is_prerequisite_met = !$enforcePrerequisites || $previousModulePassed || $user->isAdmin() || $user->id === $module->course->instructor_id;
+
+            // Next module prerequisite requires this module's post-test passed (if post-test exists and enabled)
+            $previousModulePassed = $isPostCompleted;
         });
 
         // 3. Authorization check (is Enrolled or is Instructor of course or is Admin)
@@ -190,6 +241,7 @@ class CourseController extends Controller
             'dbCompletedQuizzes' => $completedQuizzes,
             'dbCompletedAt' => $completedAt,
             'decryptionKey' => $decryptionKey,
+            'canJoinLive' => $user->can('joinLiveSession', $course),
         ]);
     }
 
@@ -393,18 +445,28 @@ class CourseController extends Controller
     /**
      * View/Print course certificate
      */
+    /**
+     * View/Print course certificate
+     */
     public function certificate(string $slug)
     {
         if (!auth()->check()) {
             return redirect()->to('/?login=true');
         }
 
-        $course = Course::where('slug', $slug)
-            ->where('status', 'published')
-            ->with(['instructor'])
-            ->firstOrFail();
-
         $user = auth()->user();
+        $query = Course::where(function ($q) use ($slug) {
+            $q->where('slug', $slug);
+            if (is_numeric($slug)) {
+                $q->orWhere('id', (int) $slug);
+            }
+        });
+
+        if (!$user->isAdmin() && !$user->isInstructor()) {
+            $query->where('status', 'published');
+        }
+
+        $course = $query->with(['instructor'])->firstOrFail();
         $isAuthor = $course->instructor_id === $user->id;
 
         // Check if enrolled and completed
@@ -455,12 +517,23 @@ class CourseController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $course = Course::where('slug', $slug)->where('status', 'published')->firstOrFail();
+        $user = auth()->user();
+        $query = Course::where(function ($q) use ($slug) {
+            $q->where('slug', $slug);
+            if (is_numeric($slug)) {
+                $q->orWhere('id', (int) $slug);
+            }
+        });
+
+        if (!$user->isAdmin() && !$user->isInstructor()) {
+            $query->where('status', 'published');
+        }
+
+        $course = $query->firstOrFail();
         $lesson = \App\Models\Lesson::where('id', $lessonId)
             ->whereIn('module_id', $course->modules()->pluck('id'))
             ->firstOrFail();
 
-        $user = auth()->user();
         $isAuthor = $course->instructor_id === $user->id;
         
         $allowAccessWithoutEnroll = filter_var(

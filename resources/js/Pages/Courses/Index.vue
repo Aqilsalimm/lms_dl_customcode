@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { Head, Link, usePage, router } from '@inertiajs/vue3';
 import { 
-  Search, Calendar, Clock, MapPin, Code, BookText, Globe, ChevronDown, Calculator 
+  Search, Calendar, Clock, MapPin, Code, BookText, Globe, ChevronDown, Calculator, Video 
 } from 'lucide-vue-next';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 
@@ -195,6 +195,13 @@ const gridColsClass = computed(() => {
               class="h-40 md:h-48 relative flex justify-center items-center overflow-hidden"
               :style="{ backgroundColor: course.bg_color || '#264790' }"
             >
+              <!-- Live Class Badge -->
+              <div 
+                v-if="course.course_type === 'live_class'"
+                class="absolute top-3 left-3 z-20 bg-gradient-to-r from-rose-500 to-amber-500 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 border border-white/20 backdrop-blur-sm"
+              >
+                <Video :size="12" /> Live Workshop
+              </div>
               <!-- Render Cover Image if present in database course -->
               <img 
                 v-if="course.thumbnail" 

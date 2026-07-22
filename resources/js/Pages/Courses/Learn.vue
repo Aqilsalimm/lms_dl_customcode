@@ -20,12 +20,13 @@
  */
 
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, usePage, router } from '@inertiajs/vue3';
 import { 
   ShoppingCart, User, Globe, ChevronDown, GraduationCap, 
   Home, Newspaper, Calendar, Clock, MapPin, Code,
   Play, CheckCircle2, ArrowLeft, Download, Info, Menu, X,
-  BookOpen, HelpCircle, Check, Presentation, FileText, ChevronLeft, ChevronRight, AlertCircle, Award
+  BookOpen, HelpCircle, Check, Presentation, FileText, ChevronLeft, ChevronRight, AlertCircle, Award,
+  Lock, Video, ExternalLink
 } from 'lucide-vue-next';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import MaterialDiscussion from '@/Components/MaterialDiscussion.vue';
@@ -52,6 +53,10 @@ const props = defineProps({
   decryptionKey: {
     type: String,
     required: true
+  },
+  canJoinLive: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -550,6 +555,21 @@ const formatDate = (dateStr) => {
   return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
+const goToPreTest = (moduleId = null) => {
+  let preTest = null;
+  if (moduleId) {
+    preTest = props.course.assessments?.find(a => a.type === 'pre_test' && a.module_id === moduleId);
+  }
+  if (!preTest) {
+    preTest = props.course.assessments?.find(a => a.type === 'pre_test');
+  }
+  if (preTest) {
+    router.visit(`/courses/${props.course.slug}/assessments/${preTest.id}`);
+  } else {
+    alert('Asesmen pre-test tidak ditemukan untuk kelas ini.');
+  }
+};
+
 // Interactive Quiz States
 const quizAnswers = ref({});
 const quizSubmitted = ref(false);
@@ -726,6 +746,105 @@ const Logo = () => {
                 v-show="expandedModules[mod.id]"
                 class="p-4 sm:p-5 border-t border-slate-50 bg-slate-50/20 flex flex-col gap-3"
               >
+                <!-- Live Class Modular Actions (Per Session) -->
+                <template v-if="course.course_type === 'live_class'">
+                  <!-- Prerequisite Lock Banner if previous module not passed -->
+                  <div v-if="!mod.is_prerequisite_met" class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs flex items-center gap-2">
+                    <Lock :size="16" class="text-amber-600 shrink-0" />
+                    <span>Selesaikan Post-Test sesi sebelumnya untuk membuka sesi ini.</span>
+                  </div>
+
+                  <template v-else>
+                    <!-- Pre-Test Section for this module -->
+                    <div v-if="mod.assessments && mod.assessments.some(a => a.type === 'pre_test')" class="mb-2">
+                      <template v-for="preA in mod.assessments.filter(a => a.type === 'pre_test')" :key="preA.id">
+                        <Link 
+                          :href="`/courses/${course.slug}/assessments/${preA.id}`"
+                          :class="mod.is_pre_completed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'"
+                          class="w-full flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all"
+                        >
+                          <div class="flex items-center gap-2">
+                            <CheckCircle2 v-if="mod.is_pre_completed" :size="16" class="text-emerald-600" />
+                            <HelpCircle v-else :size="16" />
+                            <span>{{ preA.title || 'Pre-Test Sesi' }}</span>
+                          </div>
+                          <span class="text-[10px] uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-md">
+                            {{ mod.is_pre_completed ? 'Selesai ✓' : 'Wajib Pre-Test' }}
+                          </span>
+                        </Link>
+                      </template>
+                    </div>
+
+                    <!-- Meeting Link & Material File (Requires Pre-Test completed) -->
+                    <div v-if="mod.is_pre_completed" class="space-y-2">
+                      <!-- Live Meeting Link -->
+                      <a 
+                        v-if="mod.meeting_url || course.meeting_url" 
+                        :href="`/courses/${course.id}/live-meeting-link?module_id=${mod.id}`" 
+                        target="_blank"
+                        class="w-full flex items-center justify-between p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md"
+                      >
+                        <div class="flex items-center gap-2">
+                          <Video :size="16" />
+                          <span>Gabung Live Meeting Sesi Ini</span>
+                        </div>
+                        <ExternalLink :size="14" />
+                      </a>
+
+                      <!-- Material File -->
+                      <a 
+                        v-if="mod.material_file_path" 
+                        :href="`/storage/${mod.material_file_path}`" 
+                        target="_blank" download
+                        class="w-full flex items-center justify-between p-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all border border-slate-200"
+                      >
+                        <div class="flex items-center gap-2">
+                          <Download :size="16" class="text-slate-600" />
+                          <span>Unduh File Materi Pengantar</span>
+                        </div>
+                        <span class="text-[10px] text-slate-500 font-normal">PDF/ZIP</span>
+                      </a>
+
+                      <!-- Recording Link -->
+                      <a 
+                        v-if="mod.recording_url" 
+                        :href="mod.recording_url" 
+                        target="_blank"
+                        class="w-full flex items-center justify-between p-3 bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-xl text-xs font-bold transition-all border border-purple-200"
+                      >
+                        <div class="flex items-center gap-2">
+                          <Play :size="16" class="text-purple-600" />
+                          <span>Tonton Rekaman Live Sesi Ini</span>
+                        </div>
+                        <ExternalLink :size="14" />
+                      </a>
+                    </div>
+                    <div v-else class="p-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 text-xs flex items-center gap-2">
+                      <Lock :size="16" class="text-slate-400 shrink-0" />
+                      <span>Kerjakan Pre-Test terlebih dahulu untuk mengakses Link Meeting & Materi.</span>
+                    </div>
+
+                    <!-- Post-Test Section for this module -->
+                    <div v-if="mod.assessments && mod.assessments.some(a => a.type === 'post_test')" class="mt-2">
+                      <template v-for="postA in mod.assessments.filter(a => a.type === 'post_test')" :key="postA.id">
+                        <Link 
+                          :href="`/courses/${course.slug}/assessments/${postA.id}`"
+                          :class="mod.is_post_completed ? 'bg-emerald-600 text-white shadow-sm' : 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm'"
+                          class="w-full flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all"
+                        >
+                          <div class="flex items-center gap-2">
+                            <Award :size="16" />
+                            <span>{{ postA.title || 'Post-Test Sesi' }}</span>
+                          </div>
+                          <span class="text-[10px] uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-md">
+                            {{ mod.is_post_completed ? 'LULUS ✓' : 'Kerjakan Post-Test' }}
+                          </span>
+                        </Link>
+                      </template>
+                    </div>
+                  </template>
+                </template>
+
                 <!-- Sesi Materi -->
                 <button 
                   v-for="(les, lesIdx) in mod.lessons" 
@@ -785,7 +904,7 @@ const Logo = () => {
                   </div>
                 </button>
 
-                <div v-if="(!mod.lessons || mod.lessons.length === 0) && (!mod.quizzes || mod.quizzes.length === 0)" class="text-center py-4 text-xs font-bold text-slate-400">
+                <div v-if="(!mod.lessons || mod.lessons.length === 0) && (!mod.quizzes || mod.quizzes.length === 0) && (!mod.assessments || mod.assessments.length === 0)" class="text-center py-4 text-xs font-bold text-slate-400">
                   Belum ada materi pembelajaran.
                 </div>
               </div>
@@ -867,16 +986,36 @@ const Logo = () => {
                       <span class="text-[8px] uppercase tracking-wider opacity-75">Mnt</span>
                     </div>
                   </div>
+                  <!-- Pre-Test check if not passed -->
+                  <div class="mt-2 text-center sm:text-right">
+                    <span v-if="canJoinLive" class="text-[10px] font-bold text-emerald-400">✅ Syarat Pre-test Terpenuhi</span>
+                    <button v-else @click="goToPreTest" class="text-[10px] font-bold text-[#F9CC6B] underline hover:text-amber-300 transition-colors">
+                      📝 Kerjakan Pre-test Sekarang
+                    </button>
+                  </div>
                 </div>
                 
-                <a 
-                  v-else-if="timeRemaining <= 0 && timeEndRemaining > 0"
-                  :href="course.meeting_url || '#'" 
-                  target="_blank"
-                  class="w-full sm:w-auto px-8 py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-extrabold text-sm transition-all shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 animate-pulse"
-                >
-                  <Presentation :size="18" /> Join Live Session
-                </a>
+                <template v-else-if="timeRemaining <= 0 && timeEndRemaining > 0">
+                  <!-- Tampilkan status jika belum lulus Pre-test -->
+                  <div v-if="!canJoinLive" class="bg-amber-500/20 border border-amber-500/30 text-amber-100 p-4 rounded-2xl w-full max-w-sm flex flex-col gap-2 items-center text-center">
+                    <p class="text-xs font-bold">⚠️ Sesi Live terkunci. Selesaikan Pre-test dengan nilai minimum untuk membuka ruang kelas.</p>
+                    <button @click="goToPreTest" class="mt-1 bg-[#F9CC6B] hover:bg-amber-400 text-amber-950 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer">
+                      Mulai Pre-Test Sekarang
+                    </button>
+                  </div>
+
+                  <!-- Tombol Zoom Aktif jika sudah lulus / berhak join -->
+                  <div v-else class="flex flex-col items-center sm:items-end gap-2 w-full">
+                    <p class="text-emerald-400 text-xs font-bold">✅ Anda telah memenuhi syarat pre-test.</p>
+                    <a 
+                      :href="route('live-class.show', course.id)" 
+                      target="_blank"
+                      class="w-full sm:w-auto px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-extrabold text-sm transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 animate-pulse"
+                    >
+                      <Presentation :size="18" /> Masuk Ruang Zoom
+                    </a>
+                  </div>
+                </template>
 
                 <span v-else-if="timeEndRemaining <= 0" class="px-6 py-3 bg-white/10 text-white/80 rounded-2xl font-extrabold text-sm border border-white/20">
                   Sesi Telah Berakhir

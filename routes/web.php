@@ -154,6 +154,7 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::get('/dashboard/settings/course-builder/courses', [DashboardController::class, 'getCoursesWithModules'])->name('dashboard.settings.course-builder.courses');
     Route::get('/dashboard/settings/course-builder/download-quiz-template', [DashboardController::class, 'downloadQuizTemplate'])->name('dashboard.settings.course-builder.download-quiz-template');
     Route::post('/dashboard/settings/course-builder/import-quiz', [DashboardController::class, 'importQuizzes'])->name('dashboard.settings.course-builder.import-quiz');
+    Route::post('/dashboard/settings/course-builder/test-builder', [DashboardController::class, 'updateTestBuilderSettings'])->name('dashboard.settings.course-builder.test-builder.update');
 
     // Course Builder Routes
     Route::prefix('course-builder')->name('course-builder.')->group(function () {
@@ -187,6 +188,7 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
 
         // Workshop Assessments
         Route::post('/courses/{course}/assessments', [\App\Http\Controllers\WorkshopAssessmentController::class, 'storeOrUpdate'])->name('assessments.store');
+        Route::post('/courses/{course}/assessments-bulk', [\App\Http\Controllers\WorkshopAssessmentController::class, 'updateTestBuilder'])->name('assessments.bulk-store');
         Route::post('/assessments/{assessment}/questions', [\App\Http\Controllers\WorkshopAssessmentController::class, 'addQuestion'])->name('assessments.questions.store');
         Route::put('/assessment-questions/{question}', [\App\Http\Controllers\WorkshopAssessmentController::class, 'updateQuestion'])->name('assessments.questions.update');
         Route::delete('/assessment-questions/{question}', [\App\Http\Controllers\WorkshopAssessmentController::class, 'deleteQuestion'])->name('assessments.questions.destroy');
@@ -247,10 +249,21 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::get('/dashboard/students/search', [\App\Http\Controllers\CourseGiftController::class, 'searchStudents'])->name('dashboard.students.search');
     Route::post('/dashboard/courses/{course}/gift', [\App\Http\Controllers\CourseGiftController::class, 'gift'])->name('dashboard.courses.gift');
 
-    // Workshop Assessment Activities (Student/Enrolled)
+    // Workshop Assessment Activities & Analytics (Admin/Instructor/Student)
+    Route::get('/dashboard/courses/{course}/assessment-analytics', [\App\Http\Controllers\WorkshopAssessmentController::class, 'analytics'])->name('assessments.analytics');
+    Route::get('/courses/{course:slug}/assessments/{assessment}', [\App\Http\Controllers\WorkshopAssessmentController::class, 'showStudentAssessment'])->name('assessments.show-student');
     Route::post('/assessments/{assessment}/start', [\App\Http\Controllers\WorkshopAssessmentController::class, 'startAttempt'])->name('assessments.start');
     Route::post('/attempts/{attempt}/submit', [\App\Http\Controllers\WorkshopAssessmentController::class, 'submitAttempt'])->name('attempts.submit');
     Route::get('/courses/{course}/live-link', [\App\Http\Controllers\WorkshopAssessmentController::class, 'getLiveMeetingLink'])->name('courses.live-link');
+    Route::get('/courses/{course}/live-meeting-link', [\App\Http\Controllers\WorkshopAssessmentController::class, 'getLiveMeetingLink'])->name('courses.live-meeting-link');
+    
+    // Live Class secure endpoint
+    Route::get('/live-class/{course}', [\App\Http\Controllers\LiveClassController::class, 'show'])->name('live-class.show');
+
+    // Web Push Subscriptions
+    Route::get('/push-subscriptions/key', [\App\Http\Controllers\PushSubscriptionController::class, 'key'])->name('push.key');
+    Route::post('/push-subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'store'])->name('push.store');
+    Route::delete('/push-subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy'])->name('push.destroy');
 });
 
 // Shopping Cart Public Routes
@@ -266,7 +279,8 @@ Route::post('/payment/notification', [PaymentController::class, 'notification'])
 Route::post('/api/gemini/chat', [\App\Http\Controllers\GeminiChatController::class, 'chat'])->name('api.gemini.chat');
 
 Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
-Route::get('/courses/{course:slug}', [CourseController::class, 'show'])->name('courses.show');
+Route::get('/live-classes', [CourseController::class, 'index'])->name('live-classes.index');
+Route::get('/courses/{slug}', [CourseController::class, 'show'])->name('courses.show');
 
 // Public Blog Routes
 Route::get('/blogs', [BlogController::class, 'index'])->name('blogs.index');

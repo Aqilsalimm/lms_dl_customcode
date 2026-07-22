@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Course;
 use App\Models\User;
+use App\Models\Enrollment;
+use App\Models\WorkshopAssessment;
+use App\Models\WorkshopAssessmentAttempt;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\LiveClassReminderMail;
@@ -13,6 +16,15 @@ use Tests\TestCase;
 class LiveClassTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->mock(\App\Services\LicenseService::class, function ($mock) {
+            $mock->shouldReceive('isValid')->andReturn(true);
+        });
+    }
 
     /**
      * Test instructor can access the live class schedule page.
@@ -119,5 +131,151 @@ class LiveClassTest extends TestCase
         $course1->refresh();
         $about1 = json_decode($course1->about, true);
         $this->assertTrue($about1['live_class_reminder_sent']);
+    }
+
+    /**
+     * Test guest cannot access the live class room.
+     */
+    public function test_guest_cannot_access_live_class_room()
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $course = Course::create([
+            'title' => 'Test Course',
+            'instructor_id' => $instructor->id,
+            'course_type' => 'live_class',
+            'price' => 100000,
+            'level' => 'Umum',
+            'status' => 'published',
+        ]);
+
+        $response = $this->get(route('live-class.show', $course->id));
+        $response->assertRedirect();
+    }
+
+    /**
+     * Test student blocked from live class room if pre-test not completed.
+     */
+    public function test_student_blocked_from_live_class_room_if_pre_test_incomplete()
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $student = User::factory()->create(['role' => 'student']);
+        
+        $course = Course::create([
+            'title' => 'Test Course',
+            'instructor_id' => $instructor->id,
+            'course_type' => 'live_class',
+            'price' => 100000,
+            'level' => 'Umum',
+            'status' => 'published',
+        ]);
+
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+        ]);
+
+        $assessment = WorkshopAssessment::create([
+            'course_id' => $course->id,
+            'type' => 'pre_test',
+            'title' => 'Wajib Pre-test',
+            'passing_score' => 60,
+            'is_published' => true,
+        ]);
+
+        $response = $this->actingAs($student)
+            ->get(route('live-class.show', $course->id));
+
+        $response->assertRedirect(route('courses.learn', $course->slug));
+        $response->assertSessionHas('error', 'Anda harus lulus Pre-test terlebih dahulu untuk mengakses sesi Live.');
+    }
+
+    /**
+     * Test student allowed to enter live class room if pre-test is completed and passed.
+     */
+    public function test_student_allowed_live_class_room_if_pre_test_completed()
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $student = User::factory()->create(['role' => 'student']);
+        
+        $course = Course::create([
+            'title' => 'Test Course',
+            'instructor_id' => $instructor->id,
+            'course_type' => 'live_class',
+            'price' => 100000,
+            'level' => 'Umum',
+            'status' => 'published',
+            'meeting_url' => 'https://zoom.us/j/123456',
+        ]);
+
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+        ]);
+
+        $assessment = WorkshopAssessment::create([
+            'course_id' => $course->id,
+            'type' => 'pre_test',
+            'title' => 'Wajib Pre-test',
+            'passing_score' => 60,
+            'is_published' => true,
+        ]);
+
+        WorkshopAssessmentAttempt::create([
+            'assessment_id' => $assessment->id,
+            'user_id' => $student->id,
+            'status' => 'completed',
+            'total_score' => 80.00,
+            'is_passed' => true,
+            'completed_at' => now(),
+        ]);
+
+        $response = $this->actingAs($student)
+            ->get(route('live-class.show', $course->id));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->component('LiveClass/Room')
+            ->has('course')
+            ->where('zoom_link', 'https://zoom.us/j/123456')
+        );
+    }
+
+    /**
+     * Test admin/instructor bypass the pre-test lock to live class room.
+     */
+    public function test_admin_and_instructor_bypass_live_class_room_pre_test_lock()
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $admin = User::factory()->create(['role' => 'admin']);
+        
+        $course = Course::create([
+            'title' => 'Test Course',
+            'instructor_id' => $instructor->id,
+            'course_type' => 'live_class',
+            'price' => 100000,
+            'level' => 'Umum',
+            'status' => 'published',
+            'meeting_url' => 'https://zoom.us/j/123456',
+        ]);
+
+        $assessment = WorkshopAssessment::create([
+            'course_id' => $course->id,
+            'type' => 'pre_test',
+            'title' => 'Wajib Pre-test',
+            'passing_score' => 60,
+            'is_published' => true,
+        ]);
+
+        // Instructor bypass
+        $response = $this->actingAs($instructor)
+            ->get(route('live-class.show', $course->id));
+
+        $response->assertStatus(200);
+
+        // Admin bypass
+        $response2 = $this->actingAs($admin)
+            ->get(route('live-class.show', $course->id));
+
+        $response2->assertStatus(200);
     }
 }

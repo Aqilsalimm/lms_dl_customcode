@@ -2,8 +2,8 @@
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import DashboardWrapper from '@/Components/DashboardWrapper.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
-import { ChevronDown, Play, ArrowRight, BookOpen, Search, RotateCcw, Calendar, Video } from 'lucide-vue-next';
+import { ref, computed, onMounted } from 'vue';
+import { ChevronDown, Play, ArrowRight, BookOpen, Search, RotateCcw, Calendar, Video, Bell, BellOff } from 'lucide-vue-next';
 
 const props = defineProps({
   enrolledCourses: Array
@@ -13,6 +13,113 @@ const activeTab = ref('enrolled'); // 'enrolled', 'active', 'completed'
 const selectedType = ref('async'); // 'async', 'live_class'
 const showTypeDropdown = ref(false);
 const searchQuery = ref('');
+
+const isSubscribed = ref(false);
+const isSubscribing = ref(false);
+const showIosModal = ref(false);
+
+const isIOS = computed(() => {
+  if (typeof window === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+});
+
+const isStandalone = computed(() => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+});
+
+const checkSubscription = async () => {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    isSubscribed.value = !!sub;
+  } catch (e) {
+    console.error('Error checking push subscription:', e);
+  }
+};
+
+onMounted(() => {
+  checkSubscription();
+});
+
+const urlBase64ToUint8Array = (base64String) => {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+};
+
+const togglePushNotification = async () => {
+  if (isIOS.value && !isStandalone.value) {
+    showIosModal.value = true;
+    return;
+  }
+
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    alert('Browser Anda belum mendukung Web Push Notifications.');
+    return;
+  }
+
+  isSubscribing.value = true;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    
+    if (isSubscribed.value) {
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch('/push-subscriptions', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+          },
+          body: JSON.stringify({ endpoint: sub.endpoint })
+        });
+        await sub.unsubscribe();
+      }
+      isSubscribed.value = false;
+      alert('Notifikasi Live Class berhasil dinonaktifkan.');
+    } else {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        alert('Izin notifikasi ditolak oleh pengguna/browser.');
+        return;
+      }
+
+      const keyRes = await fetch('/push-subscriptions/key');
+      const keyData = await keyRes.json();
+      
+      let subOptions = { userVisibleOnly: true };
+      if (keyData.publicKey) {
+        subOptions.applicationServerKey = urlBase64ToUint8Array(keyData.publicKey);
+      }
+
+      const sub = await reg.pushManager.subscribe(subOptions);
+
+      await fetch('/push-subscriptions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        },
+        body: JSON.stringify(sub.toJSON())
+      });
+
+      isSubscribed.value = true;
+      alert('Berhasil mengaktifkan Notifikasi Live Class!');
+    }
+  } catch (e) {
+    console.error('Error toggling push notification:', e);
+    alert('Gagal memperbarui notifikasi: ' + e.message);
+  } finally {
+    isSubscribing.value = false;
+  }
+};
 
 const getProgress = (course) => {
   const savedCompletions = localStorage.getItem('drastha_course_completions');
@@ -149,6 +256,19 @@ const formatTime = (dateStr) => {
                 </button>
             </div>
           </div>
+
+          <!-- Web Push Notification Toggle Button -->
+          <button 
+            v-if="selectedType === 'live_class'"
+            @click="togglePushNotification"
+            :disabled="isSubscribing"
+            :class="isSubscribed ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'"
+            class="border px-5 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 hover:shadow-md transition-all active:scale-95 cursor-pointer"
+          >
+            <Bell :size="16" v-if="!isSubscribed" />
+            <BellOff :size="16" v-else />
+            {{ isSubscribing ? 'Memproses...' : (isSubscribed ? 'Notifikasi Live: AKTIF' : 'Aktifkan Notifikasi Live') }}
+          </button>
         </div>
       </div>
 
@@ -247,13 +367,48 @@ const formatTime = (dateStr) => {
             
             <a 
               v-else
-              :href="course.meeting_url || '#'"
+              :href="route('live-class.show', course.id)"
               target="_blank"
               class="w-full bg-[#264790] hover:bg-[#1A2B49] text-white py-4 rounded-[1.5rem] font-black text-sm transition-all flex items-center justify-center gap-2 group/btn shadow-lg hover:shadow-[#264790]/25 active:scale-95"
             >
               <Video :size="18" /> Gabung Sesi Live <ArrowRight :size="18" class="group-hover/btn:translate-x-1 transition-transform" />
             </a>
           </div>
+        </div>
+      </div>
+
+      <!-- iOS PWA Standalone Modal Guidance -->
+      <div v-if="showIosModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+        <div class="bg-white rounded-[2rem] p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-100 text-center relative overflow-hidden">
+          <div class="w-16 h-16 bg-blue-50 text-[#264790] rounded-full flex items-center justify-center mx-auto mb-4 font-black text-xl shadow-inner">
+            📱
+          </div>
+          <h3 class="text-xl font-extrabold text-[#1A2B49] mb-2">Aktifkan Notifikasi di iOS</h3>
+          <p class="text-xs text-slate-500 font-medium leading-relaxed mb-6">
+            Apple mewajibkan aplikasi web ditambahkan ke <strong>Layar Utama (Home Screen)</strong> agar Notifikasi Web Push dapat diaktifkan.
+          </p>
+
+          <div class="bg-slate-50 rounded-2xl p-4 text-left space-y-3 text-xs font-semibold text-slate-700 mb-6 border border-slate-100">
+            <div class="flex items-center gap-3">
+              <span class="w-6 h-6 rounded-full bg-[#264790] text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">1</span>
+              <span>Tekan tombol <strong>Share</strong> (bagikan) di menu bawah Safari.</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="w-6 h-6 rounded-full bg-[#264790] text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">2</span>
+              <span>Pilih <strong>"Add to Home Screen"</strong> / <strong>"Tambahkan ke Layar Utama"</strong>.</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="w-6 h-6 rounded-full bg-[#264790] text-white flex items-center justify-center text-[10px] font-black flex-shrink-0">3</span>
+              <span>Buka Drastha Learning dari Layar Utama HP Anda untuk mengaktifkan notifikasi.</span>
+            </div>
+          </div>
+
+          <button 
+            @click="showIosModal = false"
+            class="w-full bg-[#264790] hover:bg-[#1A2B49] text-white py-3.5 rounded-full font-black text-xs transition-all shadow-lg active:scale-95"
+          >
+            Saya Mengerti
+          </button>
         </div>
       </div>
 
