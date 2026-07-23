@@ -37,55 +37,69 @@ class AuthenticatedSessionController extends Controller
 
         $user = Auth::user();
 
+        // Check if Email Verification is enforced
+        $emailVerifyEnabled = filter_var(\App\Models\Setting::where('key', 'email_verification_enabled')->value('value') ?? 'true', FILTER_VALIDATE_BOOLEAN);
+        $needsEmailVerification = $emailVerifyEnabled && is_null($user->email_verified_at);
+
         // Check if 2FA is enabled dynamically from settings table
         $twoFactorEnabled = filter_var(\App\Models\Setting::where('key', 'two_factor_auth_enabled')->value('value') ?? 'false', FILTER_VALIDATE_BOOLEAN);
 
-        if ($twoFactorEnabled) {
-            // Get roles where 2FA is enforced
-            $twoFactorLocationsRaw = \App\Models\Setting::where('key', 'two_factor_auth_locations')->value('value');
-            $twoFactorLocations = [];
-            if ($twoFactorLocationsRaw) {
-                try {
-                    $twoFactorLocations = json_decode($twoFactorLocationsRaw, true) ?? [];
-                } catch (\Exception $e) {}
-            }
+        $twoFactorLocationsRaw = \App\Models\Setting::where('key', 'two_factor_auth_locations')->value('value');
+        $twoFactorLocations = [];
+        if ($twoFactorLocationsRaw) {
+            try {
+                $twoFactorLocations = is_array($twoFactorLocationsRaw) ? $twoFactorLocationsRaw : (json_decode($twoFactorLocationsRaw, true) ?? []);
+            } catch (\Exception $e) {}
+        }
 
-            // Map user role group (Settings UI uses 'admin', 'tutor', 'student')
-            // DB roles are 'admin', 'instructor', 'student'
-            $userRoleMapped = $user->role;
-            if ($userRoleMapped === 'instructor') {
-                $userRoleMapped = 'tutor';
-            }
+        // Map user role group (Settings UI uses 'admin', 'tutor', 'student', 'all')
+        // DB roles are 'admin', 'instructor', 'student'
+        $userRoleMapped = $user->role;
+        if ($userRoleMapped === 'instructor') {
+            $userRoleMapped = 'tutor';
+        }
 
-            if (empty($twoFactorLocations) || in_array($userRoleMapped, $twoFactorLocations)) {
-                // Enforce OTP verification by logging out immediately
-                Auth::guard('web')->logout();
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
+        $shouldTriggerTwoFactor = $twoFactorEnabled && (
+            empty($twoFactorLocations) || 
+            in_array($userRoleMapped, $twoFactorLocations) || 
+            in_array('all', $twoFactorLocations) ||
+            in_array('admin_login', $twoFactorLocations) && $userRoleMapped === 'admin' ||
+            in_array('tutor_login', $twoFactorLocations) && $userRoleMapped === 'tutor' ||
+            in_array('student_login', $twoFactorLocations) && $userRoleMapped === 'student'
+        );
 
-                // Store OTP details in the new guest session
-                session([
-                    'login_otp_email' => $user->email,
-                    'login_otp_remember' => $request->boolean('remember'),
-                ]);
+        if ($shouldTriggerTwoFactor || $needsEmailVerification) {
+            // Enforce OTP verification by logging out immediately
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
 
-                // Generate a 6-digit OTP code (static '111111' in local mode, random otherwise)
-                $code = app()->environment('local') ? 111111 : random_int(100000, 999999);
+            // Store OTP details in the new guest session
+            session([
+                'login_otp_email' => $user->email,
+                'login_otp_remember' => $request->boolean('remember'),
+            ]);
 
-                // Store OTP in database
-                Otp::create([
-                    'user_id' => $user->id,
-                    'email' => $user->email,
-                    'otp_code' => (string) $code,
-                    'expires_at' => now()->addMinutes(10),
-                    'used' => false,
-                ]);
+            // Generate a 6-digit OTP code (static '111111' in local mode, random otherwise)
+            $code = app()->environment('local') ? 111111 : random_int(100000, 999999);
 
-                // Send OTP email
+            // Store OTP in database
+            Otp::create([
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'otp_code' => (string) $code,
+                'expires_at' => now()->addMinutes(10),
+                'used' => false,
+            ]);
+
+            // Send OTP email
+            try {
                 Mail::to($user->email)->send(new OtpMail($code));
-
-                return redirect()->route('login.otp');
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to send OTP email: ' . $e->getMessage());
             }
+
+            return redirect()->route('login.otp');
         }
 
         // If 2FA is disabled or doesn't apply to this user's role:
@@ -143,6 +157,11 @@ class AuthenticatedSessionController extends Controller
 
         // Log the user in
         $user = User::where('email', $email)->firstOrFail();
+
+        if (is_null($user->email_verified_at)) {
+            $user->update(['email_verified_at' => now()]);
+        }
+
         Auth::login($user, session('login_otp_remember', false));
 
         // Clean up temporary session data

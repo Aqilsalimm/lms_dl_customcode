@@ -75,17 +75,19 @@ class LoginRequest extends FormRequest
         $limitSessions = \App\Models\Setting::where('key', 'limit_login_sessions')->value('value');
         if (filter_var($limitSessions, FILTER_VALIDATE_BOOLEAN)) {
             $user = Auth::user();
-            $hasActiveSession = \DB::table('sessions')
-                ->where('user_id', $user->id)
-                ->where('id', '!=', session()->getId())
-                ->where('last_activity', '>=', now()->subMinutes(config('session.lifetime'))->getTimestamp())
-                ->exists();
+            if (config('session.driver') === 'database' && \Illuminate\Support\Facades\Schema::hasTable('sessions')) {
+                $hasActiveSession = \Illuminate\Support\Facades\DB::table('sessions')
+                    ->where('user_id', $user->id)
+                    ->where('id', '!=', session()->getId())
+                    ->where('last_activity', '>=', now()->subMinutes((int) config('session.lifetime', 120))->getTimestamp())
+                    ->exists();
 
-            if ($hasActiveSession) {
-                Auth::logout();
-                throw ValidationException::withMessages([
-                    'email' => 'Akun Anda sedang aktif di perangkat lain. Silakan log out terlebih dahulu dari perangkat tersebut.',
-                ]);
+                if ($hasActiveSession) {
+                    Auth::logout();
+                    throw ValidationException::withMessages([
+                        'email' => 'Akun Anda sedang aktif di perangkat lain. Silakan log out terlebih dahulu dari perangkat tersebut.',
+                    ]);
+                }
             }
         }
 

@@ -115,7 +115,7 @@ class GoogleController extends Controller
             $twoFactorLocations = [];
             if ($twoFactorLocationsRaw) {
                 try {
-                    $twoFactorLocations = json_decode($twoFactorLocationsRaw, true) ?? [];
+                    $twoFactorLocations = is_array($twoFactorLocationsRaw) ? $twoFactorLocationsRaw : (json_decode($twoFactorLocationsRaw, true) ?? []);
                 } catch (\Exception $e) {}
             }
 
@@ -124,7 +124,16 @@ class GoogleController extends Controller
                 $userRoleMapped = 'tutor';
             }
 
-            if (empty($twoFactorLocations) || in_array($userRoleMapped, $twoFactorLocations)) {
+            $shouldTriggerTwoFactor = $twoFactorEnabled && (
+                empty($twoFactorLocations) || 
+                in_array($userRoleMapped, $twoFactorLocations) || 
+                in_array('all', $twoFactorLocations) ||
+                in_array('admin_login', $twoFactorLocations) && $userRoleMapped === 'admin' ||
+                in_array('tutor_login', $twoFactorLocations) && $userRoleMapped === 'tutor' ||
+                in_array('student_login', $twoFactorLocations) && $userRoleMapped === 'student'
+            );
+
+            if ($shouldTriggerTwoFactor) {
                 // Store OTP details in the new guest session
                 session([
                     'login_otp_email' => $user->email,
@@ -144,7 +153,11 @@ class GoogleController extends Controller
                 ]);
 
                 // Send OTP email
-                Mail::to($user->email)->send(new \App\Mail\OtpMail($code));
+                try {
+                    Mail::to($user->email)->send(new \App\Mail\OtpMail($code));
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Failed to send Google OAuth OTP email: ' . $e->getMessage());
+                }
 
                 return view('auth.google-callback', [
                     'authData' => [
