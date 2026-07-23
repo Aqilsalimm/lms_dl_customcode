@@ -50,4 +50,9 @@ class WorkshopAssessmentAttempt extends Model
     {
         return $this->hasMany(WorkshopAssessmentUserAnswer::class, 'attempt_id');
     }
+
+    public function userAnswers(): HasMany
+    {
+        return $this->answers();
+    }
 }
