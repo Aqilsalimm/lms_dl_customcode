@@ -50,8 +50,8 @@ return [
             'dashboard.qna',
             'blogs.store', 'blogs.update', 'blogs.destroy',
             'dashboard.settings.blog', 'dashboard.settings.blog.update', 'dashboard.settings.blog.upload-image',
-            // Gifting
-            'dashboard.students.search', 'dashboard.courses.gift',
+            // Gifting & Reports
+            'dashboard.students.search', 'dashboard.courses.gift', 'dashboard.reports.exam',
         ],
         'admin' => [
             // Instructor base

@@ -3,7 +3,7 @@ import { Link, usePage, router } from '@inertiajs/vue3';
 import { 
   LayoutDashboard, User, BookOpen, Star, HelpCircle, 
   Heart, ShoppingCart, MessageCircle, Megaphone, 
-  Wallet, MonitorPlay, Video, Settings, LogOut,
+  Wallet, MonitorPlay, Video, Settings, LogOut, FileBarChart,
   Bell, Plus, ShieldCheck, Check, Trash2, Activity, ChevronDown, ChevronUp, Menu, X
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
@@ -109,6 +109,7 @@ const instructorMenu = computed(() => [
   { label: usePage().props.translations?.my_bundles || 'My Bundles', icon: BookOpen, route: 'bundle-builder.index' },
   { label: usePage().props.translations?.withdrawals || 'Withdrawals', icon: Wallet, route: 'dashboard.withdrawals' },
   { label: usePage().props.translations?.live_class || 'Live Class Schedule', icon: Video, route: 'dashboard.live-class' },
+  { label: 'Report Exam', icon: FileBarChart, route: 'dashboard.reports.exam' },
 ]);
 
 const hasBlogAccess = computed(() => {

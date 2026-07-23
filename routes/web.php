@@ -108,6 +108,9 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::post('/dashboard/users-manage/{user}/role', [\App\Http\Controllers\Admin\UserManageController::class, 'updateRole'])->name('dashboard.users.role');
     Route::get('/dashboard/users-manage/export', [\App\Http\Controllers\Admin\UserManageController::class, 'export'])->name('dashboard.users.export');
     
+    // Exam & Assessment Analytics Report (Admin & Instructor)
+    Route::get('/dashboard/reports/exam', [\App\Http\Controllers\ExamReportController::class, 'index'])->name('dashboard.reports.exam');
+
     // LMS Settings
     Route::get('/dashboard/settings', [DashboardController::class, 'settings'])->name('dashboard.settings');
     Route::post('/dashboard/settings', [DashboardController::class, 'updateSettings'])->name('dashboard.settings.update');

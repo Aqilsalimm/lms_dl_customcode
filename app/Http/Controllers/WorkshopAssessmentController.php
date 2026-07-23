@@ -370,6 +370,13 @@ class WorkshopAssessmentController extends Controller
             'completed_at' => Carbon::now(),
         ]);
 
+        // Dispatch Broadcast Event for Real-Time Exam Report Analytics
+        try {
+            event(new \App\Events\ExamAttemptSubmitted($attempt));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Broadcast event ExamAttemptSubmitted failed: ' . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'Assessment submitted successfully',
             'score' => $score,
