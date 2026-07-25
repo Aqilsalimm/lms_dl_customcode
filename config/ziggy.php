@@ -20,6 +20,8 @@ return [
             'courses.learn', 'courses.lessons.content', 'courses.lessons.complete', 'courses.quizzes.complete',
             'courses.lessons.log-progress', 'notifications.read', 'notifications.read-all',
             'discussions.lesson', 'discussions.store', 'discussions.resolve', 'courses.certificate',
+            'courses.certificates.index', 'courses.certificates.claim', 'certificates.show', 'modules.certificate.download',
+            'assessments.show-student', 'assessments.start', 'attempts.submit',
             'payment.validate-coupon', 'billing.suspended', 'verification.send',
         ],
         'instructor' => [
@@ -36,6 +38,8 @@ return [
             'courses.learn', 'courses.lessons.content', 'courses.lessons.complete', 'courses.quizzes.complete',
             'courses.lessons.log-progress', 'notifications.read', 'notifications.read-all',
             'discussions.lesson', 'discussions.store', 'discussions.resolve', 'courses.certificate',
+            'courses.certificates.index', 'courses.certificates.claim', 'certificates.show', 'modules.certificate.download',
+            'assessments.show-student', 'assessments.start', 'attempts.submit',
             'payment.validate-coupon', 'billing.suspended', 'verification.send',
             // Instructor specific
             'course-builder.index', 'course-builder.metadata', 'course-builder.store', 'course-builder.build', 'course-builder.update', 'course-builder.destroy', 'course-builder.import',
@@ -44,6 +48,7 @@ return [
             'course-builder.quizzes.store', 'course-builder.quizzes.update', 'course-builder.quizzes.destroy',
             'course-builder.questions.store', 'course-builder.questions.update', 'course-builder.questions.destroy',
             'course-builder.assessments.store', 'course-builder.assessments.bulk-store', 'course-builder.assessments.questions.store', 'course-builder.assessments.questions.update', 'course-builder.assessments.questions.destroy',
+            'course-builder.certificates.store', 'course-builder.certificates.destroy',
             'bundle-builder.index', 'bundle-builder.store', 'bundle-builder.edit', 'bundle-builder.update', 'bundle-builder.destroy',
             'dashboard.live-class', 'dashboard.live-class.update-schedule',
             'dashboard.withdrawals', 'dashboard.withdrawals.store', 'dashboard.payment-profile.store',
@@ -51,7 +56,7 @@ return [
             'blogs.store', 'blogs.update', 'blogs.destroy',
             'dashboard.settings.blog', 'dashboard.settings.blog.update', 'dashboard.settings.blog.upload-image',
             // Gifting & Reports
-            'dashboard.students.search', 'dashboard.courses.gift', 'dashboard.reports.exam',
+            'dashboard.students.search', 'dashboard.courses.gift', 'dashboard.reports.exam', 'assessments.analytics',
         ],
         'admin' => [
             // Instructor base
@@ -67,6 +72,8 @@ return [
             'courses.learn', 'courses.lessons.content', 'courses.lessons.complete', 'courses.quizzes.complete',
             'courses.lessons.log-progress', 'notifications.read', 'notifications.read-all',
             'discussions.lesson', 'discussions.store', 'discussions.resolve', 'courses.certificate',
+            'courses.certificates.index', 'courses.certificates.claim', 'certificates.show', 'modules.certificate.download',
+            'assessments.show-student', 'assessments.start', 'attempts.submit',
             'payment.validate-coupon', 'billing.suspended', 'verification.send',
             'course-builder.index', 'course-builder.metadata', 'course-builder.store', 'course-builder.build', 'course-builder.update', 'course-builder.destroy', 'course-builder.import',
             'course-builder.modules.store', 'course-builder.modules.update', 'course-builder.modules.destroy',
@@ -74,6 +81,7 @@ return [
             'course-builder.quizzes.store', 'course-builder.quizzes.update', 'course-builder.quizzes.destroy',
             'course-builder.questions.store', 'course-builder.questions.update', 'course-builder.questions.destroy',
             'course-builder.assessments.store', 'course-builder.assessments.bulk-store', 'course-builder.assessments.questions.store', 'course-builder.assessments.questions.update', 'course-builder.assessments.questions.destroy',
+            'course-builder.certificates.store', 'course-builder.certificates.destroy',
             'bundle-builder.index', 'bundle-builder.store', 'bundle-builder.edit', 'bundle-builder.update', 'bundle-builder.destroy',
             'dashboard.live-class', 'dashboard.live-class.update-schedule',
             'dashboard.withdrawals', 'dashboard.withdrawals.store', 'dashboard.payment-profile.store',
@@ -81,7 +89,7 @@ return [
             'blogs.store', 'blogs.update', 'blogs.destroy',
             'dashboard.settings.blog', 'dashboard.settings.blog.update', 'dashboard.settings.blog.upload-image',
             // Gifting
-            'dashboard.students.search', 'dashboard.courses.gift',
+            'dashboard.students.search', 'dashboard.courses.gift', 'assessments.analytics',
             // Admin specific
             'dashboard.users.manage', 'dashboard.users.approve', 'dashboard.users.reject', 'dashboard.users.role', 'dashboard.users.export',
             'dashboard.settings', 'dashboard.settings.update',
