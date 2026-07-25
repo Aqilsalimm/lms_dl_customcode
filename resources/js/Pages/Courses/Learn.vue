@@ -567,6 +567,27 @@ const updateCountdown = () => {
 const sessionCertificates = ref([]);
 const isLoadingCertificates = ref(false);
 
+// Helper to check if a specific module/bab is 100% completed by student
+const isModuleCompleted = (mod) => {
+  if (!mod) return false;
+  
+  const lessonsCount = mod.lessons ? mod.lessons.length : 0;
+  const quizzesCount = mod.quizzes ? mod.quizzes.length : 0;
+
+  const completedL = mod.lessons ? mod.lessons.filter(l => isCompleted(l.id)).length : 0;
+  const completedQ = mod.quizzes ? mod.quizzes.filter(q => isQuizPassed(q.id)).length : 0;
+
+  const lessonsDone = (lessonsCount === 0 || completedL >= lessonsCount);
+  const quizzesDone = (quizzesCount === 0 || completedQ >= quizzesCount);
+
+  let postTestDone = true;
+  if (mod.assessments && mod.assessments.some(a => a.type === 'post_test')) {
+    postTestDone = Boolean(mod.is_post_completed);
+  }
+
+  return lessonsDone && quizzesDone && postTestDone;
+};
+
 const fetchCertificates = () => {
   if (!props.course || !props.course.slug) return;
   isLoadingCertificates.value = true;
@@ -779,11 +800,16 @@ const Logo = () => {
                     {{ mod.lessons?.length || 0 }} Sesi • {{ mod.quizzes?.length || 0 }} Kuis
                   </span>
                 </div>
-                <ChevronDown 
-                  :size="16" 
-                  :class="{'rotate-180': expandedModules[mod.id]}"
-                  class="text-slate-400 transition-transform duration-200 shrink-0" 
-                />
+                <div class="flex items-center gap-2">
+                  <span v-if="isModuleCompleted(mod)" class="bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 shrink-0">
+                    <CheckCircle2 :size="12" class="text-emerald-600" /> Selesai
+                  </span>
+                  <ChevronDown 
+                    :size="16" 
+                    :class="{'rotate-180': expandedModules[mod.id]}"
+                    class="text-slate-400 transition-transform duration-200 shrink-0" 
+                  />
+                </div>
               </button>
 
               <!-- Accordion Module Lessons List -->
@@ -948,6 +974,35 @@ const Logo = () => {
                     </div>
                   </div>
                 </button>
+
+                <!-- Banner Download Sertifikat Sesi Mandiri (Muncul jika Selesai & has_session_certificate aktif) -->
+                <div 
+                  v-if="mod.has_session_certificate && isModuleCompleted(mod)" 
+                  class="mt-3 p-4 bg-gradient-to-r from-emerald-50 via-teal-50/60 to-emerald-50 border border-emerald-200/90 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm animate-fade-in"
+                >
+                  <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                      <Award :size="20" class="animate-bounce" />
+                    </div>
+                    <div>
+                      <h5 class="text-xs font-black text-emerald-950 flex items-center gap-1.5">
+                        <span>🎉 Selamat! Anda telah menyelesaikan bab ini.</span>
+                      </h5>
+                      <p class="text-[11px] text-emerald-800 font-semibold mt-0.5 leading-snug">
+                        Unduh sertifikat kelulusan sesi Anda untuk: <strong class="text-emerald-950">{{ mod.title }}</strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  <a 
+                    :href="route('modules.certificate.download', mod.id)" 
+                    target="_blank"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-black text-xs shadow transition-all flex items-center justify-center gap-1.5 shrink-0 hover:scale-[1.02] cursor-pointer"
+                  >
+                    <Download :size="14" />
+                    <span>Download Sertifikat PDF</span>
+                  </a>
+                </div>
 
                 <div v-if="(!mod.lessons || mod.lessons.length === 0) && (!mod.quizzes || mod.quizzes.length === 0) && (!mod.assessments || mod.assessments.length === 0)" class="text-center py-4 text-xs font-bold text-slate-400">
                   Belum ada materi pembelajaran.
