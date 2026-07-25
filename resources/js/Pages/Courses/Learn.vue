@@ -26,7 +26,7 @@ import {
   Home, Newspaper, Calendar, Clock, MapPin, Code,
   Play, CheckCircle2, ArrowLeft, Download, Info, Menu, X,
   BookOpen, HelpCircle, Check, Presentation, FileText, ChevronLeft, ChevronRight, AlertCircle, Award,
-  Lock, Video, ExternalLink
+  Lock, Video, ExternalLink, Link as LinkIcon, Paperclip
 } from 'lucide-vue-next';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import MaterialDiscussion from '@/Components/MaterialDiscussion.vue';
@@ -508,6 +508,30 @@ const pptSlides = computed(() => {
     bg_color: '#1e293b',
     text_color: '#ffffff'
   }];
+});
+
+const activeLessonExerciseFiles = computed(() => {
+  if (!activeLesson.value || !activeLesson.value.content) return [];
+  if (typeof activeLesson.value.content === 'string' && activeLesson.value.content.startsWith('{')) {
+    try {
+      const obj = JSON.parse(activeLesson.value.content);
+      if (Array.isArray(obj.exercise_files)) {
+        return obj.exercise_files.filter(f => f && f.url);
+      }
+    } catch (e) {}
+  }
+  return [];
+});
+
+const activeLessonFeaturedImage = computed(() => {
+  if (!activeLesson.value || !activeLesson.value.content) return null;
+  if (typeof activeLesson.value.content === 'string' && activeLesson.value.content.startsWith('{')) {
+    try {
+      const obj = JSON.parse(activeLesson.value.content);
+      return obj.featured_image || null;
+    } catch (e) {}
+  }
+  return null;
 });
 
 // Live Class Countdown Logic
@@ -1183,19 +1207,33 @@ const Logo = () => {
 
               <!-- Tab Content: Resources -->
               <div v-if="activeTab === 'resources'">
-                <a 
-                  href="#" 
-                  @click.prevent="alert('Mengunduh paket sumber belajar / assets kelas...')"
-                  class="inline-flex items-center gap-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/50 p-4 rounded-2xl font-bold text-xs sm:text-sm text-slate-700 transition-colors shadow-sm"
-                >
-                  <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-[#264790] shadow-sm shrink-0">
-                    <Download :size="16" />
-                  </div>
-                  <div>
-                    <span class="block text-slate-800">Download Asset / Tools Belajar</span>
-                    <span class="block text-[10px] text-slate-400 font-bold mt-0.5">Format: ZIP / PDF (Drastha Learning)</span>
-                  </div>
-                </a>
+                <div v-if="activeLessonExerciseFiles.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <a 
+                    v-for="(file, fIdx) in activeLessonExerciseFiles" 
+                    :key="fIdx"
+                    :href="file.url"
+                    target="_blank"
+                    class="flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-200/80 p-3.5 rounded-2xl font-bold text-xs sm:text-sm text-slate-700 transition-all shadow-sm group"
+                  >
+                    <div class="flex items-center gap-3 min-w-0 pr-2">
+                      <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-[#264790] shadow-sm shrink-0 group-hover:scale-105 transition-transform border border-slate-100">
+                        <LinkIcon v-if="file.source_type === 'url' || (!file.url.startsWith('/storage') && file.url.startsWith('http'))" :size="18" class="text-amber-600" />
+                        <Paperclip v-else :size="18" class="text-[#264790]" />
+                      </div>
+                      <div class="min-w-0">
+                        <span class="block text-slate-800 font-extrabold text-xs sm:text-sm truncate" :title="file.name || file.url">{{ file.name || 'Berkas Lampiran' }}</span>
+                        <span class="block text-[10px] text-slate-400 font-bold mt-0.5">
+                          {{ file.source_type === 'url' || (!file.url.startsWith('/storage') && file.url.startsWith('http')) ? 'Tautan Eksternal' : ('File Statis (' + (file.size || 'Download') + ')') }}
+                        </span>
+                      </div>
+                    </div>
+                    <ExternalLink v-if="file.source_type === 'url' || (!file.url.startsWith('/storage') && file.url.startsWith('http'))" :size="14" class="text-slate-400 shrink-0" />
+                    <Download v-else :size="14" class="text-slate-400 shrink-0" />
+                  </a>
+                </div>
+                <div v-else class="text-center py-6 px-4 text-slate-400 text-xs font-semibold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  Belum ada berkas lampiran atau tautan sumber belajar untuk sesi ini.
+                </div>
               </div>
 
               <!-- Tab Content: About -->

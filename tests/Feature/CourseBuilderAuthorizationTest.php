@@ -366,4 +366,35 @@ class CourseBuilderAuthorizationTest extends TestCase
         $response->assertHeader('X-XSS-Protection', '1; mode=block');
         $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     }
+
+    public function test_user_can_upload_lesson_asset_featured_image_and_attachment()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $instructor = User::factory()->create(['role' => 'instructor']);
+
+        // 1. Upload Featured Image
+        $imageFile = \Illuminate\Http\UploadedFile::fake()->image('lesson_banner.png', 600, 400);
+        $responseImg = $this->actingAs($instructor)
+            ->post(route('course-builder.upload-lesson-asset'), [
+                'file' => $imageFile,
+                'asset_type' => 'featured_image',
+            ]);
+
+        $responseImg->assertStatus(200);
+        $responseImg->assertJsonStructure(['success', 'url', 'name']);
+        $this->assertTrue($responseImg->json('success'));
+
+        // 2. Upload Attachment
+        $docFile = \Illuminate\Http\UploadedFile::fake()->create('Modul_Materi.pdf', 1024, 'application/pdf');
+        $responseDoc = $this->actingAs($instructor)
+            ->post(route('course-builder.upload-lesson-asset'), [
+                'file' => $docFile,
+                'asset_type' => 'attachment',
+            ]);
+
+        $responseDoc->assertStatus(200);
+        $responseDoc->assertJsonStructure(['success', 'url', 'name', 'size']);
+        $this->assertTrue($responseDoc->json('success'));
+        $this->assertEquals('Modul_Materi.pdf', $responseDoc->json('name'));
+    }
 }

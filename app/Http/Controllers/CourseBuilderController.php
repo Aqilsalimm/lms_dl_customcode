@@ -595,4 +595,55 @@ class CourseBuilderController extends Controller
         $question->delete();
         return response()->json(['message' => 'Question deleted successfully']);
     }
+
+    /**
+     * Upload featured image or exercise file attachment for lessons
+     */
+    public function uploadLessonAsset(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|max:512000', // max 500MB
+            'asset_type' => 'nullable|string|in:featured_image,attachment'
+        ]);
+
+        $file = $request->file('file');
+        $assetType = $request->input('asset_type', 'attachment');
+
+        if ($assetType === 'featured_image') {
+            $path = $file->store('lessons/images', 'public');
+            try {
+                \App\Services\ImageOptimizer::optimize(
+                    storage_path('app/public/' . $path),
+                    $file->getMimeType()
+                );
+            } catch (\Exception $e) {}
+
+            return response()->json([
+                'success' => true,
+                'url' => '/storage/' . $path,
+                'name' => $file->getClientOriginalName()
+            ]);
+        } else {
+            $path = $file->store('lessons/attachments', 'public');
+            $bytes = $file->getSize();
+            $sizeFormatted = $this->formatBytes($bytes);
+
+            return response()->json([
+                'success' => true,
+                'url' => '/storage/' . $path,
+                'name' => $file->getClientOriginalName(),
+                'size' => $sizeFormatted
+            ]);
+        }
+    }
+
+    private function formatBytes($bytes, $precision = 2)
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= pow(1024, $pow);
+        return round($bytes, $precision) . ' ' . $units[$pow];
+    }
 }

@@ -175,6 +175,7 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
         Route::delete('/modules/{module}', [CourseBuilderController::class, 'deleteModule'])->name('modules.destroy');
         
         // Lessons
+        Route::post('/upload-lesson-asset', [CourseBuilderController::class, 'uploadLessonAsset'])->name('upload-lesson-asset');
         Route::post('/modules/{module}/lessons', [CourseBuilderController::class, 'addLesson'])->name('lessons.store');
         Route::put('/lessons/{lesson}', [CourseBuilderController::class, 'updateLesson'])->name('lessons.update');
         Route::delete('/lessons/{lesson}', [CourseBuilderController::class, 'deleteLesson'])->name('lessons.destroy');

@@ -649,7 +649,111 @@ const deleteModule = (moduleId) => {
   );
 };
 
-// --- LESSON CRUD ---
+// --- LESSON CRUD & ASSET UPLOADS ---
+const isUploadingFeaturedImage = ref(false);
+const featuredImageInputRef = ref(null);
+
+const triggerFeaturedImageUpload = () => {
+  if (featuredImageInputRef.value) {
+    featuredImageInputRef.value.click();
+  }
+};
+
+const handleFeaturedImageSelect = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  isUploadingFeaturedImage.value = true;
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('asset_type', 'featured_image');
+
+  axios.post('/course-builder/upload-lesson-asset', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+  .then(res => {
+    if (res.data.success) {
+      lessonForm.value.featured_image = res.data.url;
+    } else {
+      showCustomAlert('Error', 'Gagal mengunggah Featured Image.', 'error');
+    }
+  })
+  .catch(err => {
+    const msg = err.response?.data?.message || 'Gagal terhubung ke server.';
+    showCustomAlert('Error', msg, 'error');
+  })
+  .finally(() => {
+    isUploadingFeaturedImage.value = false;
+  });
+};
+
+const removeFeaturedImage = () => {
+  lessonForm.value.featured_image = null;
+};
+
+// Dynamic Exercise Files (Attachments) Handlers
+const addExerciseFileSlot = (sourceType = 'file') => {
+  if (!Array.isArray(lessonForm.value.exercise_files)) {
+    lessonForm.value.exercise_files = [];
+  }
+  lessonForm.value.exercise_files.push({
+    id: 'att_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    source_type: sourceType,
+    name: '',
+    url: '',
+    size: '',
+    is_uploading: false
+  });
+};
+
+const handleExerciseFileUpload = (e, index) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (!lessonForm.value.exercise_files[index]) return;
+  lessonForm.value.exercise_files[index].is_uploading = true;
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('asset_type', 'attachment');
+
+  axios.post('/course-builder/upload-lesson-asset', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+  .then(res => {
+    if (res.data.success && lessonForm.value.exercise_files[index]) {
+      lessonForm.value.exercise_files[index].name = res.data.name;
+      lessonForm.value.exercise_files[index].url = res.data.url;
+      lessonForm.value.exercise_files[index].size = res.data.size;
+      lessonForm.value.exercise_files[index].source_type = 'file';
+      lessonForm.value.exercise_files[index].is_uploading = false;
+
+      // Auto-append a new empty slot if this was the last slot
+      if (index === lessonForm.value.exercise_files.length - 1) {
+        addExerciseFileSlot('file');
+      }
+    } else {
+      showCustomAlert('Error', 'Gagal mengunggah file attachment.', 'error');
+    }
+  })
+  .catch(err => {
+    if (lessonForm.value.exercise_files[index]) {
+      lessonForm.value.exercise_files[index].is_uploading = false;
+    }
+    const msg = err.response?.data?.message || 'Gagal terhubung ke server.';
+    showCustomAlert('Error', msg, 'error');
+  });
+};
+
+const removeExerciseFileSlot = (index) => {
+  if (Array.isArray(lessonForm.value.exercise_files)) {
+    lessonForm.value.exercise_files.splice(index, 1);
+    if (lessonForm.value.exercise_files.length === 0) {
+      addExerciseFileSlot('file');
+    }
+  }
+};
+
 const openLessonModal = (module, lesson = null) => {
   selectedModule.value = module;
   if (lesson) {
@@ -658,7 +762,6 @@ const openLessonModal = (module, lesson = null) => {
     let parsedPptSlides = [];
     let parsedSlidesUrl = lesson.slide_url || '';
     
-    // New fields
     let parsedFeaturedImage = null;
     let parsedVideoType = 'url';
     let parsedPlaybackTime = { hour: 0, min: 0, sec: 0 };
@@ -674,7 +777,6 @@ const openLessonModal = (module, lesson = null) => {
         }
       } catch (e) {}
     } else if (parsedContent.startsWith('{') && parsedContent.endsWith('}')) {
-      // Legacy fallback for old data
       try {
         const obj = JSON.parse(parsedContent);
         parsedType = obj.type || 'video';
@@ -700,6 +802,21 @@ const openLessonModal = (module, lesson = null) => {
         parsedType = 'video';
       }
       parsedPlaybackTime = { hour: Math.floor(lesson.duration_minutes / 60), min: lesson.duration_minutes % 60, sec: 0 };
+    }
+
+    if (!Array.isArray(parsedExerciseFiles) || parsedExerciseFiles.length === 0) {
+      parsedExerciseFiles = [
+        { id: 'att_' + Date.now(), source_type: 'file', name: '', url: '', size: '', is_uploading: false }
+      ];
+    } else {
+      parsedExerciseFiles = parsedExerciseFiles.map((item, idx) => ({
+        id: item.id || ('att_' + Date.now() + '_' + idx),
+        source_type: item.source_type || (item.url && !item.url.startsWith('/storage') && item.url.startsWith('http') ? 'url' : 'file'),
+        name: item.name || '',
+        url: item.url || '',
+        size: item.size || '',
+        is_uploading: false
+      }));
     }
 
     activeAdminSlideIdx.value = 0;
@@ -736,7 +853,9 @@ const openLessonModal = (module, lesson = null) => {
       video_url: '', 
       slides_url: '',
       playback_time: { hour: 0, min: 0, sec: 0 },
-      exercise_files: [],
+      exercise_files: [
+        { id: 'att_' + Date.now(), source_type: 'file', name: '', url: '', size: '', is_uploading: false }
+      ],
       is_preview: false,
       ppt_slides: [
         { id: Date.now(), title: 'Slide 1: Pengantar', body_text: 'Tulis penjelasan slide di sini...', bg_color: '#ffffff', text_color: '#1e293b' }
@@ -749,11 +868,23 @@ const openLessonModal = (module, lesson = null) => {
 const saveLesson = () => {
   if (isSaving.value) return;
   isSaving.value = true;
+
+  // Filter out empty attachment entries before saving
+  const validExerciseFiles = (lessonForm.value.exercise_files || [])
+    .filter(f => f && f.url && f.url.trim() !== '')
+    .map(f => ({
+      id: f.id,
+      source_type: f.source_type || 'file',
+      name: f.name || (f.source_type === 'url' ? f.url : 'Attachment File'),
+      url: f.url,
+      size: f.size || ''
+    }));
+
   let finalContentObj = {
     type: lessonForm.value.lesson_type,
     summary: lessonForm.value.content,
     featured_image: lessonForm.value.featured_image,
-    exercise_files: lessonForm.value.exercise_files,
+    exercise_files: validExerciseFiles,
     is_preview: lessonForm.value.is_preview
   };
 
@@ -2885,12 +3016,36 @@ const startQuizImport = () => {
               <!-- Featured Image -->
               <div>
                 <label class="block text-slate-700 text-sm font-medium mb-2">Featured Image</label>
-                <div class="border border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center justify-center bg-white text-center">
-                  <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+
+                <input 
+                  type="file" 
+                  ref="featuredImageInputRef" 
+                  class="hidden" 
+                  accept="image/jpeg,image/png,image/gif,image/webp" 
+                  @change="handleFeaturedImageSelect" 
+                />
+
+                <div v-if="!lessonForm.featured_image" class="border border-dashed border-slate-300 rounded-xl p-5 flex flex-col items-center justify-center bg-white text-center hover:border-indigo-400 transition-colors cursor-pointer" @click="triggerFeaturedImageUpload">
+                  <div class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-2">
+                    <RefreshCw v-if="isUploadingFeaturedImage" :size="18" class="animate-spin text-indigo-600" />
+                    <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                   </div>
-                  <button class="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-md text-xs font-semibold mb-2">Upload Image</button>
-                  <p class="text-[10px] text-slate-400">JPEG, PNG, GIF, and WebP formats, up to 2 GB</p>
+                  <button type="button" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3.5 py-1.5 rounded-lg text-xs font-semibold mb-1 transition-colors">
+                    {{ isUploadingFeaturedImage ? 'Uploading...' : 'Upload Image' }}
+                  </button>
+                  <p class="text-[10px] text-slate-400">JPEG, PNG, GIF, and WebP, max 500 MB</p>
+                </div>
+
+                <div v-else class="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-50 group">
+                  <img :src="lessonForm.featured_image" class="w-full h-36 object-cover" />
+                  <button 
+                    type="button" 
+                    @click="removeFeaturedImage" 
+                    class="absolute top-2 right-2 bg-rose-500 hover:bg-rose-600 text-white rounded-full p-1.5 shadow transition-colors"
+                    title="Hapus Featured Image"
+                  >
+                    <X :size="14" />
+                  </button>
                 </div>
               </div>
 
@@ -3107,12 +3262,118 @@ const startQuizImport = () => {
                 </div>
               </div>
 
-              <!-- Exercise Files -->
-              <div>
-                <label class="block text-slate-700 text-sm font-medium mb-2">Exercise Files</label>
-                <button class="w-full bg-indigo-50/50 hover:bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-md py-2.5 text-xs font-semibold transition-colors flex items-center justify-center gap-2">
-                  <Paperclip :size="14" /> Upload Attachment
-                </button>
+              <!-- Exercise Files / Multi-Attachment Upload & URL Section -->
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <label class="block text-slate-700 text-sm font-medium">Exercise Files & Attachments</label>
+                  <span class="text-[10px] font-extrabold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">
+                    {{ (lessonForm.exercise_files?.filter(f => f.url && f.url.trim() !== '') || []).length }} Tersimpan
+                  </span>
+                </div>
+                <p class="text-[10px] text-slate-400 leading-normal">
+                  Unggah berkas statis (PDF, DOCX, ZIP, MP4) atau sertakan tautan URL eksternal. Setiap kali mengunggah file, baris baru akan muncul secara otomatis.
+                </p>
+
+                <div class="flex flex-col gap-3 max-h-72 overflow-y-auto pr-1">
+                  <div 
+                    v-for="(attItem, attIdx) in lessonForm.exercise_files" 
+                    :key="attItem.id || attIdx"
+                    class="p-3 bg-white border border-slate-200/80 rounded-xl space-y-2.5 shadow-sm relative group hover:border-slate-300 transition-colors"
+                  >
+                    <!-- Row Header: Option Switcher & Delete -->
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-1.5 bg-slate-100 p-0.5 rounded-lg">
+                        <button 
+                          type="button"
+                          @click="attItem.source_type = 'file'"
+                          :class="attItem.source_type === 'file' ? 'bg-white text-indigo-700 shadow font-bold' : 'text-slate-500 hover:text-slate-700'"
+                          class="px-2.5 py-1 text-[10px] rounded-md transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <Paperclip :size="12" /> File Statis
+                        </button>
+                        <button 
+                          type="button"
+                          @click="attItem.source_type = 'url'"
+                          :class="attItem.source_type === 'url' ? 'bg-white text-indigo-700 shadow font-bold' : 'text-slate-500 hover:text-slate-700'"
+                          class="px-2.5 py-1 text-[10px] rounded-md transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <ExternalLink :size="12" /> Link URL
+                        </button>
+                      </div>
+
+                      <button 
+                        type="button" 
+                        @click="removeExerciseFileSlot(attIdx)" 
+                        class="text-slate-400 hover:text-rose-500 p-1 hover:bg-rose-50 rounded-lg transition-colors"
+                        title="Hapus Field Lampiran Ini"
+                      >
+                        <Trash2 :size="14" />
+                      </button>
+                    </div>
+
+                    <!-- Content: File Statis Mode -->
+                    <div v-if="attItem.source_type === 'file'" class="space-y-2">
+                      <div v-if="attItem.url" class="flex items-center justify-between bg-indigo-50/50 border border-indigo-100 p-2.5 rounded-lg text-xs">
+                        <div class="flex items-center gap-2 truncate pr-2">
+                          <FileText :size="16" class="text-indigo-600 shrink-0" />
+                          <div class="truncate">
+                            <span class="font-bold text-slate-800 block truncate" :title="attItem.name">{{ attItem.name }}</span>
+                            <span class="text-[9px] text-slate-400 font-bold block">{{ attItem.size || 'Ter-upload' }}</span>
+                          </div>
+                        </div>
+                        <label class="text-[10px] font-bold text-indigo-600 hover:underline cursor-pointer shrink-0">
+                          Ganti File
+                          <input type="file" class="hidden" @change="e => handleExerciseFileUpload(e, attIdx)" />
+                        </label>
+                      </div>
+
+                      <div v-else class="relative border border-dashed border-slate-300 rounded-lg p-3 text-center bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                        <input type="file" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" @change="e => handleExerciseFileUpload(e, attIdx)" />
+                        <div v-if="attItem.is_uploading" class="flex items-center justify-center gap-2 text-xs font-bold text-indigo-600">
+                          <RefreshCw :size="14" class="animate-spin" /> Mengunggah File...
+                        </div>
+                        <div v-else class="flex items-center justify-center gap-2 text-xs text-slate-500 font-medium">
+                          <Paperclip :size="14" class="text-indigo-500" />
+                          <span>Pilih berkas file (PDF, DOCX, ZIP, MP4)...</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Content: Link URL Mode -->
+                    <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input 
+                        v-model="attItem.name" 
+                        type="text" 
+                        placeholder="Nama / Judul Tautan (misal: Figma)" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-medium outline-none focus:bg-white focus:border-indigo-500" 
+                      />
+                      <input 
+                        v-model="attItem.url" 
+                        type="text" 
+                        placeholder="https://drive.google.com/..." 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 font-medium outline-none focus:bg-white focus:border-indigo-500" 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Button to add new slot manually -->
+                <div class="flex items-center gap-2 pt-1">
+                  <button 
+                    type="button" 
+                    @click="addExerciseFileSlot('file')" 
+                    class="flex-1 py-2 px-2.5 bg-indigo-50/60 hover:bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <Plus :size="14" /> Tambah File Statis
+                  </button>
+                  <button 
+                    type="button" 
+                    @click="addExerciseFileSlot('url')" 
+                    class="flex-1 py-2 px-2.5 bg-amber-50/60 hover:bg-amber-50 text-amber-700 border border-amber-100 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <ExternalLink :size="14" /> Tambah Link URL
+                  </button>
+                </div>
               </div>
 
               <!-- Lesson Preview Toggle -->
