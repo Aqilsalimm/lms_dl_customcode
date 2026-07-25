@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Certificate;
 use App\Models\Course;
+use App\Models\Module;
 use App\Models\UserCertificate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -11,6 +12,45 @@ use Inertia\Inertia;
 
 class CertificateController extends Controller
 {
+    /**
+     * Download Session Certificate PDF using DomPDF
+     */
+    public function downloadSessionCertificate(Module $module)
+    {
+        $user = auth()->user();
+        if (!$user) {
+            abort(401, 'Unauthenticated.');
+        }
+
+        // 1. Validation: Ensure user has completed this module
+        if (!$module->isCompletedBy($user)) {
+            abort(403, 'Selesaikan seluruh materi dan kuis pada bab ini terlebih dahulu untuk mengunduh sertifikat.');
+        }
+
+        // 2. Prepare Data
+        $bgPath = null;
+        if ($module->certificate_bg_path && file_exists(storage_path('app/public/' . $module->certificate_bg_path))) {
+            $bgPath = storage_path('app/public/' . $module->certificate_bg_path);
+        }
+
+        $data = [
+            'studentName' => strtoupper($user->name),
+            'sessionTitle' => $module->title,
+            'background' => $bgPath,
+            'nameYPosition' => $module->text_name_y_position ?: 44,
+            'titleYPosition' => $module->text_title_y_position ?: 56,
+            'certCode' => 'S-CERT-' . strtoupper(Str::random(4)) . '-' . $module->id . '-' . $user->id,
+            'date' => now()->translatedFormat('d F Y'),
+        ];
+
+        // 3. Render PDF via DomPDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('certificates.session_template', $data)
+            ->setPaper('a4', 'landscape');
+
+        // 4. Return PDF Download Response
+        $filename = 'Sertifikat_' . Str::slug($module->title) . '_' . Str::slug($user->name) . '.pdf';
+        return $pdf->download($filename);
+    }
     /**
      * Get list of certificates and unlock status for active student
      */

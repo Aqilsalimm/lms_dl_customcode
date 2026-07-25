@@ -175,4 +175,45 @@ class ConditionalCertificateTest extends TestCase
         $this->assertNotNull($module->certificate_bg_path);
         \Illuminate\Support\Facades\Storage::disk('public')->assertExists($module->certificate_bg_path);
     }
+
+    public function test_user_can_download_session_certificate_pdf_when_module_is_completed()
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $student = User::factory()->create(['role' => 'student']);
+
+        $course = Course::create([
+            'title' => 'NodeJS Backend',
+            'slug' => 'nodejs-backend',
+            'instructor_id' => $instructor->id,
+            'price' => 120000,
+            'level' => 'Umum',
+            'status' => 'published',
+        ]);
+
+        $module = Module::create([
+            'course_id' => $course->id,
+            'title' => 'Bab 1: Express REST API',
+            'sort_order' => 0,
+            'has_session_certificate' => true,
+        ]);
+
+        $lesson = Lesson::create([
+            'module_id' => $module->id,
+            'title' => 'Routing in Express',
+            'duration_minutes' => 10,
+            'sort_order' => 0,
+        ]);
+
+        $enrollment = Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'completed_lessons' => [$lesson->id],
+        ]);
+
+        $response = $this->actingAs($student)
+            ->get(route('modules.certificate.download', $module->id));
+
+        $response->assertStatus(200);
+        $response->assertHeader('content-type', 'application/pdf');
+    }
 }

@@ -239,6 +239,7 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::get('/courses/{course:slug}/certificates', [\App\Http\Controllers\CertificateController::class, 'index'])->name('courses.certificates.index');
     Route::post('/courses/{course:slug}/certificates/{certificate}/claim', [\App\Http\Controllers\CertificateController::class, 'claim'])->name('courses.certificates.claim');
     Route::get('/certificates/{code}', [\App\Http\Controllers\CertificateController::class, 'show'])->name('certificates.show');
+    Route::get('/modules/{module}/certificate/download', [\App\Http\Controllers\CertificateController::class, 'downloadSessionCertificate'])->name('modules.certificate.download');
     Route::post('/course-builder/courses/{course}/certificates', [\App\Http\Controllers\CertificateController::class, 'store'])->name('course-builder.certificates.store');
     Route::delete('/course-builder/certificates/{certificate}', [\App\Http\Controllers\CertificateController::class, 'destroy'])->name('course-builder.certificates.destroy');
 
