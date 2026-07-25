@@ -603,7 +603,12 @@ const openModuleModal = (module = null) => {
       recording_url: module.recording_url || '',
       material_file: null,
       material_file_path: module.material_file_path || null,
-      enable_assessment: module.enable_assessment !== undefined ? Boolean(module.enable_assessment) : true
+      enable_assessment: module.enable_assessment !== undefined ? Boolean(module.enable_assessment) : true,
+      has_session_certificate: module.has_session_certificate !== undefined ? Boolean(module.has_session_certificate) : false,
+      certificate_bg: null,
+      certificate_bg_path: module.certificate_bg_path || null,
+      text_name_y_position: module.text_name_y_position !== undefined && module.text_name_y_position !== null ? module.text_name_y_position : 44,
+      text_title_y_position: module.text_title_y_position !== undefined && module.text_title_y_position !== null ? module.text_title_y_position : 56,
     };
   } else {
     moduleForm.value = { 
@@ -615,7 +620,12 @@ const openModuleModal = (module = null) => {
       recording_url: '',
       material_file: null,
       material_file_path: null,
-      enable_assessment: true
+      enable_assessment: true,
+      has_session_certificate: false,
+      certificate_bg: null,
+      certificate_bg_path: null,
+      text_name_y_position: 44,
+      text_title_y_position: 56,
     };
   }
   currentModal.value = 'module';
@@ -635,8 +645,14 @@ const saveModule = () => {
   formData.append('end_date', moduleForm.value.end_date || '');
   formData.append('recording_url', moduleForm.value.recording_url || '');
   formData.append('enable_assessment', moduleForm.value.enable_assessment ? '1' : '0');
+  formData.append('has_session_certificate', moduleForm.value.has_session_certificate ? '1' : '0');
+  formData.append('text_name_y_position', moduleForm.value.text_name_y_position || 44);
+  formData.append('text_title_y_position', moduleForm.value.text_title_y_position || 56);
   if (moduleForm.value.material_file instanceof File) {
     formData.append('material_file', moduleForm.value.material_file);
+  }
+  if (moduleForm.value.certificate_bg instanceof File) {
+    formData.append('certificate_bg', moduleForm.value.certificate_bg);
   }
 
   const url = moduleForm.value.id
@@ -3139,6 +3155,79 @@ const startQuizImport = () => {
               </div>
             </div>
           </template>
+
+          <!-- Session Certificate Configuration Section -->
+          <div class="p-4 bg-amber-50/60 rounded-2xl border border-amber-200/80 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <label class="block text-slate-800 text-xs font-bold flex items-center gap-1.5">
+                  <Award :size="15" class="text-amber-600" />
+                  <span>Aktifkan Sertifikat Sesi Mandiri (Custom Background)</span>
+                </label>
+                <p class="text-[10px] text-slate-500 font-medium mt-0.5">Siswa dapat mengunduh sertifikat khusus begitu bab ini selesai.</p>
+              </div>
+              <button 
+                type="button" 
+                @click="moduleForm.has_session_certificate = !moduleForm.has_session_certificate"
+                :class="moduleForm.has_session_certificate ? 'bg-amber-600' : 'bg-slate-200'"
+                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+              >
+                <span 
+                  :class="moduleForm.has_session_certificate ? 'translate-x-5' : 'translate-x-0'"
+                  class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                ></span>
+              </button>
+            </div>
+
+            <!-- Upload Background & Layout Adjustments -->
+            <div v-if="moduleForm.has_session_certificate" class="pt-3 border-t border-amber-200/60 space-y-3">
+              <div class="bg-amber-100/70 p-2.5 rounded-xl border border-amber-200 text-[11px] text-amber-900 leading-relaxed font-medium">
+                💡 <strong>Panduan Desain:</strong> Silakan unggah gambar background sertifikat kosong (A4 Landscape, JPG/PNG). Pastikan area tengah atas dibiarkan kosong agar Nama Peserta & Judul Sesi dapat dicetak otomatis secara presisi.
+              </div>
+
+              <div>
+                <label class="block text-slate-700 text-xs font-bold mb-1">Unggah Background Sertifikat Sesi (JPG/PNG, Max 5MB)</label>
+                <input 
+                  @change="e => moduleForm.certificate_bg = e.target.files[0]" 
+                  type="file" 
+                  accept="image/jpeg,image/png,image/jpg"
+                  class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none text-xs text-slate-600 font-medium" 
+                />
+                <p v-if="moduleForm.certificate_bg_path" class="text-[10px] text-emerald-700 font-bold mt-1 flex items-center gap-1">
+                  ✓ Background Terpasang: <span class="font-mono">{{ moduleForm.certificate_bg_path }}</span>
+                </p>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <div class="flex justify-between items-center mb-1">
+                    <label class="text-slate-700 text-[11px] font-bold">Posisi Nama (Y %)</label>
+                    <span class="text-[11px] font-mono text-indigo-700 font-bold">{{ moduleForm.text_name_y_position }}%</span>
+                  </div>
+                  <input 
+                    v-model.number="moduleForm.text_name_y_position" 
+                    type="range" 
+                    min="10" 
+                    max="90" 
+                    class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#264790]" 
+                  />
+                </div>
+                <div>
+                  <div class="flex justify-between items-center mb-1">
+                    <label class="text-slate-700 text-[11px] font-bold">Posisi Judul Sesi (Y %)</label>
+                    <span class="text-[11px] font-mono text-indigo-700 font-bold">{{ moduleForm.text_title_y_position }}%</span>
+                  </div>
+                  <input 
+                    v-model.number="moduleForm.text_title_y_position" 
+                    type="range" 
+                    min="10" 
+                    max="90" 
+                    class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#264790]" 
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
 
           <button @click="saveModule" :disabled="isSaving" class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-3 rounded-2xl font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed mt-2">
             <RefreshCw v-if="isSaving" :size="16" class="animate-spin" />

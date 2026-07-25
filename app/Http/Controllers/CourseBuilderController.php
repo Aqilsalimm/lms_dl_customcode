@@ -274,11 +274,24 @@ class CourseBuilderController extends Controller
             'recording_url' => 'nullable|string',
             'material_file' => 'nullable|file|max:10240',
             'enable_assessment' => 'nullable|boolean',
+            'has_session_certificate' => 'nullable|boolean',
+            'certificate_bg' => 'nullable|file|mimes:jpeg,jpg,png|max:5120',
+            'text_name_y_position' => 'nullable|integer|min:0|max:100',
+            'text_title_y_position' => 'nullable|integer|min:0|max:100',
         ]);
 
         $materialFilePath = null;
         if ($request->hasFile('material_file')) {
             $materialFilePath = $request->file('material_file')->store('courses/materials', 'public');
+        }
+
+        $certificateBgPath = null;
+        if ($request->hasFile('certificate_bg')) {
+            $certificateBgPath = $request->file('certificate_bg')->store('courses/certificates', 'public');
+            \App\Services\ImageOptimizer::optimize(
+                storage_path('app/public/' . $certificateBgPath),
+                $request->file('certificate_bg')->getMimeType()
+            );
         }
 
         $sortOrder = $course->modules()->count();
@@ -293,6 +306,10 @@ class CourseBuilderController extends Controller
             'recording_url' => $request->recording_url,
             'material_file_path' => $materialFilePath,
             'enable_assessment' => $request->has('enable_assessment') ? filter_var($request->enable_assessment, FILTER_VALIDATE_BOOLEAN) : true,
+            'has_session_certificate' => $request->has('has_session_certificate') ? filter_var($request->has_session_certificate, FILTER_VALIDATE_BOOLEAN) : false,
+            'certificate_bg_path' => $certificateBgPath,
+            'text_name_y_position' => $request->input('text_name_y_position', 44),
+            'text_title_y_position' => $request->input('text_title_y_position', 56),
         ]);
 
         return response()->json([
@@ -312,17 +329,37 @@ class CourseBuilderController extends Controller
             'recording_url' => 'nullable|string',
             'material_file' => 'nullable|file|max:10240',
             'enable_assessment' => 'nullable|boolean',
+            'has_session_certificate' => 'nullable|boolean',
+            'certificate_bg' => 'nullable|file|mimes:jpeg,jpg,png|max:5120',
+            'text_name_y_position' => 'nullable|integer|min:0|max:100',
+            'text_title_y_position' => 'nullable|integer|min:0|max:100',
         ]);
 
-        $data = $request->only(['title', 'meeting_url', 'start_date', 'end_date', 'recording_url']);
+        $data = $request->only([
+            'title', 'meeting_url', 'start_date', 'end_date', 'recording_url',
+            'text_name_y_position', 'text_title_y_position'
+        ]);
 
         if ($request->has('enable_assessment')) {
             $data['enable_assessment'] = filter_var($request->enable_assessment, FILTER_VALIDATE_BOOLEAN);
         }
 
+        if ($request->has('has_session_certificate')) {
+            $data['has_session_certificate'] = filter_var($request->has_session_certificate, FILTER_VALIDATE_BOOLEAN);
+        }
+
         if ($request->hasFile('material_file')) {
             $path = $request->file('material_file')->store('courses/materials', 'public');
             $data['material_file_path'] = $path;
+        }
+
+        if ($request->hasFile('certificate_bg')) {
+            $bgPath = $request->file('certificate_bg')->store('courses/certificates', 'public');
+            \App\Services\ImageOptimizer::optimize(
+                storage_path('app/public/' . $bgPath),
+                $request->file('certificate_bg')->getMimeType()
+            );
+            $data['certificate_bg_path'] = $bgPath;
         }
 
         $module->update($data);

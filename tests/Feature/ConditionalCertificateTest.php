@@ -135,4 +135,44 @@ class ConditionalCertificateTest extends TestCase
         $enrollment->update(['completed_lessons' => [$lesson->id]]);
         $this->assertTrue($module->fresh()->isCompletedBy($student));
     }
+
+    public function test_instructor_can_add_and_update_module_with_session_certificate_and_background_image()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+        $instructor = User::factory()->create(['role' => 'instructor']);
+
+        $course = Course::create([
+            'title' => 'React Mastery',
+            'slug' => 'react-mastery',
+            'instructor_id' => $instructor->id,
+            'price' => 100000,
+            'level' => 'Umum',
+            'status' => 'published',
+        ]);
+
+        $bgFile = \Illuminate\Http\UploadedFile::fake()->image('cert_bg.png', 1000, 700);
+
+        $response = $this->actingAs($instructor)
+            ->postJson("/course-builder/courses/{$course->id}/modules", [
+                'title' => 'Sesi 1: React Fundamentals',
+                'has_session_certificate' => '1',
+                'certificate_bg' => $bgFile,
+                'text_name_y_position' => 42,
+                'text_title_y_position' => 58,
+            ]);
+
+        $response->assertStatus(200);
+        $moduleId = $response->json('module.id');
+
+        $this->assertDatabaseHas('modules', [
+            'id' => $moduleId,
+            'has_session_certificate' => 1,
+            'text_name_y_position' => 42,
+            'text_title_y_position' => 58,
+        ]);
+
+        $module = Module::find($moduleId);
+        $this->assertNotNull($module->certificate_bg_path);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($module->certificate_bg_path);
+    }
 }
