@@ -174,4 +174,58 @@ class ExamReportTest extends TestCase
                    $event->score === 100.0;
         });
     }
+
+    public function test_test_builder_supports_use_global_settings_toggle_and_fallbacks()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $course = Course::create([
+            'title' => 'Test Builder Global Setting Course',
+            'slug' => 'test-builder-global-course',
+            'instructor_id' => $admin->id,
+            'course_type' => 'workshop',
+            'price' => 100000,
+            'level' => 'Umum',
+            'status' => 'published',
+        ]);
+
+        // 1. Create global settings
+        \App\Models\Setting::updateOrCreate(['key' => 'test_builder_pre_passing_score'], ['value' => '85']);
+        \App\Models\Setting::updateOrCreate(['key' => 'test_builder_default_duration'], ['value' => '45']);
+        \App\Models\Setting::updateOrCreate(['key' => 'test_builder_default_max_attempts'], ['value' => '5']);
+
+        // 2. Test saving assessment with use_global_settings = true
+        $assessmentGlobal = WorkshopAssessment::create([
+            'course_id' => $course->id,
+            'title' => 'Global Pre-Test',
+            'type' => 'pre_test',
+            'use_global_settings' => true,
+            'passing_score' => 50, // custom value ignored because use_global_settings is true
+            'duration_minutes' => 15,
+            'max_attempts' => 1,
+            'is_published' => true,
+        ]);
+
+        $this->assertTrue($assessmentGlobal->use_global_settings);
+        $this->assertEquals(85, $assessmentGlobal->effective_passing_score);
+        $this->assertEquals(45, $assessmentGlobal->effective_duration_minutes);
+        $this->assertEquals(5, $assessmentGlobal->effective_max_attempts);
+
+        // 3. Test saving assessment with use_global_settings = false (custom config)
+        $assessmentCustom = WorkshopAssessment::create([
+            'course_id' => $course->id,
+            'title' => 'Custom Pre-Test',
+            'type' => 'pre_test',
+            'use_global_settings' => false,
+            'passing_score' => 90,
+            'duration_minutes' => 60,
+            'max_attempts' => 2,
+            'is_published' => true,
+        ]);
+
+        $this->assertFalse($assessmentCustom->use_global_settings);
+        $this->assertEquals(90, $assessmentCustom->effective_passing_score);
+        $this->assertEquals(60, $assessmentCustom->effective_duration_minutes);
+        $this->assertEquals(2, $assessmentCustom->effective_max_attempts);
+    }
 }
+

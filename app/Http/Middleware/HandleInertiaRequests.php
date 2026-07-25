@@ -120,6 +120,13 @@ class HandleInertiaRequests extends Middleware
             'gray_color',
             'border_color',
             'text_color_hover',
+            'test_builder_default_duration',
+            'test_builder_pre_passing_score',
+            'test_builder_post_passing_score',
+            'test_builder_default_max_attempts',
+            'test_builder_auto_enable',
+            'test_builder_show_explanations',
+            'test_builder_enforce_prerequisites',
         ];
         
         return array_intersect_key($settings, array_flip($publicKeys));

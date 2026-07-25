@@ -36,6 +36,7 @@ class WorkshopAssessmentController extends Controller
             'type' => 'required|string|in:pre_test,post_test',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'use_global_settings' => 'nullable|boolean',
             'duration_minutes' => 'nullable|integer|min:1',
             'passing_score' => 'nullable|integer|min:0|max:100',
             'max_attempts' => 'nullable|integer|min:0',
@@ -49,6 +50,8 @@ class WorkshopAssessmentController extends Controller
             'questions.*.correct_answer' => 'required|string',
         ]);
 
+        $useGlobal = $request->has('use_global_settings') ? filter_var($request->use_global_settings, FILTER_VALIDATE_BOOLEAN) : true;
+
         $defaultDuration = (int) (\App\Models\Setting::where('key', 'test_builder_default_duration')->value('value') ?: 30);
         $defaultPrePassing = (int) (\App\Models\Setting::where('key', 'test_builder_pre_passing_score')->value('value') ?: 70);
         $defaultPostPassing = (int) (\App\Models\Setting::where('key', 'test_builder_post_passing_score')->value('value') ?: 70);
@@ -61,6 +64,7 @@ class WorkshopAssessmentController extends Controller
             [
                 'title' => $request->title,
                 'description' => $request->description,
+                'use_global_settings' => $useGlobal,
                 'duration_minutes' => $request->duration_minutes ?? $defaultDuration,
                 'passing_score' => $passingScore,
                 'max_attempts' => $request->max_attempts ?? $defaultMaxAttempts,
@@ -110,6 +114,7 @@ class WorkshopAssessmentController extends Controller
             'assessments.*.type' => 'required|string|in:pre_test,post_test',
             'assessments.*.title' => 'required|string|max:255',
             'assessments.*.description' => 'nullable|string',
+            'assessments.*.use_global_settings' => 'nullable|boolean',
             'assessments.*.duration_minutes' => 'nullable|integer|min:1',
             'assessments.*.passing_score' => 'nullable|integer|min:0|max:100',
             'assessments.*.max_attempts' => 'nullable|integer|min:0',
@@ -131,6 +136,7 @@ class WorkshopAssessmentController extends Controller
             foreach ($validated['assessments'] as $assessmentData) {
                 $modId = $assessmentData['module_id'] ?? $targetModuleId;
                 $passingScore = $assessmentData['passing_score'] ?? ($assessmentData['type'] === 'pre_test' ? $defaultPrePassing : $defaultPostPassing);
+                $useGlobal = isset($assessmentData['use_global_settings']) ? filter_var($assessmentData['use_global_settings'], FILTER_VALIDATE_BOOLEAN) : true;
 
                 // A. Update or Create assessment (pre_test / post_test)
                 $assessment = $course->assessments()->updateOrCreate(
@@ -141,6 +147,7 @@ class WorkshopAssessmentController extends Controller
                     [
                         'title' => $assessmentData['title'],
                         'description' => $assessmentData['description'] ?? null,
+                        'use_global_settings' => $useGlobal,
                         'duration_minutes' => $assessmentData['duration_minutes'] ?? $defaultDuration,
                         'passing_score' => $passingScore,
                         'max_attempts' => $assessmentData['max_attempts'] ?? $defaultMaxAttempts,
@@ -297,7 +304,8 @@ class WorkshopAssessmentController extends Controller
             ->where('user_id', $user->id)
             ->count();
 
-        if ($assessment->max_attempts > 0 && $attemptCount >= $assessment->max_attempts) {
+        $effectiveMaxAttempts = $assessment->effective_max_attempts;
+        if ($effectiveMaxAttempts > 0 && $attemptCount >= $effectiveMaxAttempts) {
             return response()->json(['message' => 'Batas maksimal percobaan pengerjaan tes ini sudah habis.'], 403);
         }
 
