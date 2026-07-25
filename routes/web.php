@@ -260,8 +260,8 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::post('/dashboard/courses/{course}/gift', [\App\Http\Controllers\CourseGiftController::class, 'gift'])->name('dashboard.courses.gift');
 
     // Workshop Assessment Activities & Analytics (Admin/Instructor/Student)
+    Route::get('/dashboard/reports/exam', [\App\Http\Controllers\ExamReportController::class, 'index'])->name('dashboard.reports.exam');
     Route::get('/dashboard/courses/{course}/assessment-analytics', [\App\Http\Controllers\WorkshopAssessmentController::class, 'analytics'])->name('assessments.analytics');
-    Route::get('/dashboard/reports/exam/{course?}', [\App\Http\Controllers\WorkshopAssessmentController::class, 'analytics'])->name('dashboard.reports.exam');
     Route::get('/courses/{course:slug}/assessments/{assessment}', [\App\Http\Controllers\WorkshopAssessmentController::class, 'showStudentAssessment'])->name('assessments.show-student');
     Route::post('/assessments/{assessment}/start', [\App\Http\Controllers\WorkshopAssessmentController::class, 'startAttempt'])->name('assessments.start');
     Route::post('/attempts/{attempt}/submit', [\App\Http\Controllers\WorkshopAssessmentController::class, 'submitAttempt'])->name('attempts.submit');

@@ -88,8 +88,8 @@ return [
             'dashboard.qna',
             'blogs.store', 'blogs.update', 'blogs.destroy',
             'dashboard.settings.blog', 'dashboard.settings.blog.update', 'dashboard.settings.blog.upload-image',
-            // Gifting
-            'dashboard.students.search', 'dashboard.courses.gift', 'assessments.analytics',
+            // Gifting & Reports
+            'dashboard.students.search', 'dashboard.courses.gift', 'dashboard.reports.exam', 'assessments.analytics',
             // Admin specific
             'dashboard.users.manage', 'dashboard.users.approve', 'dashboard.users.reject', 'dashboard.users.role', 'dashboard.users.export',
             'dashboard.settings', 'dashboard.settings.update',
