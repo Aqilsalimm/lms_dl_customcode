@@ -128,4 +128,12 @@ class Course extends Model
     {
         return $this->hasMany(WorkshopAssessment::class);
     }
+
+    /**
+     * Get all certificates (session and course_completion) for this course.
+     */
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(Certificate::class);
+    }
 }

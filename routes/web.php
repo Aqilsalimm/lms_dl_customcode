@@ -236,6 +236,11 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('/notifications/test-trigger', [NotificationController::class, 'testTrigger'])->name('notifications.test-trigger');
     Route::get('/courses/{course:slug}/certificate', [CourseController::class, 'certificate'])->name('courses.certificate');
+    Route::get('/courses/{course:slug}/certificates', [\App\Http\Controllers\CertificateController::class, 'index'])->name('courses.certificates.index');
+    Route::post('/courses/{course:slug}/certificates/{certificate}/claim', [\App\Http\Controllers\CertificateController::class, 'claim'])->name('courses.certificates.claim');
+    Route::get('/certificates/{code}', [\App\Http\Controllers\CertificateController::class, 'show'])->name('certificates.show');
+    Route::post('/course-builder/courses/{course}/certificates', [\App\Http\Controllers\CertificateController::class, 'store'])->name('course-builder.certificates.store');
+    Route::delete('/course-builder/certificates/{certificate}', [\App\Http\Controllers\CertificateController::class, 'destroy'])->name('course-builder.certificates.destroy');
 
     // QnA & Discussions
     Route::get('/discussions/lesson/{lesson}', [DiscussionController::class, 'getForMaterial'])->name('discussions.lesson');

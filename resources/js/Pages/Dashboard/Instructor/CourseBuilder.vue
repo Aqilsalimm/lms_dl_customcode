@@ -423,29 +423,62 @@ const meetingModalForm = ref({
   password: ''
 });
 
-// Trigger opening of modal
-const openMeetingModal = (type) => {
-  meetingModalType.value = type;
-  
-  const existingData = type === 'zoom' ? additionalForm.value.live_zoom_data : additionalForm.value.live_gmeet_data;
-  
-  if (existingData) {
-    meetingModalForm.value = { ...existingData };
-  } else {
-    meetingModalForm.value = {
-      name: props.course.title ? `Kelas Live: ${props.course.title}` : '',
-      summary: 'Sesi tanya jawab live interaktif mengenai materi pembelajaran.',
-      date: new Date().toISOString().substring(0, 10), // default to today
-      time: '19:00',
-      duration: 40,
-      durationUnit: 'Minutes',
-      timezone: 'Asia/Jakarta',
-      link: '',
-      meetingId: '',
-      password: ''
-    };
+// --- SESSION CERTIFICATE MANAGEMENT (STEP 3) ---
+const courseCertificates = ref([]);
+const isLoadingCourseCertificates = ref(false);
+const showAddCertModal = ref(false);
+const certForm = ref({
+  title: '',
+  type: 'session',
+  module_ids: [],
+  description: ''
+});
+
+const fetchCourseCertificates = () => {
+  if (!props.course || !props.course.id) return;
+  isLoadingCourseCertificates.value = true;
+  axios.get(`/courses/${props.course.slug || props.course.id}/certificates`)
+    .then(res => {
+      courseCertificates.value = res.data.certificates || [];
+    })
+    .catch(() => {})
+    .finally(() => {
+      isLoadingCourseCertificates.value = false;
+    });
+};
+
+const createCertificateTemplate = () => {
+  if (!certForm.value.title || !certForm.value.module_ids || certForm.value.module_ids.length === 0) {
+    showCustomAlert('Perhatian', 'Judul sertifikat dan minimal 1 modul prasyarat wajib dipilih.', 'warning');
+    return;
   }
-  showMeetingModal.value = true;
+  axios.post(`/course-builder/courses/${props.course.id}/certificates`, certForm.value)
+    .then(res => {
+      showCustomAlert('Berhasil', 'Template Sertifikat Sesi berhasil dibuat.', 'success');
+      showAddCertModal.value = false;
+      certForm.value = { title: '', type: 'session', module_ids: [], description: '' };
+      fetchCourseCertificates();
+    })
+    .catch(err => {
+      showCustomAlert('Error', err.response?.data?.message || 'Gagal membuat template sertifikat.', 'error');
+    });
+};
+
+const deleteCertificateTemplate = (certId) => {
+  showCustomAlert(
+    'Konfirmasi Hapus',
+    'Apakah Anda yakin ingin menghapus template sertifikat ini?',
+    'confirm',
+    () => {
+      axios.delete(`/course-builder/certificates/${certId}`)
+        .then(() => {
+          showCustomAlert('Berhasil', 'Template sertifikat berhasil dihapus.', 'success');
+          fetchCourseCertificates();
+        });
+    },
+    'Hapus',
+    'Batal'
+  );
 };
 
 // Generate meeting link upon submitting the modal form
@@ -1796,6 +1829,13 @@ const startQuizImport = () => {
                   >
                     <BookOpen :size="14" /> Preparation
                   </button>
+                  <button 
+                    @click="activeOptionsTab = 'certificates'; fetchCourseCertificates();"
+                    :class="activeOptionsTab === 'certificates' ? 'bg-[#F4F7F9] text-[#264790]' : 'text-slate-500 hover:bg-slate-50'"
+                    class="w-full text-left px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <Award :size="14" /> Session Certificates
+                  </button>
                 </div>
 
                 <!-- Tabs Content -->
@@ -1912,6 +1952,143 @@ const startQuizImport = () => {
                         v-model="additionalForm.requirements"
                         placeholder="Contoh: Silakan install VSCode dan Node.js sebelum sesi dimulai..."
                       />
+                    </div>
+                  </div>
+
+                  <!-- Session Certificates Tab Content -->
+                  <div v-if="activeOptionsTab === 'certificates'" class="flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <h4 class="text-base font-extrabold text-[#1A2B49] mb-0.5">Konfigurasi Sertifikat Sesi</h4>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                          Tentukan template sertifikat per sesi / bundel modul beserta modul prasyaratnya.
+                        </p>
+                      </div>
+                      <button 
+                        type="button" 
+                        @click="showAddCertModal = true" 
+                        class="bg-[#264790] hover:bg-[#44A6D9] text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                      >
+                        <Plus :size="14" /> Tambah Template
+                      </button>
+                    </div>
+
+                    <div v-if="isLoadingCourseCertificates" class="text-center py-6 text-slate-400 text-xs font-semibold">
+                      <RefreshCw :size="16" class="animate-spin inline-block mr-2" /> Memuat sertifikat kelas...
+                    </div>
+
+                    <div v-else-if="courseCertificates.length > 0" class="space-y-3">
+                      <div 
+                        v-for="cert in courseCertificates" 
+                        :key="cert.id" 
+                        class="p-4 bg-white border border-slate-200/80 rounded-2xl flex items-center justify-between gap-3 shadow-sm hover:border-slate-300 transition-colors"
+                      >
+                        <div class="space-y-1 min-w-0 pr-2">
+                          <div class="flex items-center gap-2">
+                            <span 
+                              :class="cert.type === 'course_completion' ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-indigo-100 text-indigo-800 border-indigo-200'"
+                              class="text-[9px] font-extrabold px-2 py-0.5 rounded-md uppercase border"
+                            >
+                              {{ cert.type === 'course_completion' ? 'Completion' : (cert.type === 'multi_session' ? 'Multi-Sesi' : 'Sesi Single') }}
+                            </span>
+                            <h5 class="text-xs font-extrabold text-[#1A2B49] truncate">{{ cert.title }}</h5>
+                          </div>
+                          <p class="text-[10px] text-slate-500 line-clamp-1">{{ cert.description }}</p>
+                          <p class="text-[10px] text-slate-400 font-bold">
+                            Prasyarat: {{ (cert.module_ids || []).length }} Modul Terpilih
+                          </p>
+                        </div>
+
+                        <div class="flex items-center gap-2 shrink-0">
+                          <a 
+                            :href="`/certificates/${cert.id}`" 
+                            target="_blank"
+                            class="text-xs font-bold text-[#264790] hover:underline flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200"
+                          >
+                            <ExternalLink :size="12" /> Preview
+                          </a>
+                          <button 
+                            type="button" 
+                            @click="deleteCertificateTemplate(cert.id)"
+                            class="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Hapus Template Sertifikat"
+                          >
+                            <Trash2 :size="14" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div v-else class="text-center py-6 px-4 text-slate-400 text-xs font-semibold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                      Belum ada template sertifikat sesi kustom. Klik tombol "+ Tambah Template" di atas untuk membuat sertifikat per sesi.
+                    </div>
+
+                    <!-- Modal Tambah Sertifikat Template -->
+                    <div v-if="showAddCertModal" class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                      <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl p-6 relative border border-slate-100 space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                          <h3 class="text-base font-extrabold text-[#1A2B49]">Tambah Template Sertifikat Sesi</h3>
+                          <button @click="showAddCertModal = false" class="text-slate-400 hover:text-slate-600 cursor-pointer"><X :size="18" /></button>
+                        </div>
+
+                        <div class="space-y-3 text-left">
+                          <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Judul Sertifikat</label>
+                            <input 
+                              v-model="certForm.title" 
+                              type="text" 
+                              placeholder="Contoh: Sertifikat Kelulusan Sesi 1" 
+                              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-medium outline-none focus:border-[#264790]" 
+                            />
+                          </div>
+
+                          <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Tipe Sertifikat</label>
+                            <select 
+                              v-model="certForm.type" 
+                              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-medium outline-none focus:border-[#264790]"
+                            >
+                              <option value="session">Sertifikat Sesi Single (Per Bab)</option>
+                              <option value="multi_session">Sertifikat Multi-Sesi (Kombinasi Beberapa Bab)</option>
+                              <option value="course_completion">Sertifikat Completion Utama (Seluruh Kelas)</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Pilih Modul Prasyarat Pembukaan Kunci</label>
+                            <div class="max-h-36 overflow-y-auto space-y-1.5 bg-slate-50 border border-slate-200 rounded-xl p-2.5">
+                              <label 
+                                v-for="mod in modules" 
+                                :key="mod.id" 
+                                class="flex items-center gap-2 text-xs text-slate-700 font-medium cursor-pointer hover:bg-slate-100 p-1.5 rounded-lg"
+                              >
+                                <input 
+                                  type="checkbox" 
+                                  :value="mod.id" 
+                                  v-model="certForm.module_ids"
+                                  class="w-4 h-4 text-[#264790] rounded border-slate-300" 
+                                />
+                                <span>{{ mod.title }}</span>
+                              </label>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Deskripsi Penjelasan (Opsional)</label>
+                            <textarea 
+                              v-model="certForm.description" 
+                              rows="2" 
+                              placeholder="Deskripsi singkat mengenai reward sertifikat ini..." 
+                              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-medium outline-none focus:border-[#264790]" 
+                            ></textarea>
+                          </div>
+                        </div>
+
+                        <div class="pt-2 flex items-center gap-2">
+                          <button @click="showAddCertModal = false" type="button" class="flex-1 bg-slate-100 text-slate-600 hover:bg-slate-200 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer">Batal</button>
+                          <button @click="createCertificateTemplate" type="button" class="flex-1 bg-[#264790] hover:bg-[#44A6D9] text-white py-2.5 rounded-xl text-xs font-extrabold shadow transition-all cursor-pointer">Simpan Template</button>
+                        </div>
+                      </div>
                     </div>
                   </div>
 

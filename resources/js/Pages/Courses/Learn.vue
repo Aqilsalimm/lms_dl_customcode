@@ -30,6 +30,7 @@ import {
 } from 'lucide-vue-next';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import MaterialDiscussion from '@/Components/MaterialDiscussion.vue';
+import CertificateCard from '@/Components/CertificateCard.vue';
 import axios from 'axios';
 
 const props = defineProps({
@@ -562,7 +563,27 @@ const updateCountdown = () => {
   }
 };
 
+// Session Certificates & Unlocking State
+const sessionCertificates = ref([]);
+const isLoadingCertificates = ref(false);
+
+const fetchCertificates = () => {
+  if (!props.course || !props.course.slug) return;
+  isLoadingCertificates.value = true;
+  axios.get(`/courses/${props.course.slug}/certificates`)
+    .then(res => {
+      sessionCertificates.value = res.data.certificates || [];
+    })
+    .catch(err => {
+      console.error('Failed to fetch session certificates:', err);
+    })
+    .finally(() => {
+      isLoadingCertificates.value = false;
+    });
+};
+
 onMounted(() => {
+  fetchCertificates();
   if (props.course.course_type === 'live_class') {
     updateCountdown();
     countdownInterval = setInterval(updateCountdown, 60000); // update every minute
@@ -1188,18 +1209,29 @@ const Logo = () => {
             <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] flex flex-col gap-6">
               
               <!-- Tabs Navigation -->
-              <div class="flex gap-4 border-b border-slate-100 pb-3">
+              <div class="flex gap-4 border-b border-slate-100 pb-3 overflow-x-auto">
                 <button 
                   @click="activeTab = 'resources'"
                   :class="activeTab === 'resources' ? 'text-[#264790] border-b-2 border-[#264790]' : 'text-slate-400 hover:text-slate-600'"
-                  class="pb-2 font-extrabold text-sm transition-colors outline-none cursor-pointer"
+                  class="pb-2 font-extrabold text-sm transition-colors outline-none cursor-pointer whitespace-nowrap"
                 >
                   Resources
                 </button>
                 <button 
+                  @click="activeTab = 'certificates'"
+                  :class="activeTab === 'certificates' ? 'text-[#264790] border-b-2 border-[#264790]' : 'text-slate-400 hover:text-slate-600'"
+                  class="pb-2 font-extrabold text-sm transition-colors outline-none cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+                >
+                  <Award :size="16" />
+                  <span>Sertifikat Sesi & Completion</span>
+                  <span v-if="sessionCertificates.length > 0" class="text-[10px] bg-amber-100 text-amber-800 font-black px-2 py-0.5 rounded-full">
+                    {{ sessionCertificates.filter(c => c.unlocked).length }}/{{ sessionCertificates.length }}
+                  </span>
+                </button>
+                <button 
                   @click="activeTab = 'about'"
                   :class="activeTab === 'about' ? 'text-[#264790] border-b-2 border-[#264790]' : 'text-slate-400 hover:text-slate-600'"
-                  class="pb-2 font-extrabold text-sm transition-colors outline-none cursor-pointer"
+                  class="pb-2 font-extrabold text-sm transition-colors outline-none cursor-pointer whitespace-nowrap"
                 >
                   About
                 </button>
@@ -1233,6 +1265,37 @@ const Logo = () => {
                 </div>
                 <div v-else class="text-center py-6 px-4 text-slate-400 text-xs font-semibold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                   Belum ada berkas lampiran atau tautan sumber belajar untuk sesi ini.
+                </div>
+              </div>
+
+              <!-- Tab Content: Certificates -->
+              <div v-else-if="activeTab === 'certificates'" class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h3 class="text-sm font-extrabold text-[#1A2B49]">Daftar Sertifikat Sesi & Kelulusan Kelas</h3>
+                    <p class="text-xs text-slate-500 font-medium mt-0.5">Sertifikat dianggap sebagai reward yang dapat Anda buka setiap kali syarat penyelesaian sesi terpenuhi.</p>
+                  </div>
+                  <button @click="fetchCertificates" class="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer" title="Refresh Sertifikat">
+                    <RefreshCw :size="14" :class="{'animate-spin': isLoadingCertificates}" />
+                  </button>
+                </div>
+
+                <div v-if="isLoadingCertificates" class="text-center py-8 text-slate-400 text-xs font-semibold">
+                  <RefreshCw :size="18" class="animate-spin inline-block mr-2 text-[#264790]" /> Memeriksa syarat pembukaan sertifikat...
+                </div>
+
+                <div v-else-if="sessionCertificates.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <CertificateCard 
+                    v-for="cert in sessionCertificates" 
+                    :key="cert.id" 
+                    :certificate="cert" 
+                    :course-slug="course.slug"
+                    @claimed="fetchCertificates"
+                  />
+                </div>
+
+                <div v-else class="text-center py-6 px-4 text-slate-400 text-xs font-semibold bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  Belum ada sertifikat sesi yang dikonfigurasi untuk kelas ini.
                 </div>
               </div>
 

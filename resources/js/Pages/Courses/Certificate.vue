@@ -7,7 +7,10 @@ const props = defineProps({
   course: Object,
   settings: Object,
   completedAt: String,
-  studentName: String
+  studentName: String,
+  certificateTitle: String,
+  certificateCode: String,
+  certificateType: String,
 });
 
 // Format Date nicely
