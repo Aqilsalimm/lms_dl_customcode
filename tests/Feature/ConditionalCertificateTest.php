@@ -89,4 +89,50 @@ class ConditionalCertificateTest extends TestCase
             'certificate_id' => $certObj1->id,
         ]);
     }
+
+    public function test_module_session_certificate_fields_and_is_completed_by_method()
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $student = User::factory()->create(['role' => 'student']);
+
+        $course = Course::create([
+            'title' => 'Mastering Vue 3',
+            'slug' => 'mastering-vue-3',
+            'instructor_id' => $instructor->id,
+            'price' => 200000,
+            'level' => 'Umum',
+            'status' => 'published',
+        ]);
+
+        $module = Module::create([
+            'course_id' => $course->id,
+            'title' => 'Bab 1: Options API vs Composition API',
+            'sort_order' => 0,
+            'has_session_certificate' => true,
+            'certificate_bg_path' => 'certificates/bg_bab1.png',
+            'text_name_y_position' => 45,
+            'text_title_y_position' => 55,
+        ]);
+
+        $lesson = Lesson::create([
+            'module_id' => $module->id,
+            'title' => 'Pengenalan Composition API',
+            'duration_minutes' => 15,
+            'sort_order' => 0,
+        ]);
+
+        $enrollment = Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+            'completed_lessons' => [],
+        ]);
+
+        $this->assertTrue($module->has_session_certificate);
+        $this->assertEquals('certificates/bg_bab1.png', $module->certificate_bg_path);
+        $this->assertFalse($module->isCompletedBy($student));
+
+        // Complete lesson
+        $enrollment->update(['completed_lessons' => [$lesson->id]]);
+        $this->assertTrue($module->fresh()->isCompletedBy($student));
+    }
 }
