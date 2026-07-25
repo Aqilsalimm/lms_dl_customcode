@@ -20,6 +20,7 @@ import {
 
 const props = defineProps({
   course: Object,
+  allCourses: Array,
   preTest: Object,
   postTest: Object,
   atRiskStudents: Array,
@@ -54,11 +55,26 @@ const activeTab = ref('overview'); // 'overview', 'at_risk', 'item_analysis', 'a
             </p>
           </div>
 
-          <div class="flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl">
-            <GraduationCap :size="32" class="text-blue-300" />
-            <div>
-              <div class="text-[10px] font-extrabold uppercase tracking-widest text-blue-200">Total Peserta</div>
-              <div class="text-xl font-black">{{ studentScores ? studentScores.length : 0 }} Siswa</div>
+          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div v-if="allCourses && allCourses.length > 1" class="flex flex-col gap-1">
+              <span class="text-[10px] uppercase font-bold text-blue-200">Pilih Kelas</span>
+              <select 
+                :value="course.id" 
+                @change="e => $inertia.visit(route('dashboard.reports.exam', e.target.value))"
+                class="bg-white/10 text-white border border-white/20 rounded-xl px-3 py-2 text-xs font-bold outline-none cursor-pointer hover:bg-white/20 transition-colors"
+              >
+                <option v-for="c in allCourses" :key="c.id" :value="c.id" class="text-slate-800 font-medium">
+                  {{ c.title }}
+                </option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl">
+              <GraduationCap :size="32" class="text-blue-300" />
+              <div>
+                <div class="text-[10px] font-extrabold uppercase tracking-widest text-blue-200">Total Peserta</div>
+                <div class="text-xl font-black">{{ studentScores ? studentScores.length : 0 }} Siswa</div>
+              </div>
             </div>
           </div>
         </div>

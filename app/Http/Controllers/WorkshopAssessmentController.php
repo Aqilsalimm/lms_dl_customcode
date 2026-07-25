@@ -536,8 +536,26 @@ class WorkshopAssessmentController extends Controller
     /**
      * Display analytical dashboard for Pre-Test and Post-Test recapitulation.
      */
-    public function analytics(Course $course)
+    public function analytics($course = null)
     {
+        $user = auth()->user();
+
+        if ($course) {
+            if (is_numeric($course) || is_string($course)) {
+                $course = Course::where('id', $course)->orWhere('slug', $course)->first();
+            }
+        }
+
+        $coursesQuery = $user->isAdmin() ? Course::query() : Course::where('instructor_id', $user->id);
+        $allCourses = $coursesQuery->select(['id', 'title', 'slug'])->get();
+
+        if (!$course || !$course->exists) {
+            $course = (clone $coursesQuery)->whereHas('assessments')->first() ?: (clone $coursesQuery)->first();
+            if (!$course) {
+                return redirect()->route('course-builder.index')->with('warning', 'Belum ada kelas dengan Ujian/Assessment untuk ditampilkan dalam laporan.');
+            }
+        }
+
         $this->validateCourseOwner($course);
 
         $preTest = $course->assessments()->where('type', 'pre_test')->first();
@@ -671,6 +689,7 @@ class WorkshopAssessmentController extends Controller
 
         return Inertia::render('Dashboard/Instructor/AssessmentAnalytics', [
             'course' => $course->only(['id', 'title', 'slug', 'course_type']),
+            'allCourses' => $allCourses,
             'preTest' => $preTest ? [
                 'id' => $preTest->id,
                 'title' => $preTest->title,
