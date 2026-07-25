@@ -4,7 +4,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { 
   BookOpen, Plus, Trash2, ArrowRight, Settings, 
-  X, Check, AlertCircle, Upload, Gift
+  X, Check, AlertCircle, Upload, Gift, BarChart3
 } from 'lucide-vue-next';
 import axios from 'axios';
 import Swal from 'sweetalert2';
@@ -280,6 +280,13 @@ const submitGift = () => {
                       >
                         <Gift :size="14" /> Hadiahkan
                       </button>
+                      <Link 
+                        :href="route('assessments.analytics', course.id)"
+                        class="bg-blue-50 hover:bg-[#264790] text-[#264790] hover:text-white px-3.5 py-2 rounded-2xl font-bold text-xs shadow-sm transition-all duration-200 flex items-center gap-1.5"
+                        title="Dasbor Rekap & Analitik Real-Time Pre-Test / Post-Test Ujian"
+                      >
+                        <BarChart3 :size="14" /> Analitik Test
+                      </Link>
                       <Link 
                         :href="route('course-builder.build', course.id)"
                         class="bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white px-3.5 py-2 rounded-2xl font-bold text-xs shadow-sm transition-all duration-200 flex items-center gap-1.5"

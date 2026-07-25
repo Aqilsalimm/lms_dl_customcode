@@ -616,7 +616,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Instructor/CourseIndex.vue": {
-    "file": "assets/CourseIndex-C9SoqAVJ.js",
+    "file": "assets/CourseIndex-R6uu4Q0I.js",
     "name": "CourseIndex",
     "src": "resources/js/Pages/Dashboard/Instructor/CourseIndex.vue",
     "isDynamicEntry": true,
@@ -862,7 +862,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-D3-K7ZNL.js",
+    "file": "assets/app-zwdgmAHo.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
