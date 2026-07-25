@@ -213,8 +213,8 @@ class ExamReportTest extends TestCase
         // 3. Test saving assessment with use_global_settings = false (custom config)
         $assessmentCustom = WorkshopAssessment::create([
             'course_id' => $course->id,
-            'title' => 'Custom Pre-Test',
-            'type' => 'pre_test',
+            'title' => 'Custom Post-Test',
+            'type' => 'post_test',
             'use_global_settings' => false,
             'passing_score' => 90,
             'duration_minutes' => 60,
