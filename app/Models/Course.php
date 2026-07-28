@@ -29,12 +29,15 @@ class Course extends Model
         'capacity',
         'status',
         'course_type',
+        'delivery_mode',
         'start_date',
         'end_date',
         'timezone',
         'meeting_url',
+        'location_venue',
         'max_participants',
         'recording_url',
+        'documentation_urls',
         'is_event_finished',
         'tools'
     ];
@@ -46,6 +49,7 @@ class Course extends Model
         'end_date' => 'datetime',
         'is_event_finished' => 'boolean',
         'tools' => 'array',
+        'documentation_urls' => 'array',
     ];
 
     protected $appends = [
@@ -135,5 +139,13 @@ class Course extends Model
     public function certificates(): HasMany
     {
         return $this->hasMany(Certificate::class);
+    }
+
+    /**
+     * Get all live class sessions for this course.
+     */
+    public function liveClasses(): HasMany
+    {
+        return $this->hasMany(LiveClass::class);
     }
 }
