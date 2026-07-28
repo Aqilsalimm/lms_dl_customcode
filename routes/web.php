@@ -268,8 +268,11 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::get('/courses/{course}/live-link', [\App\Http\Controllers\WorkshopAssessmentController::class, 'getLiveMeetingLink'])->name('courses.live-link');
     Route::get('/courses/{course}/live-meeting-link', [\App\Http\Controllers\WorkshopAssessmentController::class, 'getLiveMeetingLink'])->name('courses.live-meeting-link');
     
-    // Live Class secure endpoint
+    // Live Class secure endpoint & hybrid management
     Route::get('/live-class/{course}', [\App\Http\Controllers\LiveClassController::class, 'show'])->name('live-class.show');
+    Route::post('/live-classes', [\App\Http\Controllers\LiveClassController::class, 'store'])->name('live-classes.store');
+    Route::put('/live-classes/{liveClass}', [\App\Http\Controllers\LiveClassController::class, 'update'])->name('live-classes.update');
+    Route::delete('/live-classes/{liveClass}', [\App\Http\Controllers\LiveClassController::class, 'destroy'])->name('live-classes.destroy');
 
     // Web Push Subscriptions
     Route::get('/push-subscriptions/key', [\App\Http\Controllers\PushSubscriptionController::class, 'key'])->name('push.key');
