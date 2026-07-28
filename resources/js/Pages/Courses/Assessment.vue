@@ -8,7 +8,7 @@ export default {
 </script>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { 
   Clock, Award, AlertCircle, CheckCircle2, 
@@ -39,6 +39,39 @@ const selectedAnswers = ref({});
 const timeLeftFormatted = ref('00:00');
 let timerInterval = null;
 
+// Persisted Draft logic
+const storageKey = computed(() => attempt.value ? `assessment_attempt_${attempt.value.id}` : null);
+const loadPersistedAnswers = () => {
+  if (storageKey.value) {
+    const saved = localStorage.getItem(storageKey.value);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        selectedAnswers.value = { ...selectedAnswers.value, ...parsed };
+      } catch (e) {
+        console.error('Failed to parse saved answers', e);
+      }
+    }
+  }
+};
+
+watch(selectedAnswers, (newVal) => {
+  if (storageKey.value && !isSubmitted.value) {
+    localStorage.setItem(storageKey.value, JSON.stringify(newVal));
+  }
+}, { deep: true });
+
+// Multiple Tab Prevention
+const channel = new BroadcastChannel('drastha_assessment_channel');
+channel.onmessage = (event) => {
+  if (event.data.type === 'START' && event.data.assessmentId === props.assessment.id) {
+    if (hasStarted.value && !isSubmitted.value) {
+      alert('Perhatian: Anda telah membuka kuis ini di tab lain. Untuk mencegah konflik, sesi di tab ini tidak dilanjutkan.');
+      window.location.reload();
+    }
+  }
+};
+
 // Start the assessment session
 const startAssessment = async () => {
   try {
@@ -47,6 +80,8 @@ const startAssessment = async () => {
       attempt.value = res.data.attempt;
       hasStarted.value = true;
       initTimer(res.data.attempt);
+      loadPersistedAnswers();
+      channel.postMessage({ type: 'START', assessmentId: props.assessment.id });
     }
   } catch (err) {
     alert(err.response?.data?.message || 'Gagal memulai tes. Silakan coba lagi.');
@@ -96,20 +131,39 @@ const submitAnswers = async (isAuto = false) => {
   isSubmitting.value = true;
   clearInterval(timerInterval);
 
-  try {
-    const res = await axios.post(route('attempts.submit', attempt.value.id), {
-      answers: selectedAnswers.value
-    });
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      const res = await axios.post(route('attempts.submit', attempt.value.id), {
+        answers: selectedAnswers.value
+      });
 
-    if (res.data) {
-      quizScore.value = res.data.score;
-      quizResults.value = res.data.results;
-      isSubmitted.value = true;
+      if (res.data) {
+        quizScore.value = res.data.score;
+        quizResults.value = res.data.results;
+        isSubmitted.value = true;
+        
+        // Cleanup storage on success
+        if (storageKey.value) localStorage.removeItem(storageKey.value);
+        
+        isSubmitting.value = false;
+        return; // Success, exit
+      }
+    } catch (err) {
+      retries--;
+      if (retries === 0) {
+        alert(err.response?.data?.message || 'Koneksi terputus: Gagal mengirim jawaban setelah beberapa percobaan. Harap periksa jaringan Anda.');
+        isSubmitting.value = false;
+        
+        // Re-init timer if we failed (unless it was auto-submit, then it stays at 0)
+        if (!isAuto) {
+          initTimer(attempt.value);
+        }
+        return;
+      }
+      // Wait 2 seconds before retrying
+      await new Promise(r => setTimeout(r, 2000));
     }
-  } catch (err) {
-    alert(err.response?.data?.message || 'Gagal mengirim jawaban.');
-  } finally {
-    isSubmitting.value = false;
   }
 };
 
@@ -121,20 +175,22 @@ const allQuestionsAnswered = computed(() => {
 
 // Setup on mount
 onMounted(() => {
-  if (props.existingAttempt) {
-    initTimer(props.existingAttempt);
-  }
-  
   // Prep answers structure
   if (props.assessment.questions) {
     props.assessment.questions.forEach(q => {
       selectedAnswers.value[q.id] = undefined;
     });
   }
+  
+  if (props.existingAttempt) {
+    loadPersistedAnswers();
+    initTimer(props.existingAttempt);
+  }
 });
 
 onBeforeUnmount(() => {
   if (timerInterval) clearInterval(timerInterval);
+  channel.close();
 });
 
 // Format timestamp Helper
@@ -216,7 +272,7 @@ const formatDate = (dateStr) => {
                   <Presentation :size="14" />
                   <span>Pre-test Evaluasi</span>
                 </div>
-                <CheckCircle2 v-if="pastAttempts.some(a => a.assessment.type === 'pre_test' && a.is_passed)" :size="14" class="text-emerald-400" />
+                <CheckCircle2 v-if="assessment.type === 'pre_test' && pastAttempts.some(a => a.is_passed)" :size="14" class="text-emerald-400" />
               </div>
 
               <!-- Post-test Link / Status -->
@@ -228,7 +284,7 @@ const formatDate = (dateStr) => {
                   <Award :size="14" />
                   <span>Post-test Kelulusan</span>
                 </div>
-                <CheckCircle2 v-if="pastAttempts.some(a => a.assessment.type === 'post_test' && a.is_passed)" :size="14" class="text-emerald-400" />
+                <CheckCircle2 v-if="assessment.type === 'post_test' && pastAttempts.some(a => a.is_passed)" :size="14" class="text-emerald-400" />
               </div>
             </div>
           </div>
@@ -325,6 +381,7 @@ const formatDate = (dateStr) => {
             <!-- Start Action Button -->
             <button 
               @click="startAssessment"
+              data-testid="start-pretest-btn"
               class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-4 rounded-2xl font-extrabold text-sm shadow-md transition-colors cursor-pointer text-center"
             >
               Mulai Pengerjaan Tes
@@ -409,6 +466,7 @@ const formatDate = (dateStr) => {
                   v-else
                   type="button"
                   @click="submitAnswers(false)"
+                  data-testid="submit-pretest-btn"
                   :disabled="isSubmitting"
                   class="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition-all cursor-pointer shadow-md flex items-center gap-1.5"
                 >

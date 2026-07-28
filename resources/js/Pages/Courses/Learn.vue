@@ -76,19 +76,23 @@ const completedLessons = ref([...props.dbCompletedLessons]);
 const completedQuizzes = ref([...props.dbCompletedQuizzes]);
 const showCompletedOverlay = ref(false);
 
-// Set initial active lesson
-if (props.course.modules && props.course.modules.length > 0) {
-  // Expand first module by default
-  expandedModules.value[props.course.modules[0].id] = true;
-  
-  if (props.course.modules[0].lessons && props.course.modules[0].lessons.length > 0) {
-    activeLesson.value = props.course.modules[0].lessons[0];
-    activeModule.value = props.course.modules[0];
-  } else if (props.course.modules[0].quizzes && props.course.modules[0].quizzes.length > 0) {
-    activeQuiz.value = props.course.modules[0].quizzes[0];
-    activeModule.value = props.course.modules[0];
+// Set initial active lesson & watch for prop updates
+watch(() => props.course, (newCourse) => {
+  if (newCourse?.modules && newCourse.modules.length > 0) {
+    if (expandedModules.value[newCourse.modules[0].id] === undefined) {
+      expandedModules.value[newCourse.modules[0].id] = true;
+    }
+    if (!activeLesson.value && !activeQuiz.value) {
+      if (newCourse.modules[0].lessons && newCourse.modules[0].lessons.length > 0) {
+        activeLesson.value = newCourse.modules[0].lessons[0];
+        activeModule.value = newCourse.modules[0];
+      } else if (newCourse.modules[0].quizzes && newCourse.modules[0].quizzes.length > 0) {
+        activeQuiz.value = newCourse.modules[0].quizzes[0];
+        activeModule.value = newCourse.modules[0];
+      }
+    }
   }
-}
+}, { immediate: true, deep: true });
 
 // Expand/collapse module accordion
 const toggleModule = (id) => {
@@ -817,8 +821,8 @@ const Logo = () => {
                 v-show="expandedModules[mod.id]"
                 class="p-4 sm:p-5 border-t border-slate-50 bg-slate-50/20 flex flex-col gap-3"
               >
-                <!-- Live Class Modular Actions (Per Session) -->
-                <template v-if="course.course_type === 'live_class'">
+                <!-- Modular Actions (Per Session) -->
+                <template v-if="true">
                   <!-- Prerequisite Lock Banner if previous module not passed -->
                   <div v-if="!mod.is_prerequisite_met" class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs flex items-center gap-2">
                     <Lock :size="16" class="text-amber-600 shrink-0" />
@@ -831,6 +835,7 @@ const Logo = () => {
                       <template v-for="preA in mod.assessments.filter(a => a.type === 'pre_test')" :key="preA.id">
                         <Link 
                           :href="`/courses/${course.slug}/assessments/${preA.id}`"
+                          data-testid="start-pretest-btn"
                           :class="mod.is_pre_completed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'"
                           class="w-full flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all"
                         >
@@ -847,7 +852,11 @@ const Logo = () => {
                     </div>
 
                     <!-- Meeting Link & Material File (Requires Pre-Test completed) -->
-                    <div v-if="mod.is_pre_completed" class="space-y-2">
+                    <div v-if="mod.is_pre_completed" data-testid="syllabus-unlocked" class="space-y-2">
+                      <div class="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold flex items-center gap-2">
+                        <CheckCircle2 :size="16" class="text-emerald-600" />
+                        <span>Pre-Test Selesai - Akses Materi Terbuka</span>
+                      </div>
                       <!-- Live Meeting Link -->
                       <a 
                         v-if="mod.meeting_url || course.meeting_url" 
@@ -890,9 +899,9 @@ const Logo = () => {
                         <ExternalLink :size="14" />
                       </a>
                     </div>
-                    <div v-else class="p-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 text-xs flex items-center gap-2">
+                    <div v-else data-testid="syllabus-locked" class="p-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 text-xs flex items-center gap-2">
                       <Lock :size="16" class="text-slate-400 shrink-0" />
-                      <span>Kerjakan Pre-Test terlebih dahulu untuk mengakses Link Meeting & Materi.</span>
+                      <span>Selesaikan Pre-Test terlebih dahulu untuk mengakses Link Meeting & Materi.</span>
                     </div>
 
                     <!-- Post-Test Section for this module -->
@@ -920,8 +929,13 @@ const Logo = () => {
                 <button 
                   v-for="(les, lesIdx) in mod.lessons" 
                   :key="les.id"
-                  @click="selectLesson(les, mod)"
-                  :class="activeLesson?.id === les.id ? 'bg-[#264790] text-white shadow-md' : 'bg-[#F4F7F9] text-[#1A2B49] hover:bg-slate-100'"
+                  data-testid="lesson-link"
+                  :aria-disabled="(!mod.is_pre_completed && mod.assessments?.some(a => a.type === 'pre_test')) ? 'true' : 'false'"
+                  @click="(!mod.is_pre_completed && mod.assessments?.some(a => a.type === 'pre_test')) ? null : selectLesson(les, mod)"
+                  :class="[
+                    activeLesson?.id === les.id ? 'bg-[#264790] text-white shadow-md' : 'bg-[#F4F7F9] text-[#1A2B49] hover:bg-slate-100',
+                    (!mod.is_pre_completed && mod.assessments?.some(a => a.type === 'pre_test')) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  ]"
                   class="w-full flex items-center justify-between p-4 rounded-xl text-left transition-all duration-200 outline-none animate-fade-in"
                 >
                   <div class="flex items-center gap-3">

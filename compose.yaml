@@ -27,6 +27,7 @@ services:
             - mailpit
     mysql:
         image: 'mysql:8.4'
+        command: '--skip-name-resolve'
         ports:
             - '127.0.0.1:${FORWARD_DB_PORT:-3306}:3306'
         environment:

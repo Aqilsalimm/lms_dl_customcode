@@ -15,6 +15,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // 0. Seed License Key for Tests/Development
+        \App\Models\Setting::updateOrCreate(
+            ['key' => 'license_key'],
+            ['value' => 'DRSTHA-DEVELOPER-BYPASS-9999']
+        );
         // 1. Seed Users (Admin, Instructor, Student)
         $admin = User::firstOrCreate([
             'email' => 'admin@drastha.com'
@@ -155,6 +160,40 @@ class DatabaseSeeder extends Seeder
                 'options' => ['my-variable = 10', 'my_variable = 10', '10variable = 10', 'my variable = 10'],
                 'correct_option_index' => 1,
                 'sort_order' => 0
+            ]);
+
+            // Add Pre-Test
+            $pretest = \App\Models\WorkshopAssessment::firstOrCreate([
+                'course_id' => $course->id,
+                'module_id' => $module->id,
+                'type' => 'pre_test'
+            ], [
+                'title' => 'Pre-Test Evaluasi Awal',
+                'description' => 'Kerjakan Pre-Test ini sebelum memulai materi.',
+                'duration_minutes' => 10,
+                'passing_score' => 0,
+                'max_attempts' => 0,
+                'is_published' => true
+            ]);
+
+            \App\Models\WorkshopAssessmentQuestion::firstOrCreate([
+                'assessment_id' => $pretest->id,
+                'question_text' => 'Pilih opsi pertama'
+            ], [
+                'options' => ['Opsi A', 'Opsi B'],
+                'correct_answer' => '0',
+                'points' => 50,
+                'order_number' => 0
+            ]);
+
+            \App\Models\WorkshopAssessmentQuestion::firstOrCreate([
+                'assessment_id' => $pretest->id,
+                'question_text' => 'Pilih opsi kedua'
+            ], [
+                'options' => ['Opsi A', 'Opsi B'],
+                'correct_answer' => '1',
+                'points' => 50,
+                'order_number' => 1
             ]);
         }
 

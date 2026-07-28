@@ -47,3 +47,5 @@ omop-engagement-manual-assessment-report-2024-06-28.json
 bug-bounty-report.md
 laporan-pentest-medium-threats.txt
 catatan.txt
+playwright-report/
+test-results/

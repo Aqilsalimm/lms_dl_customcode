@@ -378,6 +378,24 @@ class WorkshopAssessmentController extends Controller
             'completed_at' => Carbon::now(),
         ]);
 
+        if ($assessment->type === 'post_test' && $isPassed) {
+            $enrollment = \App\Models\Enrollment::where('user_id', $attempt->user_id)
+                ->where('course_id', $assessment->course_id)
+                ->first();
+            
+            if ($enrollment) {
+                $enrollment->update(['status' => 'completed']);
+            }
+
+            \App\Models\UserCertificate::firstOrCreate([
+                'user_id' => $attempt->user_id,
+                'course_id' => $assessment->course_id,
+            ], [
+                'certificate_code' => 'CERT-' . strtoupper(uniqid()) . '-' . $attempt->user_id,
+                'claimed_at' => Carbon::now(),
+            ]);
+        }
+
         // Dispatch Broadcast Event for Real-Time Exam Report Analytics
         try {
             event(new \App\Events\ExamAttemptSubmitted($attempt));
