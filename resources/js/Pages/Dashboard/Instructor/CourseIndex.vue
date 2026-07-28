@@ -18,6 +18,9 @@ const newCourseTitle = ref('');
 const newCourseLevel = ref('Umum');
 const newCoursePrice = ref(0);
 const newCourseType = ref('async');
+const newDeliveryMode = ref('online');
+const newLocationVenue = ref('');
+const newMeetingUrl = ref('');
 const isSubmitting = ref(false);
 
 const fileInput = ref(null);
@@ -33,6 +36,9 @@ const closeCreateModal = () => {
   newCourseLevel.value = 'Umum';
   newCoursePrice.value = 0;
   newCourseType.value = 'async';
+  newDeliveryMode.value = 'online';
+  newLocationVenue.value = '';
+  newMeetingUrl.value = '';
 };
 
 const triggerFileInput = () => {
@@ -70,6 +76,11 @@ const createCourse = () => {
     return;
   }
 
+  if (newCourseType.value === 'live_class' && newDeliveryMode.value === 'offline' && !newLocationVenue.value) {
+    alert('Alamat / Lokasi Gedung Tatap Muka wajib diisi untuk kelas Offline.');
+    return;
+  }
+
   isSubmitting.value = true;
 
   router.post(route('course-builder.store'), {
@@ -77,11 +88,13 @@ const createCourse = () => {
     level: newCourseLevel.value,
     price: newCoursePrice.value,
     course_type: newCourseType.value,
+    delivery_mode: newDeliveryMode.value,
+    location_venue: newDeliveryMode.value === 'offline' ? newLocationVenue.value : null,
+    meeting_url: newDeliveryMode.value === 'online' ? newMeetingUrl.value : null,
   }, {
     onSuccess: (page) => {
       closeCreateModal();
       isSubmitting.value = false;
-      // Inertia redirects automatically or we reload
     },
     onError: () => {
       isSubmitting.value = false;
@@ -370,6 +383,56 @@ const submitGift = () => {
               placeholder="Contoh: Pemrograman JavaScript dari Nol"
               class="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-[#264790] rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium transition-colors"
             />
+          </div>
+
+          <!-- Moda Pelaksanaan Kelas (Hanya jika Live Class / Workshop dipilih) -->
+          <div v-if="newCourseType === 'live_class'" class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col gap-3">
+            <label class="block text-[#1A2B49] text-xs font-black uppercase tracking-wider">Moda Pelaksanaan Kelas</label>
+            <div class="grid grid-cols-2 gap-3">
+              <label 
+                class="p-3 border-2 rounded-xl cursor-pointer flex items-center gap-2.5 transition-all"
+                :class="newDeliveryMode === 'online' ? 'border-[#264790] bg-blue-50/60 text-[#264790]' : 'border-slate-200 bg-white text-slate-600'"
+              >
+                <input type="radio" v-model="newDeliveryMode" value="online" class="w-4 h-4 text-[#264790]" />
+                <div>
+                  <p class="font-extrabold text-xs">Online Class</p>
+                  <p class="text-[10px] text-slate-400 font-semibold">PJJ via Zoom / Meet</p>
+                </div>
+              </label>
+
+              <label 
+                class="p-3 border-2 rounded-xl cursor-pointer flex items-center gap-2.5 transition-all"
+                :class="newDeliveryMode === 'offline' ? 'border-amber-500 bg-amber-50/60 text-amber-900' : 'border-slate-200 bg-white text-slate-600'"
+              >
+                <input type="radio" v-model="newDeliveryMode" value="offline" class="w-4 h-4 text-amber-600" />
+                <div>
+                  <p class="font-extrabold text-xs">Offline Class</p>
+                  <p class="text-[10px] text-slate-400 font-semibold">Tatap Muka / Venue</p>
+                </div>
+              </label>
+            </div>
+
+            <!-- Dynamic Input for Location Venue if Offline -->
+            <div v-if="newDeliveryMode === 'offline'" class="mt-1">
+              <label class="block text-amber-900 text-[11px] font-extrabold mb-1">Alamat Lengkap / Lokasi Gedung (Tatap Muka)</label>
+              <textarea 
+                v-model="newLocationVenue" 
+                rows="2"
+                placeholder="Gedung Utama Lt. 3, Ruang Lab Komputer 2, Jl. Sudirman No. 45..."
+                class="w-full bg-white border border-amber-300 rounded-xl px-3.5 py-2.5 outline-none text-xs font-bold text-[#1A2B49] focus:border-amber-600"
+              ></textarea>
+            </div>
+
+            <!-- Dynamic Input for Meeting Link if Online -->
+            <div v-if="newDeliveryMode === 'online'" class="mt-1">
+              <label class="block text-blue-900 text-[11px] font-extrabold mb-1">Link Zoom / Google Meet (Opsional)</label>
+              <input 
+                v-model="newMeetingUrl" 
+                type="url"
+                placeholder="https://zoom.us/j/... atau https://meet.google.com/..."
+                class="w-full bg-white border border-blue-200 rounded-xl px-3.5 py-2 outline-none text-xs font-bold text-[#1A2B49] focus:border-[#264790]"
+              />
+            </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">

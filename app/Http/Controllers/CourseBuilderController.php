@@ -76,10 +76,16 @@ class CourseBuilderController extends Controller
             'price' => 'required|numeric|min:0',
             'level' => 'required|string|in:SD,SMP,SMA,Umum',
             'course_type' => 'required|string|in:async,live_class',
+            'delivery_mode' => 'nullable|string|in:online,offline',
+            'location_venue' => 'nullable|string',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
             'meeting_url' => 'nullable|string',
         ]);
+
+        $deliveryMode = $request->input('delivery_mode', 'online');
+        $meetingUrl = $deliveryMode === 'offline' ? null : $request->meeting_url;
+        $locationVenue = $deliveryMode === 'offline' ? $request->location_venue : null;
 
         $course = Course::create([
             'instructor_id' => auth()->id(),
@@ -88,13 +94,27 @@ class CourseBuilderController extends Controller
             'price' => $request->price,
             'level' => $request->level,
             'course_type' => $request->course_type,
+            'delivery_mode' => $deliveryMode,
+            'location_venue' => $locationVenue,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
-            'meeting_url' => $request->meeting_url,
+            'meeting_url' => $meetingUrl,
             'status' => 'draft',
             'icon_type' => 'code',
             'bg_color' => '#44A6D9',
         ]);
+
+        if ($request->course_type === 'live_class') {
+            \App\Models\LiveClass::create([
+                'course_id' => $course->id,
+                'title' => $course->title,
+                'delivery_mode' => $deliveryMode,
+                'meeting_link' => $meetingUrl,
+                'location_venue' => $locationVenue,
+                'start_time' => $request->start_date,
+                'end_time' => $request->end_date,
+            ]);
+        }
 
         if ($request->has('tags')) {
             $course->tags()->sync($request->tags);
@@ -172,6 +192,9 @@ class CourseBuilderController extends Controller
             'bg_color' => 'nullable|string',
             'icon_type' => 'nullable|string',
             'course_type' => 'nullable|string|in:async,live_class',
+            'delivery_mode' => 'nullable|string|in:online,offline',
+            'location_venue' => 'nullable|string',
+            'documentation_urls' => 'nullable|array',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
             'timezone' => 'nullable|string',
@@ -184,9 +207,15 @@ class CourseBuilderController extends Controller
 
         $data = $request->only([
             'title', 'category_id', 'price', 'payment_type', 'access_duration_months', 'level', 'capacity', 'status',
-            'description', 'about', 'bg_color', 'icon_type', 'course_type', 'start_date', 'end_date',
+            'description', 'about', 'bg_color', 'icon_type', 'course_type', 'delivery_mode', 'location_venue', 'documentation_urls', 'start_date', 'end_date',
             'timezone', 'meeting_url', 'recording_url', 'max_participants', 'is_event_finished', 'tools'
         ]);
+
+        if (isset($data['delivery_mode']) && $data['delivery_mode'] === 'offline') {
+            $data['meeting_url'] = null;
+        } elseif (isset($data['delivery_mode']) && $data['delivery_mode'] === 'online') {
+            $data['location_venue'] = null;
+        }
 
         // Convert string representations of true/false to boolean
         if (isset($data['is_event_finished'])) {
@@ -208,6 +237,35 @@ class CourseBuilderController extends Controller
         }
 
         $course->update($data);
+
+        // Synchronize or create primary LiveClass record for live classes
+        if ($course->course_type === 'live_class') {
+            $liveClass = \App\Models\LiveClass::where('course_id', $course->id)->first();
+            if ($liveClass) {
+                $liveClass->update([
+                    'title' => $course->title,
+                    'delivery_mode' => $course->delivery_mode ?? 'online',
+                    'meeting_link' => $course->meeting_url,
+                    'location_venue' => $course->location_venue,
+                    'recording_url' => $course->recording_url,
+                    'documentation_urls' => $course->documentation_urls,
+                    'start_time' => $course->start_date,
+                    'end_time' => $course->end_date,
+                ]);
+            } else {
+                \App\Models\LiveClass::create([
+                    'course_id' => $course->id,
+                    'title' => $course->title,
+                    'delivery_mode' => $course->delivery_mode ?? 'online',
+                    'meeting_link' => $course->meeting_url,
+                    'location_venue' => $course->location_venue,
+                    'recording_url' => $course->recording_url,
+                    'documentation_urls' => $course->documentation_urls,
+                    'start_time' => $course->start_date,
+                    'end_time' => $course->end_date,
+                ]);
+            }
+        }
 
         if ($request->has('tags')) {
             $course->tags()->sync($request->tags);

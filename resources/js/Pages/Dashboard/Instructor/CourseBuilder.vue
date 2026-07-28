@@ -74,6 +74,9 @@ const form = ref({
   level: props.course.level,
   status: props.course.status,
   course_type: props.course.course_type || 'async',
+  delivery_mode: props.course.delivery_mode || 'online',
+  location_venue: props.course.location_venue || '',
+  documentation_urls: props.course.documentation_urls || [],
   start_date: props.course.start_date ? (props.course.start_date.includes('T') ? props.course.start_date.substring(0, 16) : props.course.start_date.split(' ')[0] + 'T' + (props.course.start_date.split(' ')[1] || '00:00').substring(0, 5)) : '',
   end_date: props.course.end_date ? (props.course.end_date.includes('T') ? props.course.end_date.substring(0, 16) : props.course.end_date.split(' ')[0] + 'T' + (props.course.end_date.split(' ')[1] || '00:00').substring(0, 5)) : '',
   timezone: props.course.timezone || 'Asia/Jakarta',
@@ -540,6 +543,8 @@ const handleUpdate = (stayOnPage = false) => {
   formData.append('capacity', form.value.capacity);
   formData.append('access_duration_months', form.value.access_duration_months || 0);
   formData.append('course_type', form.value.course_type);
+  formData.append('delivery_mode', form.value.delivery_mode || 'online');
+  formData.append('location_venue', form.value.location_venue || '');
   formData.append('start_date', form.value.start_date || '');
   formData.append('end_date', form.value.end_date || '');
   formData.append('timezone', form.value.timezone || '');
@@ -1705,6 +1710,34 @@ const startQuizImport = () => {
                   </div>
                 </div>
 
+                <!-- Dynamic Moda Pelaksanaan Switcher (Gambar 2) -->
+                <div>
+                  <label class="block text-slate-600 text-xs font-black uppercase tracking-wider mb-2">Moda Pelaksanaan Kelas</label>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label 
+                      class="p-3.5 border-2 rounded-2xl cursor-pointer flex items-center gap-3 transition-all"
+                      :class="form.delivery_mode === 'online' ? 'border-[#264790] bg-blue-50/70 text-[#264790]' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'"
+                    >
+                      <input type="radio" v-model="form.delivery_mode" value="online" class="w-4 h-4 text-[#264790] cursor-pointer" />
+                      <div>
+                        <p class="font-black text-xs flex items-center gap-1">💻 Online Class</p>
+                        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">PJJ via Zoom / Google Meet</p>
+                      </div>
+                    </label>
+
+                    <label 
+                      class="p-3.5 border-2 rounded-2xl cursor-pointer flex items-center gap-3 transition-all"
+                      :class="form.delivery_mode === 'offline' ? 'border-amber-500 bg-amber-50/70 text-amber-950' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'"
+                    >
+                      <input type="radio" v-model="form.delivery_mode" value="offline" class="w-4 h-4 text-amber-600 cursor-pointer" />
+                      <div>
+                        <p class="font-black text-xs flex items-center gap-1">📍 Offline Class</p>
+                        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">Tatap Muka / On-Site Venue</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label class="block text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-wide">Tanggal Mulai</label>
@@ -1725,7 +1758,8 @@ const startQuizImport = () => {
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div v-if="!form.is_event_finished">
+                  <!-- Conditional Input: Link Meeting for Online vs Alamat Gedung for Offline -->
+                  <div v-if="!form.is_event_finished && form.delivery_mode === 'online'">
                     <label class="block text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-wide">Link Meeting (Zoom/GMeet)</label>
                     <input 
                       v-model="form.meeting_url" 
@@ -1734,7 +1768,18 @@ const startQuizImport = () => {
                       class="w-full bg-white border border-slate-200 focus:border-[#264790] rounded-xl px-4 py-2 outline-none text-[#1A2B49] font-medium text-sm transition-colors"
                     />
                   </div>
-                  <div v-if="form.is_event_finished">
+
+                  <div v-if="!form.is_event_finished && form.delivery_mode === 'offline'" class="col-span-2">
+                    <label class="block text-amber-900 text-xs font-black mb-1 uppercase tracking-wide">Alamat Lengkap / Lokasi Gedung (Tatap Muka)</label>
+                    <textarea 
+                      v-model="form.location_venue" 
+                      rows="2"
+                      placeholder="Gedung Utama Lt. 3, Ruang Lab Komputer 2, Jl. Sudirman No. 45..."
+                      class="w-full bg-white border border-amber-300 focus:border-amber-600 rounded-xl px-4 py-2.5 outline-none text-[#1A2B49] font-bold text-xs transition-colors"
+                    ></textarea>
+                  </div>
+
+                  <div v-if="form.is_event_finished" class="col-span-2">
                     <label class="block text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-wide">Link Recording (Youtube/Drive)</label>
                     <input 
                       v-model="form.recording_url" 
@@ -1743,7 +1788,8 @@ const startQuizImport = () => {
                       class="w-full bg-white border border-slate-200 focus:border-emerald-500 rounded-xl px-4 py-2 outline-none text-[#1A2B49] font-medium text-sm transition-colors ring-2 ring-emerald-500/20"
                     />
                   </div>
-                  <div>
+
+                  <div v-if="form.delivery_mode === 'online' || form.is_event_finished">
                     <label class="block text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-wide">Batas Kuota Maksimal</label>
                     <input 
                       v-model.number="form.max_participants" 
@@ -1763,12 +1809,11 @@ const startQuizImport = () => {
               <div>
                 <label class="block text-slate-400 text-xs font-bold mb-2 uppercase tracking-wide">Tipe Kelas</label>
                 <select 
-                  v-model="additionalForm.class_type" 
-                  class="w-full bg-white border border-slate-200 hover:border-slate-300 focus:border-[#264790] rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium cursor-pointer transition-all shadow-[0_8px_30px_rgb(0,0,0,0.01)]"
+                  v-model="form.delivery_mode" 
+                  class="w-full bg-white border border-slate-200 hover:border-slate-300 focus:border-[#264790] rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-bold cursor-pointer transition-all shadow-[0_8px_30px_rgb(0,0,0,0.01)]"
                 >
-                  <option value="Offline">Offline</option>
-                  <option value="Online">Online</option>
-                  <option value="Hybrid">Hybrid</option>
+                  <option value="online">Online</option>
+                  <option value="offline">Offline</option>
                 </select>
               </div>
 
