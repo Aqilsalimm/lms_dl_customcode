@@ -278,4 +278,98 @@ class LiveClassTest extends TestCase
 
         $response2->assertStatus(200);
     }
+
+    /**
+     * Test storing online live class sanitizes location_venue to null.
+     */
+    public function test_store_online_live_class_sanitizes_location_venue_to_null()
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $course = Course::create([
+            'title' => 'Online Live Course',
+            'instructor_id' => $instructor->id,
+            'course_type' => 'live_class',
+            'price' => 100000,
+            'level' => 'Umum',
+            'status' => 'published',
+        ]);
+
+        $response = $this->actingAs($instructor)
+            ->post(route('live-classes.store'), [
+                'title' => 'Sesi 1 Online Zoom',
+                'course_id' => $course->id,
+                'delivery_mode' => 'online',
+                'meeting_link' => 'https://zoom.us/j/987654321',
+                'location_venue' => 'Address should be cleared for online mode',
+                'recording_url' => 'https://youtube.com/watch?v=sample',
+                'documentation_urls' => ['https://drive.google.com/file1'],
+            ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success', 'Kelas berhasil dibuat.');
+
+        $this->assertDatabaseHas('live_classes', [
+            'title' => 'Sesi 1 Online Zoom',
+            'delivery_mode' => 'online',
+            'meeting_link' => 'https://zoom.us/j/987654321',
+            'location_venue' => null,
+            'recording_url' => 'https://youtube.com/watch?v=sample',
+        ]);
+    }
+
+    /**
+     * Test storing offline live class forces meeting_link to null.
+     */
+    public function test_store_offline_live_class_forces_meeting_link_to_null()
+    {
+        $instructor = User::factory()->create(['role' => 'instructor']);
+        $course = Course::create([
+            'title' => 'Offline Workshop',
+            'instructor_id' => $instructor->id,
+            'course_type' => 'live_class',
+            'price' => 150000,
+            'level' => 'Umum',
+            'status' => 'published',
+        ]);
+
+        $response = $this->actingAs($instructor)
+            ->post(route('live-classes.store'), [
+                'title' => 'Sesi Tatap Muka Lab Komputer',
+                'course_id' => $course->id,
+                'delivery_mode' => 'offline',
+                'meeting_link' => 'https://zoom.us/j/should-be-null',
+                'location_venue' => 'Gedung Utama Lt. 3, Ruang Lab Komputer 2',
+                'recording_url' => 'https://youtube.com/watch?v=offline-rec',
+                'documentation_urls' => ['https://drive.google.com/photo1', 'https://drive.google.com/photo2'],
+            ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('live_classes', [
+            'title' => 'Sesi Tatap Muka Lab Komputer',
+            'delivery_mode' => 'offline',
+            'meeting_link' => null,
+            'location_venue' => 'Gedung Utama Lt. 3, Ruang Lab Komputer 2',
+        ]);
+    }
+
+    /**
+     * Test LiveClass model accessors and casts.
+     */
+    public function test_live_class_model_accessors_and_casts()
+    {
+        $liveClass = \App\Models\LiveClass::create([
+            'title' => 'Hybrid Masterclass',
+            'delivery_mode' => 'offline',
+            'location_venue' => 'Auditorium Kampus A',
+            'recording_url' => 'https://vimeo.com/123456',
+            'documentation_urls' => ['https://drive.google.com/album1'],
+        ]);
+
+        $this->assertTrue($liveClass->is_offline);
+        $this->assertTrue($liveClass->has_recording);
+        $this->assertTrue($liveClass->has_documentation);
+        $this->assertIsArray($liveClass->documentation_urls);
+        $this->assertCount(1, $liveClass->documentation_urls);
+    }
 }
