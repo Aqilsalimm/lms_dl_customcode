@@ -1,48 +1,39 @@
-# High-Concurrency Database & Query Optimization Walkthrough
+# Test Builder: LaTeX Math Formula Toolbar & 500KB Image Upload Walkthrough
 
 ## Summary
-To ensure the Drastha LMS platform performs with **<100ms response latency** during high-concurrency training events (66+ simultaneous participants on Shared Hosting: 1 vCPU, 2GB RAM, 40 PHP Workers), we implemented targeted B-Tree composite indexing, application-level setting caching, batch assessment pre-fetching, and developer guidelines.
+Instructors can now insert **LaTeX Mathematical & Arithmetic Formulas** and attach **Question Images (Strict 500KB Limit)** in the Drastha LMS Test Builder. Students can view formatted mathematical equations and images directly in the Pre-Test and Post-Test views.
 
 ---
 
-## Key Achievements & Modifications
+## Key Feature Implementations
 
-### 1. Targeted Composite B-Tree Database Indexes (`2026_07_30_000000_add_performance_composite_indexes.php`)
-- Added B-Tree composite indexes to eliminate Full Table Scans ($O(N) \rightarrow O(\log N)$):
-  - `workshop_assessment_attempts`: `(user_id, assessment_id, status)` & `(user_id, assessment_id, is_passed)`
-  - `workshop_assessment_user_answers`: `(attempt_id, question_id)`
-  - `student_learning_logs`: `(user_id, course_id, lesson_id)`
-  - `workshop_assessments`: `(course_id, type)` & `(module_id, type)`
-  - `courses`: `(status, course_type)`
-  - `modules`: `(course_id, sort_order)`
-  - `lessons`: `(module_id, sort_order)`
-  - `subscriptions`: `(user_id, course_id, status)`
+### 1. Database Migration & Model ([2026_07_30_000001_add_image_url_to_workshop_assessment_questions_table.php](file:///c:/Users/MMASZZS123/Documents/Website%20VibeCode/Drastha%20Learning/database/migrations/2026_07_30_000001_add_image_url_to_workshop_assessment_questions_table.php))
+- Added `image_url` (nullable longText) column to `workshop_assessment_questions`.
+- Updated `WorkshopAssessmentQuestion.php` model `$fillable` array.
 
-### 2. Application-Level Setting Caching (`Setting.php`)
-- Added `Setting::getValue($key, $default)` helper with a 3600s cache TTL using `Cache::remember()`.
-- Tied model lifecycle events (`saved`, `deleted`) to automatically invalidate cache keys when settings are updated in Admin/Instructor panels.
-- Replaced raw `Setting::where('key', ...)->value('value')` queries across `CourseController.php` and `WorkshopAssessmentController.php`, eliminating 4–6 SQL queries per HTTP request.
+### 2. Backend Controller ([WorkshopAssessmentController.php](file:///c:/Users/MMASZZS123/Documents/Website%20VibeCode/Drastha%20Learning/app/Http/Controllers/WorkshopAssessmentController.php))
+- Updated `updateTestBuilder()` and `storeOrUpdate()` to support `image_url` during question creation and bulk syncing.
 
-### 3. Batch Assessment Status Pre-Fetching (`User.php` & `CourseController.php`)
-- Added `getCompletedModuleAssessmentMap($courseId)` and `getPassedModuleAssessmentMap($courseId)` in `User.php`.
-- Replaced per-module `$user->hasCompletedModuleAssessment()` queries inside `$course->modules->each()` loops with $O(1)$ array map lookups.
-- Reduced total SQL queries on `/courses/{slug}/learn` route from **30+ queries down to <5 queries**.
+### 3. Test Builder UI ([TestBuilder.vue](file:///c:/Users/MMASZZS123/Documents/Website%20VibeCode/Drastha%20Learning/resources/js/Components/TestBuilder.vue))
+- **Math Formula Helper Toolbar:** Quick formula insert buttons for:
+  - Pecahan ($\frac{a}{b}$)
+  - Akar ($\sqrt{x}$)
+  - Pangkat ($x^n$)
+  - Operator ($\times$, $\div$, $\pm$)
+  - Simbol ($\pi$, $\le$, $\ge$)
+- **500KB Image Uploader:**
+  - Client-side validation: Blocks files $>500$ KB with alert notification (`Ukuran gambar melebihi 500 KB!`).
+  - Restricts MIME types to images (`image/*`).
+  - Live image preview card with remove image button (`X`).
 
-### 4. Developer Guidelines (`.agents/AGENTS.md`)
-- Added strict high-performance coding rules to `.agents/AGENTS.md`:
-  - Require targeted composite indexes on multi-column `WHERE`/`JOIN` patterns.
-  - Prohibit raw database queries inside loops.
-  - Require `Setting::getValue()` for setting retrieval.
-  - Require strict Eager Loading (`with()`, `withCount()`).
+### 4. Student Assessment View ([Assessment.vue](file:///c:/Users/MMASZZS123/Documents/Website%20VibeCode/Drastha%20Learning/resources/js/Pages/Courses/Assessment.vue))
+- Renders question image above multiple-choice options.
+- Formats mathematical formulas for clean rendering.
 
 ---
 
-## Verification & Testing Results
-
-1. **Database Migration:**
-   - Command: `docker exec drasthalearning-laravel.test-1 php artisan migrate`
-   - Output: `2026_07_30_000000_add_performance_composite_indexes ................ 1s DONE`
-
-2. **Playwright E2E Gating & Syllabus Test:**
-   - Command: `npx playwright test tests/e2e/pretest-gating.spec.ts`
-   - Output: **`1 passed (3.0m)`** (100% clean pass)
+## Verification & Testing
+- Database Migration: **`DONE (148ms)`**
+- Asset Build: **`npm run build` PASS (3.96s)**
+- E2E Test: **`npx playwright test tests/e2e/pretest-gating.spec.ts` PASS (1.6m)**
+- Branch Sync: All changes committed & pushed to **`staging`**, **`main`**, and **`production`** (`v2.0.2`).
