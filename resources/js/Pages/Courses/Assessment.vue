@@ -411,10 +411,19 @@ const formatDate = (dateStr) => {
               <div :key="currentQuestionIndex" class="flex flex-col gap-6">
                 
                 <!-- Main Question Area enclosed in an elevated card -->
-                <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-100 shadow-md">
+                <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-100 shadow-md flex flex-col gap-4">
                   <div class="text-[#1A2B49] font-extrabold text-sm sm:text-base leading-relaxed flex gap-2">
                     <span class="text-[#264790]">{{ currentQuestionIndex + 1 }}.</span>
                     <p class="flex-1 whitespace-pre-wrap">{{ assessment.questions[currentQuestionIndex]?.question_text }}</p>
+                  </div>
+
+                  <!-- Render Attached Question Image if present -->
+                  <div v-if="assessment.questions[currentQuestionIndex]?.image_url" class="mt-1">
+                    <img 
+                      :src="assessment.questions[currentQuestionIndex].image_url" 
+                      alt="Gambar Soal" 
+                      class="max-h-72 rounded-2xl border border-slate-200 object-contain bg-slate-50 p-2 shadow-xs" 
+                    />
                   </div>
                 </div>
 

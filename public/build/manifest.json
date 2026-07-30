@@ -356,7 +356,7 @@
     ]
   },
   "resources/js/Pages/Courses/Assessment.vue": {
-    "file": "assets/Assessment-Di5uBYf-.js",
+    "file": "assets/Assessment-CbDlLZ4V.js",
     "name": "Assessment",
     "src": "resources/js/Pages/Courses/Assessment.vue",
     "isDynamicEntry": true,
@@ -368,7 +368,7 @@
       "_GuestLayout-BHJauh3R.js"
     ],
     "css": [
-      "assets/Assessment-O8RgmGeU.css"
+      "assets/Assessment-YBtzR39J.css"
     ]
   },
   "resources/js/Pages/Courses/Certificate.vue": {
@@ -600,7 +600,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Instructor/CourseBuilder.vue": {
-    "file": "assets/CourseBuilder-DVqyubiZ.js",
+    "file": "assets/CourseBuilder-CHZdZwLM.js",
     "name": "CourseBuilder",
     "src": "resources/js/Pages/Dashboard/Instructor/CourseBuilder.vue",
     "isDynamicEntry": true,
@@ -862,7 +862,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-BdVlBcLe.js",
+    "file": "assets/app-cp4pA6T1.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -928,7 +928,7 @@
       "resources/js/Pages/Welcome.vue"
     ],
     "css": [
-      "assets/app--bKKrg2k.css"
+      "assets/app-DclKnQPB.css"
     ]
   }
 }

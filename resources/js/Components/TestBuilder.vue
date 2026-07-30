@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, computed } from 'vue';
-import { Plus, Trash2, Save, HelpCircle, AlertCircle, CheckCircle2, Sliders, Globe, Lock, Unlock, Settings2 } from 'lucide-vue-next';
+import { Plus, Trash2, Save, HelpCircle, AlertCircle, CheckCircle2, Sliders, Globe, Lock, Unlock, Settings2, Image, UploadCloud, X, Calculator } from 'lucide-vue-next';
 import { router, usePage } from '@inertiajs/vue3';
 
 const props = defineProps({
@@ -53,6 +53,7 @@ const initAssessmentForm = (data, defaultTitle, defaultType) => {
     questions: data?.questions?.map(q => ({
       id: q.id || null,
       question_text: q.question_text || '',
+      image_url: q.image_url || null,
       options: Array.isArray(q.options) ? [...q.options] : ['', '', '', ''],
       correct_answer: q.correct_answer !== undefined ? String(q.correct_answer) : '0',
       points: q.points !== undefined && q.points !== null ? Number(q.points) : 10
@@ -84,10 +85,45 @@ const addQuestion = () => {
   form.questions.push({
     id: null,
     question_text: '',
+    image_url: null,
     options: ['', '', '', ''],
     correct_answer: '0',
     points: 10
   });
+};
+
+// Handle Question Image Upload with strict 500KB client-side validation
+const handleQuestionImageUpload = (event, question) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const maxSizeBytes = 500 * 1024; // 500 KB
+  if (file.size > maxSizeBytes) {
+    alert(`Ukuran gambar melebihi batas maksimal 500 KB! (Ukuran berkas Anda: ${(file.size / 1024).toFixed(1)} KB)`);
+    event.target.value = '';
+    return;
+  }
+
+  if (!file.type.startsWith('image/')) {
+    alert('Berkas yang diunggah harus berupa gambar (JPG, PNG, WebP, GIF).');
+    event.target.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    question.image_url = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+const removeQuestionImage = (question) => {
+  question.image_url = null;
+};
+
+// Math Formula Snippet Insertion
+const insertMathFormula = (question, formulaPattern) => {
+  question.question_text = (question.question_text || '') + (question.question_text ? ' ' : '') + formulaPattern;
 };
 
 // Remove a question
@@ -401,15 +437,86 @@ const saveConfiguration = () => {
               </div>
             </div>
 
-            <!-- Question Textarea -->
-            <div class="flex flex-col gap-1.5">
-              <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Pertanyaan</label>
+            <!-- Question Textarea & Math Snippet Toolbar -->
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Pertanyaan Soal</label>
+                <span class="text-[10px] text-slate-400 font-semibold">Dukung LaTeX & Rumus Matematika</span>
+              </div>
+
+              <!-- Math Formula Quick Insert Toolbar -->
+              <div class="flex flex-wrap items-center gap-1.5 p-2 bg-slate-100/80 rounded-xl border border-slate-200 text-xs">
+                <span class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1 px-1">
+                  <Calculator :size="12" class="text-[#264790]" /> Rumus/Formula:
+                </span>
+                <button type="button" @click="insertMathFormula(question, '\\frac{a}{b}')" class="px-2 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-[11px] font-bold text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-2xs" title="Sisipkan Pecahan">
+                  Pecahan \(\frac{a}{b}\)
+                </button>
+                <button type="button" @click="insertMathFormula(question, '\\sqrt{x}')" class="px-2 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-[11px] font-bold text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-2xs" title="Sisipkan Akar">
+                  Akar \(\sqrt{x}\)
+                </button>
+                <button type="button" @click="insertMathFormula(question, 'x^{n}')" class="px-2 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-[11px] font-bold text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-2xs" title="Sisipkan Pangkat">
+                  Pangkat \(x^n\)
+                </button>
+                <button type="button" @click="insertMathFormula(question, '\\times')" class="px-2 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-[11px] font-bold text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-2xs" title="Perkalian">
+                  \(\times\)
+                </button>
+                <button type="button" @click="insertMathFormula(question, '\\div')" class="px-2 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-[11px] font-bold text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-2xs" title="Pembagian">
+                  \(\div\)
+                </button>
+                <button type="button" @click="insertMathFormula(question, '\\pm')" class="px-2 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-[11px] font-bold text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-2xs" title="Plus/Minus">
+                  \(\pm\)
+                </button>
+                <button type="button" @click="insertMathFormula(question, '\\pi')" class="px-2 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-[11px] font-bold text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-2xs" title="Pi">
+                  \(\pi\)
+                </button>
+                <button type="button" @click="insertMathFormula(question, '\\le')" class="px-2 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-[11px] font-bold text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-2xs" title="Kurang Dari Sama Dengan">
+                  \(\le\)
+                </button>
+                <button type="button" @click="insertMathFormula(question, '\\ge')" class="px-2 py-1 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-lg text-[11px] font-bold text-slate-700 hover:text-blue-700 transition-all cursor-pointer shadow-2xs" title="Lebih Dari Sama Dengan">
+                  \(\ge\)
+                </button>
+              </div>
+
               <textarea
                 v-model="question.question_text"
                 rows="2"
-                placeholder="Tuliskan teks pertanyaan..."
+                placeholder="Tuliskan teks pertanyaan atau rumus (misal: Hitunglah nilai dari \sqrt{16} + \frac{4}{2})..."
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all resize-none"
               ></textarea>
+            </div>
+
+            <!-- Question Image Attachment (Max 500 KB) -->
+            <div class="flex flex-col gap-2 bg-slate-50/60 p-3.5 rounded-2xl border border-slate-200/80">
+              <div class="flex items-center justify-between">
+                <label class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Image :size="14" class="text-[#264790]" /> Lampiran Gambar Soal (Maksimal 500 KB)
+                </label>
+                <span v-if="question.image_url" class="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">✓ Gambar Terlampir</span>
+              </div>
+
+              <!-- Image Preview Container if present -->
+              <div v-if="question.image_url" class="relative group w-fit mt-1">
+                <img :src="question.image_url" alt="Pratinjau Gambar Soal" class="max-h-48 rounded-xl border border-slate-200 object-contain bg-white p-1.5 shadow-xs" />
+                <button 
+                  type="button" 
+                  @click="removeQuestionImage(question)"
+                  class="absolute -top-2 -right-2 bg-rose-500 hover:bg-rose-600 text-white p-1 rounded-full shadow-md transition-transform hover:scale-110 cursor-pointer"
+                  title="Hapus Gambar"
+                >
+                  <X :size="14" />
+                </button>
+              </div>
+
+              <!-- Image Upload Input -->
+              <div v-else class="flex flex-wrap items-center gap-3 mt-0.5">
+                <label class="flex items-center gap-2 px-4 py-2 bg-white hover:bg-blue-50/80 border border-dashed border-slate-300 hover:border-blue-400 rounded-xl cursor-pointer text-xs font-bold text-slate-600 hover:text-blue-700 transition-all shadow-2xs">
+                  <UploadCloud :size="15" class="text-[#264790]" />
+                  <span>Pilih Gambar (Maks 500KB)</span>
+                  <input type="file" accept="image/*" @change="(e) => handleQuestionImageUpload(e, question)" class="hidden" />
+                </label>
+                <span class="text-[10px] font-semibold text-slate-400">Format: JPG, PNG, WebP, GIF (Ukuran maks: 500 KB)</span>
+              </div>
             </div>
 
             <!-- Stacked Options inputs with Radio buttons -->

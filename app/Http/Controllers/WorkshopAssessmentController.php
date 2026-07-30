@@ -83,6 +83,7 @@ class WorkshopAssessmentController extends Controller
                     ['id' => $qId],
                     [
                         'question_text' => $qData['question_text'],
+                        'image_url' => $qData['image_url'] ?? null,
                         'options' => $qData['options'],
                         'correct_answer' => $qData['correct_answer'],
                         'points' => $qData['points'] ?? 10,
@@ -165,6 +166,7 @@ class WorkshopAssessmentController extends Controller
                         $questionsToInsert[] = [
                             'assessment_id' => $assessment->id,
                             'question_text' => $q['question_text'],
+                            'image_url' => $q['image_url'] ?? null,
                             'options' => json_encode($q['options']),
                             'correct_answer' => $q['correct_answer'],
                             'points' => $q['points'] ?? 10,

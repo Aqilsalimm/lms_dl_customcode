@@ -11,6 +11,7 @@ class WorkshopAssessmentQuestion extends Model
     protected $fillable = [
         'assessment_id',
         'question_text',
+        'image_url',
         'options',
         'correct_answer',
         'points',
