@@ -209,10 +209,12 @@ const isUpcoming = (dateString) => {
               <div 
                 v-for="c in courses" 
                 :key="'list_' + c.id"
-                class="p-5 border border-slate-100 rounded-2xl bg-slate-50/50 hover:bg-slate-50 transition-colors flex flex-col gap-3"
+                class="p-4 sm:p-5 border border-slate-100 rounded-2xl bg-slate-50/50 hover:bg-slate-50 transition-colors flex flex-col gap-3 overflow-hidden"
               >
-                <div class="flex items-start justify-between gap-3">
-                  <h4 class="font-extrabold text-sm text-[#1A2B49] leading-snug line-clamp-2">{{ c.title }}</h4>
+                <div class="flex items-start justify-between gap-2.5 min-w-0">
+                  <div class="min-w-0 flex-1">
+                    <h4 class="font-extrabold text-sm text-[#1A2B49] leading-snug truncate" :title="c.title">{{ c.title }}</h4>
+                  </div>
                   <span 
                     :class="[
                       c.is_event_finished 
@@ -221,24 +223,24 @@ const isUpcoming = (dateString) => {
                           ? 'bg-sky-50 text-sky-600 border border-sky-100'
                           : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
                     ]"
-                    class="text-[10px] font-extrabold px-2.5 py-1 rounded-full shrink-0 uppercase tracking-wider"
+                    class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shrink-0 uppercase tracking-wider"
                   >
                     {{ c.is_event_finished ? 'Selesai' : isUpcoming(c.start_date) ? 'Mendatang' : 'Sedang Berlangsung' }}
                   </span>
                 </div>
 
                 <div class="flex flex-col gap-1 text-slate-500 font-medium text-xs">
-                  <div class="flex items-center gap-1.5">
-                    <Calendar :size="14" class="text-slate-400" />
-                    <span>Mulai: {{ formatDate(c.start_date) }}</span>
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <Calendar :size="14" class="text-slate-400 shrink-0" />
+                    <span class="truncate">Mulai: {{ formatDate(c.start_date) }}</span>
                   </div>
-                  <div class="flex items-center gap-1.5">
-                    <Clock :size="14" class="text-slate-400" />
-                    <span>Zona Waktu: {{ c.timezone || 'Asia/Jakarta' }}</span>
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <Clock :size="14" class="text-slate-400 shrink-0" />
+                    <span class="truncate">Zona Waktu: {{ c.timezone || 'Asia/Jakarta' }}</span>
                   </div>
-                  <div class="flex items-center gap-1.5">
-                    <Users :size="14" class="text-slate-400" />
-                    <span>Kapasitas: {{ c.max_participants || 100 }} Siswa</span>
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <Users :size="14" class="text-slate-400 shrink-0" />
+                    <span class="truncate">Kapasitas: {{ c.max_participants || 100 }} Siswa</span>
                   </div>
                 </div>
 

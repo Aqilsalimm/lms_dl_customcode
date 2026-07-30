@@ -641,7 +641,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Instructor/LiveClass.vue": {
-    "file": "assets/LiveClass-n0vEOSRy.js",
+    "file": "assets/LiveClass-DASUm-IU.js",
     "name": "LiveClass",
     "src": "resources/js/Pages/Dashboard/Instructor/LiveClass.vue",
     "isDynamicEntry": true,
@@ -862,7 +862,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-4xJJBbQp.js",
+    "file": "assets/app-BdVlBcLe.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -928,7 +928,7 @@
       "resources/js/Pages/Welcome.vue"
     ],
     "css": [
-      "assets/app-LZmqPfGd.css"
+      "assets/app--bKKrg2k.css"
     ]
   }
 }
