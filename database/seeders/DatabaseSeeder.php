@@ -15,6 +15,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Check if running in production environment
+        if (app()->environment('production') || config('app.env') === 'production') {
+            $this->call(ProductionSeeder::class);
+            return;
+        }
+
         // 0. Seed License Key for Tests/Development
         \App\Models\Setting::updateOrCreate(
             ['key' => 'license_key'],
