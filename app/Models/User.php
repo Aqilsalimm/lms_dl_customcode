@@ -168,4 +168,44 @@ class User extends Authenticatable
         ->where('is_passed', true)
         ->exists();
     }
+
+    /**
+     * Pre-fetch all completed module assessment IDs for a course in 1 single query ($O(1)$ loop lookup)
+     */
+    public function getCompletedModuleAssessmentMap(int $courseId): array
+    {
+        return $this->assessmentAttempts()
+            ->where('status', 'completed')
+            ->whereHas('assessment', function ($q) use ($courseId) {
+                $q->where('course_id', $courseId);
+            })
+            ->with('assessment:id,module_id,type')
+            ->get()
+            ->pluck('assessment')
+            ->filter()
+            ->mapWithKeys(function ($assessment) {
+                return ["{$assessment->module_id}_{$assessment->type}" => true];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Pre-fetch all passed module assessment IDs for a course in 1 single query ($O(1)$ loop lookup)
+     */
+    public function getPassedModuleAssessmentMap(int $courseId): array
+    {
+        return $this->assessmentAttempts()
+            ->where('is_passed', true)
+            ->whereHas('assessment', function ($q) use ($courseId) {
+                $q->where('course_id', $courseId);
+            })
+            ->with('assessment:id,module_id,type')
+            ->get()
+            ->pluck('assessment')
+            ->filter()
+            ->mapWithKeys(function ($assessment) {
+                return ["{$assessment->module_id}_{$assessment->type}" => true];
+            })
+            ->toArray();
+    }
 }

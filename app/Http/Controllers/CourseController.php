@@ -15,7 +15,7 @@ class CourseController extends Controller
     public function index(Request $request)
     {
         // Check Course Visibility Setting
-        $visibility = \App\Models\Setting::where('key', 'course_visibility')->value('value');
+        $visibility = \App\Models\Setting::getValue('course_visibility');
         if (filter_var($visibility, FILTER_VALIDATE_BOOLEAN) && !auth()->check()) {
             return redirect()->to('/?login=true')->with('error', 'Please log in to view courses.');
         }
@@ -52,7 +52,7 @@ class CourseController extends Controller
             });
         }
 
-        $perPage = (int) (\App\Models\Setting::where('key', 'courses_per_page')->value('value') ?: 12);
+        $perPage = (int) (\App\Models\Setting::getValue('courses_per_page') ?: 12);
         $courses = $query->latest()->paginate($perPage)->withQueryString();
 
         return Inertia::render('Courses/Index', [
@@ -68,7 +68,7 @@ class CourseController extends Controller
     public function show(string $slug)
     {
         // Check Course Visibility Setting
-        $visibility = \App\Models\Setting::where('key', 'course_visibility')->value('value');
+        $visibility = \App\Models\Setting::getValue('course_visibility');
         if (filter_var($visibility, FILTER_VALIDATE_BOOLEAN) && !auth()->check()) {
             return redirect()->to('/?login=true')->with('error', 'Please log in to view course details.');
         }
@@ -112,7 +112,7 @@ class CourseController extends Controller
         }
 
         $contentSummary = filter_var(
-            \App\Models\Setting::where('key', 'content_summary')->value('value'),
+            \App\Models\Setting::getValue('content_summary'),
             FILTER_VALIDATE_BOOLEAN
         );
 
@@ -162,14 +162,17 @@ class CourseController extends Controller
         $course = $query->with(['category', 'tags', 'instructor', 'modules.lessons', 'modules.quizzes.questions', 'modules.assessments', 'assessments'])
             ->firstOrFail();
 
-        $user = auth()->user();
         $enforcePrerequisites = filter_var(
-            \App\Models\Setting::where('key', 'test_builder_enforce_prerequisites')->value('value') ?: 'true',
+            \App\Models\Setting::getValue('test_builder_enforce_prerequisites', 'true'),
             FILTER_VALIDATE_BOOLEAN
         );
         $previousModulePassed = true; // First module has no prerequisite restriction
 
-        $course->modules->each(function ($module) use ($user, &$previousModulePassed, $enforcePrerequisites) {
+        // Pre-fetch completed and passed assessment maps in 2 single batch queries (prevents N+1 in module loop)
+        $completedMap = $user->getCompletedModuleAssessmentMap($course->id);
+        $passedMap = $user->getPassedModuleAssessmentMap($course->id);
+
+        $course->modules->each(function ($module) use ($user, &$previousModulePassed, $enforcePrerequisites, $completedMap, $passedMap) {
             $module->lessons->each(function ($lesson) {
                 $lesson->makeHidden(['content', 'video_url', 'slide_url', 'slide_content']);
             });
@@ -180,12 +183,17 @@ class CourseController extends Controller
                 });
             });
 
-            // Calculate assessment status per module for live class
+            // Calculate assessment status per module using O(1) array map lookup
             $preTest = $module->assessments->where('type', 'pre_test')->first();
             $postTest = $module->assessments->where('type', 'post_test')->first();
 
-            $isPreCompleted = (!$enforcePrerequisites || $module->enable_assessment === false || !$preTest) ? true : $user->hasCompletedModuleAssessment($module->id, 'pre_test');
-            $isPostCompleted = (!$enforcePrerequisites || $module->enable_assessment === false || !$postTest) ? true : $user->hasPassedModuleAssessment($module->id, 'post_test');
+            $isPreCompleted = (!$enforcePrerequisites || $module->enable_assessment === false || !$preTest) 
+                ? true 
+                : isset($completedMap["{$module->id}_pre_test"]);
+
+            $isPostCompleted = (!$enforcePrerequisites || $module->enable_assessment === false || !$postTest) 
+                ? true 
+                : isset($passedMap["{$module->id}_post_test"]);
 
             $module->is_pre_completed = $isPreCompleted;
             $module->is_post_completed = $isPostCompleted;
@@ -196,11 +204,10 @@ class CourseController extends Controller
         });
 
         // 3. Authorization check (is Enrolled or is Instructor of course or is Admin)
-        $user = auth()->user();
         $isAuthor = $course->instructor_id === $user->id;
         
         $allowAccessWithoutEnroll = filter_var(
-            \App\Models\Setting::where('key', 'course_content_access')->value('value'),
+            \App\Models\Setting::getValue('course_content_access'),
             FILTER_VALIDATE_BOOLEAN
         );
 
@@ -223,7 +230,7 @@ class CourseController extends Controller
         $completedAt = $enrollment ? $enrollment->completed_at : null;
 
         $spotlightMode = filter_var(
-            \App\Models\Setting::where('key', 'spotlight_mode')->value('value'),
+            \App\Models\Setting::getValue('spotlight_mode'),
             FILTER_VALIDATE_BOOLEAN
         );
 

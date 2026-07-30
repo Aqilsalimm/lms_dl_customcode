@@ -52,10 +52,10 @@ class WorkshopAssessmentController extends Controller
 
         $useGlobal = $request->has('use_global_settings') ? filter_var($request->use_global_settings, FILTER_VALIDATE_BOOLEAN) : true;
 
-        $defaultDuration = (int) (\App\Models\Setting::where('key', 'test_builder_default_duration')->value('value') ?: 30);
-        $defaultPrePassing = (int) (\App\Models\Setting::where('key', 'test_builder_pre_passing_score')->value('value') ?: 70);
-        $defaultPostPassing = (int) (\App\Models\Setting::where('key', 'test_builder_post_passing_score')->value('value') ?: 70);
-        $defaultMaxAttempts = (int) (\App\Models\Setting::where('key', 'test_builder_default_max_attempts')->value('value') ?: 3);
+        $defaultDuration = (int) (\App\Models\Setting::getValue('test_builder_default_duration', 30));
+        $defaultPrePassing = (int) (\App\Models\Setting::getValue('test_builder_pre_passing_score', 70));
+        $defaultPostPassing = (int) (\App\Models\Setting::getValue('test_builder_post_passing_score', 70));
+        $defaultMaxAttempts = (int) (\App\Models\Setting::getValue('test_builder_default_max_attempts', 3));
 
         $passingScore = $request->passing_score ?? ($request->type === 'pre_test' ? $defaultPrePassing : $defaultPostPassing);
 
@@ -427,7 +427,7 @@ class WorkshopAssessmentController extends Controller
         $module = $moduleId ? $course->modules()->find($moduleId) : null;
         $targetMeetingUrl = ($module && $module->meeting_url) ? $module->meeting_url : $course->meeting_url;
         $enforcePrerequisites = filter_var(
-            \App\Models\Setting::where('key', 'test_builder_enforce_prerequisites')->value('value') ?: 'true',
+            \App\Models\Setting::getValue('test_builder_enforce_prerequisites', 'true'),
             FILTER_VALIDATE_BOOLEAN
         );
 
