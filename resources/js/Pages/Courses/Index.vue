@@ -36,27 +36,54 @@ const selectedCategoryLabel = computed(() => {
 const selectCategory = (slug) => {
   selectedCategorySlug.value = slug;
   showCategoryDropdown.value = false;
-  router.get('/courses', {
-    ...props.filters,
-    category: slug || undefined,
-    level: activeFilter.value !== 'Semua Kursus' ? activeFilter.value : undefined
-  }, { preserveState: true, replace: true });
+  const queryParams = { ...props.filters };
+  if (slug) {
+    queryParams.category = slug;
+  } else {
+    delete queryParams.category;
+  }
+  router.get('/courses', queryParams, { preserveState: true, replace: true });
 };
 
 const courseTypeFilterLabel = computed(() => {
-  if (courseTypeFilter.value === 'Semua Mode') {
+  if (courseTypeFilter.value === 'Semua Mode' || !courseTypeFilter.value) {
     return usePage().props.translations?.all_modes || 'Semua Mode';
   }
-  if (courseTypeFilter.value === 'Kelas Kursus / Live Class') {
+  if (courseTypeFilter.value === 'live_class' || courseTypeFilter.value === 'Kelas Kursus / Live Class') {
     return usePage().props.translations?.live_class || 'Kelas Kursus / Live Class';
+  }
+  if (courseTypeFilter.value === 'async' || courseTypeFilter.value === 'Kursus Mandiri') {
+    return 'Kursus Mandiri';
   }
   return courseTypeFilter.value;
 });
 
-// Computed activeFilter dynamically listening to Ziggy query parameters
+const selectCourseType = (typeValue) => {
+  courseTypeFilter.value = typeValue;
+  showCourseTypeDropdown.value = false;
+  const queryParams = { ...props.filters };
+  if (!typeValue || typeValue === 'Semua Mode') {
+    delete queryParams.type;
+  } else {
+    queryParams.type = typeValue;
+  }
+  router.get('/courses', queryParams, { preserveState: true, replace: true });
+};
+
+const submitSearch = () => {
+  const queryParams = { ...props.filters };
+  if (searchQuery.value) {
+    queryParams.search = searchQuery.value;
+  } else {
+    delete queryParams.search;
+  }
+  router.get('/courses', queryParams, { preserveState: true, replace: true });
+};
+
+// Computed activeFilter dynamically listening to query parameters
 const activeFilter = computed({
   get() {
-    return usePage().props.ziggy?.query?.filter || new URLSearchParams(window.location.search).get('filter') || 'Semua Kursus';
+    return props.filters?.level || usePage().props.ziggy?.query?.filter || new URLSearchParams(window.location.search).get('filter') || 'Semua Kursus';
   },
   set(newValue) {
     const queryParams = { ...props.filters };
@@ -72,7 +99,16 @@ const activeFilter = computed({
 
 // Clear active filter query
 const clearFilter = () => {
-  activeFilter.value = 'Semua Kursus';
+  const queryParams = { ...props.filters };
+  delete queryParams.filter;
+  delete queryParams.level;
+  delete queryParams.category;
+  delete queryParams.type;
+  delete queryParams.search;
+  selectedCategorySlug.value = '';
+  courseTypeFilter.value = 'Semua Mode';
+  searchQuery.value = '';
+  router.get('/courses', queryParams, { preserveState: true, replace: true });
 };
 
 const formatPrice = (price) => {
@@ -91,29 +127,13 @@ const rawCourses = computed(() => {
   return [];
 });
 
-// Reactively filter courses list based on header query and search query
+// Filtered courses list based on raw backend paginated data
 const filteredCourses = computed(() => {
   let result = rawCourses.value;
-
-  if (activeFilter.value !== 'Semua Kursus') {
-    result = result.filter(course => course.level === activeFilter.value);
+  if (searchQuery.value && !props.filters?.search) {
+    const q = searchQuery.value.toLowerCase();
+    result = result.filter(course => course.title?.toLowerCase().includes(q));
   }
-
-  if (selectedCategorySlug.value) {
-    result = result.filter(course => course.category?.slug === selectedCategorySlug.value);
-  }
-
-  if (courseTypeFilter.value !== 'Semua Mode') {
-    result = result.filter(course => {
-      const isLive = courseTypeFilter.value === 'Kelas Kursus / Live Class';
-      return (isLive && course.course_type === 'live_class') || (!isLive && course.course_type !== 'live_class');
-    });
-  }
-
-  if (searchQuery.value) {
-    result = result.filter(course => course.title.toLowerCase().includes(searchQuery.value.toLowerCase()));
-  }
-
   return result;
 });
 
@@ -138,6 +158,7 @@ const gridColsClass = computed(() => {
           <Search :size="20" class="text-slate-400" />
           <input 
             v-model="searchQuery" 
+            @keyup.enter="submitSearch"
             type="text" 
             :placeholder="$t('search_placeholder') || 'Mau Belajar apa?'" 
             class="bg-transparent w-full outline-none text-[#1A2B49] placeholder-slate-400 font-semibold text-sm border-none focus:ring-0 py-0"
@@ -172,6 +193,7 @@ const gridColsClass = computed(() => {
           </div>
         </div>
 
+        <!-- Course Type Dropdown -->
         <div class="relative w-full md:w-56">
           <div 
             @click="showCourseTypeDropdown = !showCourseTypeDropdown"
@@ -185,13 +207,17 @@ const gridColsClass = computed(() => {
           </div>
           
           <div v-if="showCourseTypeDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50">
-            <div @click="courseTypeFilter = 'Semua Mode'; showCourseTypeDropdown = false" class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49]">{{ $t('all_modes') || 'Semua Mode' }}</div>
-            <div @click="courseTypeFilter = 'Kelas Kursus / Live Class'; showCourseTypeDropdown = false" class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49]">{{ $t('live_class') || 'Kelas Kursus / Live Class' }}</div>
+            <div @click="selectCourseType('Semua Mode')" class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49]">{{ $t('all_modes') || 'Semua Mode' }}</div>
+            <div @click="selectCourseType('async')" class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49]">Kursus Mandiri</div>
+            <div @click="selectCourseType('live_class')" class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49]">{{ $t('live_class') || 'Kelas Kursus / Live Class' }}</div>
           </div>
         </div>
 
-        <button class="bg-[#264790] hover:bg-[#1a2b49] text-white font-extrabold py-3.5 px-8 rounded-full shadow-md transition-colors text-sm whitespace-nowrap">
-          {{ $t('find_class') || 'Find a Class' }}
+        <button 
+          @click="submitSearch"
+          class="bg-[#264790] hover:bg-[#1a2b49] text-white font-extrabold py-3.5 px-8 rounded-full shadow-md transition-colors text-sm whitespace-nowrap cursor-pointer"
+        >
+          {{ $t('find_class') || 'Cari Kelas' }}
         </button>
       </div>
 

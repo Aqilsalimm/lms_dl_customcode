@@ -23,21 +23,33 @@ class CourseController extends Controller
         $query = Course::where('status', 'published')->with(['category', 'instructor', 'lessons']);
 
         // Filter by Course Type (async / live_class)
-        if ($request->has('type') && !empty($request->type)) {
-            $query->where('course_type', $request->type);
+        if ($request->has('type') && !empty($request->type) && $request->type !== 'Semua Mode' && $request->type !== 'all') {
+            if ($request->type === 'live_class' || $request->type === 'Kelas Kursus / Live Class') {
+                $query->where('course_type', 'live_class');
+            } elseif ($request->type === 'async' || $request->type === 'Kursus Mandiri') {
+                $query->where(function($q) {
+                    $q->where('course_type', '!=', 'live_class')->orWhereNull('course_type');
+                });
+            } else {
+                $query->where('course_type', $request->type);
+            }
         }
 
         // Filter by Level (SD, SMP, SMA, Umum)
-        if ($request->has('level') && $request->level !== 'Semua Kursus') {
-            // Mapping friendly UI names to DB level column
+        if ($request->has('level') && !empty($request->level) && $request->level !== 'Semua Kursus') {
             $levelMap = [
-                'Kelas SD' => 'SD',
-                'Kelas SMP' => 'SMP',
-                'Kelas SMA' => 'SMA',
-                'Umum / Profesional' => 'Umum'
+                'Kelas SD' => ['SD', 'Kelas SD'],
+                'Kelas SMP' => ['SMP', 'Kelas SMP'],
+                'Kelas SMA' => ['SMA', 'Kelas SMA'],
+                'Umum / Profesional' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+                'Kelas Umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+                'SD' => ['SD', 'Kelas SD'],
+                'SMP' => ['SMP', 'Kelas SMP'],
+                'SMA' => ['SMA', 'Kelas SMA'],
+                'Umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
             ];
-            $dbLevel = $levelMap[$request->level] ?? $request->level;
-            $query->where('level', $dbLevel);
+            $dbLevels = $levelMap[$request->level] ?? [$request->level];
+            $query->whereIn('level', $dbLevels);
         }
 
         // Filter by Search Query

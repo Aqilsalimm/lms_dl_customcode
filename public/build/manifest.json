@@ -385,7 +385,7 @@
     ]
   },
   "resources/js/Pages/Courses/Index.vue": {
-    "file": "assets/Index-KJAfrN4x.js",
+    "file": "assets/Index-ByJBRcBd.js",
     "name": "Index",
     "src": "resources/js/Pages/Courses/Index.vue",
     "isDynamicEntry": true,
@@ -396,7 +396,7 @@
       "_GuestLayout-BHJauh3R.js"
     ],
     "css": [
-      "assets/Index-DgA19pL4.css"
+      "assets/Index-DiXzVIx1.css"
     ]
   },
   "resources/js/Pages/Courses/Learn.vue": {
@@ -862,7 +862,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-6pmZHaTs.js",
+    "file": "assets/app-DfRNmZVJ.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -928,7 +928,7 @@
       "resources/js/Pages/Welcome.vue"
     ],
     "css": [
-      "assets/app-BykPZf53.css"
+      "assets/app-DiSL44Bf.css"
     ]
   }
 }
