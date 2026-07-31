@@ -87,6 +87,10 @@ class CourseBuilderController extends Controller
         $meetingUrl = $deliveryMode === 'offline' ? null : $request->meeting_url;
         $locationVenue = $deliveryMode === 'offline' ? $request->location_venue : null;
 
+        $moderationEnabled = \App\Models\Setting::where('key', 'instructor_course_moderation')->value('value');
+        $isModerated = ($moderationEnabled === 'true' || $moderationEnabled === '1' || $moderationEnabled === true || $moderationEnabled === 1);
+        $initialStatus = $request->input('status', (auth()->user()->isAdmin() || !$isModerated) ? 'published' : 'draft');
+
         $course = Course::create([
             'instructor_id' => auth()->id(),
             'category_id' => $request->category_id,
@@ -99,10 +103,12 @@ class CourseBuilderController extends Controller
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
             'meeting_url' => $meetingUrl,
-            'status' => 'draft',
+            'status' => $initialStatus,
             'icon_type' => 'code',
             'bg_color' => '#44A6D9',
         ]);
+
+        \Illuminate\Support\Facades\Cache::flush();
 
         if ($request->course_type === 'live_class') {
             \App\Models\LiveClass::create([

@@ -9,13 +9,39 @@ import GuestLayout from '@/Layouts/GuestLayout.vue';
 // Leaflet is removed in favor of Google Maps Embed
 
 const props = defineProps({
-  courses: Array
+  courses: [Array, Object],
+  categories: {
+    type: Array,
+    default: () => []
+  },
+  filters: {
+    type: Object,
+    default: () => ({})
+  }
 });
 
 // State for active search query
-const searchQuery = ref('');
-const courseTypeFilter = ref('Semua Mode');
+const searchQuery = ref(props.filters?.search || '');
+const courseTypeFilter = ref(props.filters?.type || 'Semua Mode');
 const showCourseTypeDropdown = ref(false);
+const showCategoryDropdown = ref(false);
+const selectedCategorySlug = ref(props.filters?.category || '');
+
+const selectedCategoryLabel = computed(() => {
+  if (!selectedCategorySlug.value) return 'Semua Kategori';
+  const found = props.categories?.find(c => c.slug === selectedCategorySlug.value);
+  return found ? found.name : selectedCategorySlug.value;
+});
+
+const selectCategory = (slug) => {
+  selectedCategorySlug.value = slug;
+  showCategoryDropdown.value = false;
+  router.get('/courses', {
+    ...props.filters,
+    category: slug || undefined,
+    level: activeFilter.value !== 'Semua Kursus' ? activeFilter.value : undefined
+  }, { preserveState: true, replace: true });
+};
 
 const courseTypeFilterLabel = computed(() => {
   if (courseTypeFilter.value === 'Semua Mode') {
@@ -33,11 +59,14 @@ const activeFilter = computed({
     return usePage().props.ziggy?.query?.filter || new URLSearchParams(window.location.search).get('filter') || 'Semua Kursus';
   },
   set(newValue) {
+    const queryParams = { ...props.filters };
     if (newValue === 'Semua Kursus') {
-      router.get('/courses');
+      delete queryParams.filter;
+      delete queryParams.level;
     } else {
-      router.get('/courses', { filter: newValue });
+      queryParams.level = newValue;
     }
+    router.get('/courses', queryParams, { preserveState: true, replace: true });
   }
 });
 
@@ -53,38 +82,13 @@ const formatPrice = (price) => {
   return 'Rp ' + Math.round(num).toLocaleString('id-ID');
 };
 
-// Course Fallback Data
+// Course Data (supports both paginated object and array)
 const rawCourses = computed(() => {
   const data = props.courses?.data || props.courses;
-  if (data && data.length > 0) {
+  if (Array.isArray(data)) {
     return data;
   }
-  return [
-    {
-      id: 1, title: 'Python Class : Pemrograman dan Perkenalan Bahasa Python', level: 'Umum', slug: 'python-class',
-      bg_color: '#FF4D4F', icon_type: 'code', sessions: 'Two Session per Week', duration: '1 Hour for 1 Session', type: 'Offline Class', price: 500000, period: '/ Bulan'
-    },
-    {
-      id: 2, title: 'Website Class : Pemrograman Website dengan HTML dan CSS', level: 'SMA', slug: 'website-class',
-      bg_color: '#44A6D9', icon_type: 'code', sessions: 'Two Session per Week', duration: '1 Hour for 1 Session', type: 'Offline Class', price: 500000, period: '/ Bulan'
-    },
-    {
-      id: 3, title: 'Python Class : Pemrograman dan Perkenalan Bahasa Python', level: 'Umum', slug: 'python-class',
-      bg_color: '#FF4D4F', icon_type: 'code', sessions: 'Two Session per Week', duration: '1 Hour for 1 Session', type: 'Offline Class', price: 500000, period: '/ Bulan'
-    },
-    {
-      id: 4, title: 'Website Class : Pemrograman Website dengan HTML dan CSS', level: 'SMP', slug: 'website-class',
-      bg_color: '#44A6D9', icon_type: 'code', sessions: 'Two Session per Week', duration: '1 Hour for 1 Session', type: 'Offline Class', price: 500000, period: '/ Bulan'
-    },
-    {
-      id: 5, title: 'Website Class : Pemrograman Website dengan HTML dan CSS', level: 'SD', slug: 'website-class',
-      bg_color: '#44A6D9', icon_type: 'code', sessions: 'Two Session per Week', duration: '1 Hour for 1 Session', type: 'Offline Class', price: 500000, period: '/ Bulan'
-    },
-    {
-      id: 6, title: 'Python Class : Pemrograman dan Perkenalan Bahasa Python', level: 'Umum', slug: 'python-class',
-      bg_color: '#FF4D4F', icon_type: 'code', sessions: 'Two Session per Week', duration: '1 Hour for 1 Session', type: 'Offline Class', price: 500000, period: '/ Bulan'
-    }
-  ];
+  return [];
 });
 
 // Reactively filter courses list based on header query and search query
@@ -93,6 +97,10 @@ const filteredCourses = computed(() => {
 
   if (activeFilter.value !== 'Semua Kursus') {
     result = result.filter(course => course.level === activeFilter.value);
+  }
+
+  if (selectedCategorySlug.value) {
+    result = result.filter(course => course.category?.slug === selectedCategorySlug.value);
   }
 
   if (courseTypeFilter.value !== 'Semua Mode') {
@@ -136,12 +144,32 @@ const gridColsClass = computed(() => {
           >
         </div>
 
-        <div class="w-full md:w-56 bg-white rounded-full px-5 py-3.5 flex items-center justify-between shadow-[0_4px_15px_rgb(0,0,0,0.02)] border border-slate-100/50 cursor-pointer">
-          <div class="flex items-center gap-3">
-            <BookText :size="20" class="text-[#1A2B49]" />
-            <span class="text-[#1A2B49] font-bold text-sm">IT Class</span>
+        <!-- Dynamic Category Dropdown -->
+        <div class="relative w-full md:w-56">
+          <div 
+            @click="showCategoryDropdown = !showCategoryDropdown"
+            class="bg-white rounded-full px-5 py-3.5 flex items-center justify-between shadow-[0_4px_15px_rgb(0,0,0,0.02)] border border-slate-100/50 cursor-pointer"
+          >
+            <div class="flex items-center gap-3">
+              <BookText :size="20" class="text-[#1A2B49]" />
+              <span class="text-[#1A2B49] font-bold text-sm line-clamp-1">{{ selectedCategoryLabel }}</span>
+            </div>
+            <ChevronDown :size="18" class="text-slate-400" />
           </div>
-          <ChevronDown :size="18" class="text-slate-400" />
+
+          <div v-if="showCategoryDropdown" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 max-h-60 overflow-y-auto">
+            <div @click="selectCategory('')" class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49] border-b border-slate-100 mb-1">
+              Semua Kategori
+            </div>
+            <div 
+              v-for="cat in categories" 
+              :key="cat.id"
+              @click="selectCategory(cat.slug)" 
+              class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49]"
+            >
+              {{ cat.name }}
+            </div>
+          </div>
         </div>
 
         <div class="relative w-full md:w-56">

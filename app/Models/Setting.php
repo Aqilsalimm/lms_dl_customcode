@@ -32,4 +32,18 @@ class Setting extends Model
             return $setting ? $setting->value : $default;
         });
     }
+
+    /**
+     * Set setting value with automatic cache invalidation
+     */
+    public static function setValue(string $key, $value, string $group = 'general')
+    {
+        $setting = static::updateOrCreate(
+            ['key' => $key],
+            ['value' => (string) $value, 'group' => $group]
+        );
+        Cache::forget("setting_{$key}");
+        Cache::forget("all_settings_pluck");
+        return $setting;
+    }
 }
