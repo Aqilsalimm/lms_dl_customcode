@@ -91,6 +91,71 @@ class CourseController extends Controller
     }
 
     /**
+     * AJAX API endpoint for live dynamic course search & filtering
+     */
+    public function apiSearch(Request $request)
+    {
+        $query = Course::where('status', 'published')->with(['category', 'instructor', 'lessons']);
+
+        // Filter by Course Type (async / live_class)
+        if ($request->has('type') && !empty($request->type) && $request->type !== 'Semua Mode' && $request->type !== 'all') {
+            if ($request->type === 'live_class' || $request->type === 'Kelas Kursus / Live Class') {
+                $query->where('course_type', 'live_class');
+            } elseif ($request->type === 'async' || $request->type === 'Kursus Mandiri') {
+                $query->where(function($q) {
+                    $q->where('course_type', '!=', 'live_class')->orWhereNull('course_type');
+                });
+            } else {
+                $query->where('course_type', $request->type);
+            }
+        }
+
+        // Filter by Level (SD, SMP, SMA, Umum)
+        if ($request->has('level') && !empty($request->level) && $request->level !== 'Semua Kursus') {
+            $levelMap = [
+                'Kelas SD' => ['SD', 'Kelas SD'],
+                'Kelas SMP' => ['SMP', 'Kelas SMP'],
+                'Kelas SMA' => ['SMA', 'Kelas SMA'],
+                'Umum / Profesional' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+                'Kelas Umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+                'SD' => ['SD', 'Kelas SD'],
+                'SMP' => ['SMP', 'Kelas SMP'],
+                'SMA' => ['SMA', 'Kelas SMA'],
+                'Umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+            ];
+            $dbLevels = $levelMap[$request->level] ?? [$request->level];
+            $query->whereIn('level', $dbLevels);
+        }
+
+        // Filter by Search Query
+        if ($request->has('search') && !empty($request->search)) {
+            $query->where('title', 'like', '%' . $request->search . '%');
+        }
+
+        // Filter by Category Slug
+        if ($request->has('category') && !empty($request->category)) {
+            $query->whereHas('category', function($q) use ($request) {
+                $q->where('slug', $request->category);
+            });
+        }
+
+        $perPage = (int) (\App\Models\Setting::getValue('courses_per_page') ?: 12);
+        $courses = $query->latest()->paginate($perPage)->withQueryString();
+
+        return response()->json([
+            'success' => true,
+            'data' => $courses->items(),
+            'pagination' => [
+                'current_page' => $courses->currentPage(),
+                'last_page' => $courses->lastPage(),
+                'total' => $courses->total(),
+                'per_page' => $courses->perPage(),
+                'links' => $courses->linkCollection()->toArray()
+            ]
+        ]);
+    }
+
+    /**
      * Display the course details page
      */
     public function show(string $slug)

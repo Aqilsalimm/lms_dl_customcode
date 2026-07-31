@@ -42,6 +42,9 @@ Route::get('/publish-all-courses', function () {
     ]);
 });
 
+// Public AJAX API Endpoint for Dynamic Course Filtering
+Route::get('/api/courses/search', [CourseController::class, 'apiSearch']);
+
 Route::get('/language/{locale}', [LocalizationController::class, 'switchLanguage'])->name('language.switch');
 
 // Redirect old WordPress or indexed paths to homepage
