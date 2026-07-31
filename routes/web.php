@@ -21,6 +21,27 @@ Route::get('/loaderio-0229882d7a9cb322b9c89ff53e4c2bb2.txt', function () {
     return 'loaderio-0229882d7a9cb322b9c89ff53e4c2bb2';
 });
 
+// Utility Route: Clear Application Cache on Live Server
+Route::get('/clear-app-cache', function () {
+    \Illuminate\Support\Facades\Cache::flush();
+    return response()->json([
+        'success' => true,
+        'message' => 'Cache server Laravel berhasil dibersihkan! Silakan buka kembali /courses',
+        'timestamp' => now()->toDateTimeString()
+    ]);
+});
+
+// Utility Route: Publish All Draft Courses on Live Server
+Route::get('/publish-all-courses', function () {
+    $updatedCount = \App\Models\Course::where('status', 'draft')->update(['status' => 'published']);
+    \Illuminate\Support\Facades\Cache::flush();
+    return response()->json([
+        'success' => true,
+        'message' => "Berhasil memperbarui {$updatedCount} kursus berstatus draft menjadi published!",
+        'timestamp' => now()->toDateTimeString()
+    ]);
+});
+
 Route::get('/language/{locale}', [LocalizationController::class, 'switchLanguage'])->name('language.switch');
 
 // Redirect old WordPress or indexed paths to homepage
