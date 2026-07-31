@@ -208,6 +208,8 @@ const gridColsClass = computed(() => {
                 :src="course.thumbnail.startsWith('http') || course.thumbnail.startsWith('/') ? course.thumbnail : '/storage/' + course.thumbnail" 
                 class="w-full h-full object-cover" 
                 alt="Course Cover" 
+                loading="lazy"
+                decoding="async"
               />
               
               <template v-else>

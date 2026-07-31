@@ -347,7 +347,8 @@ const rightFeatures = computed(() => [
                   class="w-full h-auto object-contain relative z-10"
                   width="500"
                   height="400"
-                  fetchpriority="high"
+                  loading="lazy"
+                  decoding="async"
                 />
 
               </div>
@@ -407,6 +408,7 @@ const rightFeatures = computed(() => [
                   width="500"
                   height="500"
                   loading="lazy"
+                  decoding="async"
                 />
               </div>
  
@@ -574,6 +576,8 @@ const rightFeatures = computed(() => [
                   :src="member.image" 
                   :alt="member.name" 
                   class="w-full h-full object-cover object-center relative z-10" 
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
               
