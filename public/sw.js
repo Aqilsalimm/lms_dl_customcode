@@ -1,9 +1,7 @@
-const CACHE_NAME = 'drastha-lms-v3';
+const CACHE_NAME = 'drastha-lms-v4';
 const PRECACHE_ASSETS = [
-    '/',
     '/favicon.ico',
     '/images/logo/logo_dl.png',
-    '/images/pages/welcome/welcome_beranda.gif',
 ];
 
 self.addEventListener('install', e => {
@@ -35,15 +33,22 @@ self.addEventListener('fetch', e => {
         return;
     }
 
-    // Bypass Service Worker caching/interception completely for dynamic, auth, dashboard, and Inertia routes
+    // Bypass Service Worker caching/interception completely for dynamic, auth, dashboard, courses, and Inertia routes
     if (
+        url.pathname.startsWith('/courses') ||
         url.pathname.startsWith('/dashboard') ||
+        url.pathname.startsWith('/live-classes') ||
+        url.pathname.startsWith('/cart') ||
+        url.pathname.startsWith('/checkout') ||
+        url.pathname.startsWith('/blogs') ||
         url.pathname.startsWith('/login') ||
         url.pathname.startsWith('/register') ||
         url.pathname.startsWith('/forgot-password') ||
         url.pathname.startsWith('/reset-password') ||
         url.pathname.startsWith('/api') ||
         e.request.headers.has('x-inertia') ||
+        e.request.headers.get('x-inertia') ||
+        e.request.headers.get('X-Inertia') ||
         (e.request.headers.get('accept') && e.request.headers.get('accept').includes('json'))
     ) {
         return; // Let the browser handle it directly via normal network requests
@@ -77,12 +82,10 @@ self.addEventListener('fetch', e => {
         return;
     }
 
-    // Dynamic HTML/Navigation requests: always fetch from network, DO NOT cache in Service Worker
+    // Dynamic HTML/Navigation requests: always fetch from network, DO NOT cache HTML in Service Worker
     e.respondWith(
         fetch(e.request).catch(() => {
-            return caches.match(e.request).then(cachedResponse => {
-                return cachedResponse || caches.match('/');
-            });
+            return caches.match(e.request);
         })
     );
 });
