@@ -17,6 +17,10 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+Route::get('/loaderio-0229882d7a9cb322b9c89ff53e4c2bb2.txt', function () {
+    return 'loaderio-0229882d7a9cb322b9c89ff53e4c2bb2';
+});
+
 Route::get('/language/{locale}', [LocalizationController::class, 'switchLanguage'])->name('language.switch');
 
 // Redirect old WordPress or indexed paths to homepage
