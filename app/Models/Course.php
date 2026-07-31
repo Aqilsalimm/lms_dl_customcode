@@ -66,6 +66,14 @@ class Course extends Model
                 $course->slug = Str::slug($course->title ?: 'course') . '-' . Str::random(5);
             }
         });
+
+        static::saved(function ($course) {
+            \Illuminate\Support\Facades\Cache::flush();
+        });
+
+        static::deleted(function ($course) {
+            \Illuminate\Support\Facades\Cache::flush();
+        });
     }
 
     public function instructor(): BelongsTo
@@ -111,13 +119,23 @@ class Course extends Model
     // Helper to get total duration
     public function getDurationAttribute()
     {
-        return $this->lessons()->sum('duration_minutes') . ' Menit';
+        if ($this->relationLoaded('lessons')) {
+            return $this->lessons->sum('duration_minutes') . ' Menit';
+        }
+        return \Illuminate\Support\Facades\Cache::remember("course_{$this->id}_duration", 3600, function () {
+            return $this->lessons()->sum('duration_minutes') . ' Menit';
+        });
     }
 
     // Helper to get total sessions (lessons)
     public function getSessionsAttribute()
     {
-        return $this->lessons()->count() . ' Sesi';
+        if ($this->relationLoaded('lessons')) {
+            return $this->lessons->count() . ' Sesi';
+        }
+        return \Illuminate\Support\Facades\Cache::remember("course_{$this->id}_sessions", 3600, function () {
+            return $this->lessons()->count() . ' Sesi';
+        });
     }
 
     public function reviews(): HasMany

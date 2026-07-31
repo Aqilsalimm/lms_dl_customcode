@@ -23,10 +23,12 @@ Route::get('/language/{locale}', [LocalizationController::class, 'switchLanguage
 Route::redirect('/admission', '/', 301);
 
 Route::get('/', function () {
-    $courses = Course::where('status', 'published')
-        ->with(['category', 'instructor'])
-        ->latest()
-        ->get();
+    $courses = \Illuminate\Support\Facades\Cache::remember('homepage_courses', 3600, function () {
+        return Course::where('status', 'published')
+            ->with(['category', 'instructor', 'lessons'])
+            ->latest()
+            ->get();
+    });
         
     return Inertia::render('Welcome', [
         'courses' => $courses,

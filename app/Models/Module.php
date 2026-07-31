@@ -31,6 +31,22 @@ class Module extends Model
         'text_title_y_position' => 'integer',
     ];
 
+    protected static function booted()
+    {
+        static::saved(function ($module) {
+            $module->invalidateCourseCache();
+        });
+
+        static::deleted(function ($module) {
+            $module->invalidateCourseCache();
+        });
+    }
+
+    private function invalidateCourseCache()
+    {
+        \Illuminate\Support\Facades\Cache::flush();
+    }
+
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);

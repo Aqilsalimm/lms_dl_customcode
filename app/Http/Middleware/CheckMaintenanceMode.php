@@ -13,7 +13,7 @@ class CheckMaintenanceMode
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $maintenanceModeSetting = \App\Models\Setting::where('key', 'maintenance_mode')->value('value');
+        $maintenanceModeSetting = \App\Models\Setting::getValue('maintenance_mode');
         $isMaintenanceMode = filter_var($maintenanceModeSetting, FILTER_VALIDATE_BOOLEAN);
 
         if ($isMaintenanceMode) {

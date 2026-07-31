@@ -13,10 +13,12 @@ class Setting extends Model
     {
         static::saved(function ($setting) {
             Cache::forget("setting_{$setting->key}");
+            Cache::forget("all_settings_pluck");
         });
 
         static::deleted(function ($setting) {
             Cache::forget("setting_{$setting->key}");
+            Cache::forget("all_settings_pluck");
         });
     }
 

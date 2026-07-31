@@ -79,7 +79,10 @@ class HandleInertiaRequests extends Middleware
                         $group = 'student';
                     }
                 }
-                return array_merge((new \Tighten\Ziggy\Ziggy($group))->toArray(), [
+                $ziggyData = \Illuminate\Support\Facades\Cache::remember("ziggy_route_map_{$group}", 3600, function () use ($group) {
+                    return (new \Tighten\Ziggy\Ziggy($group))->toArray();
+                });
+                return array_merge($ziggyData, [
                     'location' => $request->url(),
                 ]);
             },
@@ -91,7 +94,9 @@ class HandleInertiaRequests extends Middleware
      */
     private function getPublicSettings(): array
     {
-        $settings = \App\Models\Setting::pluck('value', 'key')->toArray();
+        $settings = \Illuminate\Support\Facades\Cache::remember('all_settings_pluck', 3600, function () {
+            return \App\Models\Setting::pluck('value', 'key')->toArray();
+        });
         
         $publicKeys = [
             'site_name',

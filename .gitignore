@@ -49,3 +49,8 @@ laporan-pentest-medium-threats.txt
 catatan.txt
 playwright-report/
 test-results/
+tests ~/e2e/
+opencode.json
+scratch/
+public/test.php
+dockerfile.opencode

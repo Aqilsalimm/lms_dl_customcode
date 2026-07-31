@@ -18,6 +18,22 @@ class Lesson extends Model
         'sort_order'
     ];
 
+    protected static function booted()
+    {
+        static::saved(function ($lesson) {
+            $lesson->invalidateCourseCache();
+        });
+
+        static::deleted(function ($lesson) {
+            $lesson->invalidateCourseCache();
+        });
+    }
+
+    private function invalidateCourseCache()
+    {
+        \Illuminate\Support\Facades\Cache::flush();
+    }
+
     public function module(): BelongsTo
     {
         return $this->belongsTo(Module::class);

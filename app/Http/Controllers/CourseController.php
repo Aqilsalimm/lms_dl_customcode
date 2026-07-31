@@ -20,7 +20,7 @@ class CourseController extends Controller
             return redirect()->to('/?login=true')->with('error', 'Please log in to view courses.');
         }
 
-        $query = Course::where('status', 'published')->with(['category', 'instructor']);
+        $query = Course::where('status', 'published')->with(['category', 'instructor', 'lessons']);
 
         // Filter by Course Type (async / live_class)
         if ($request->has('type') && !empty($request->type)) {
@@ -53,12 +53,28 @@ class CourseController extends Controller
         }
 
         $perPage = (int) (\App\Models\Setting::getValue('courses_per_page') ?: 12);
-        $courses = $query->latest()->paginate($perPage)->withQueryString();
+        
+        $cacheKey = 'catalog_courses_' . md5(json_encode([
+            'level' => $request->get('level'),
+            'search' => $request->get('search'),
+            'category' => $request->get('category'),
+            'type' => $request->get('type'),
+            'page' => $request->get('page', 1),
+            'per_page' => $perPage,
+        ]));
+
+        $courses = \Illuminate\Support\Facades\Cache::remember($cacheKey, 3600, function () use ($query, $perPage) {
+            return $query->latest()->paginate($perPage)->withQueryString();
+        });
+
+        $categories = \Illuminate\Support\Facades\Cache::remember('catalog_categories', 3600, function () {
+            return Category::all();
+        });
 
         return Inertia::render('Courses/Index', [
             'courses' => $courses,
             'filters' => $request->only(['level', 'search', 'category', 'type']),
-            'categories' => Category::all()
+            'categories' => $categories
         ]);
     }
 

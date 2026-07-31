@@ -81,7 +81,7 @@
         @inertiaHead
 
         @php
-            $copyProtection = \App\Models\Setting::where('key', 'copy_protection')->value('value');
+            $copyProtection = \App\Models\Setting::getValue('copy_protection');
             $isCopyProtectionEnabled = filter_var($copyProtection, FILTER_VALIDATE_BOOLEAN);
             $isAdmin = auth()->check() && auth()->user()->role === 'admin';
             $isLocal = app()->environment('local');
