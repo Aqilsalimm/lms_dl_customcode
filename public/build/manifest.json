@@ -601,7 +601,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Instructor/CourseBuilder.vue": {
-    "file": "assets/CourseBuilder-4dVysz5m.js",
+    "file": "assets/CourseBuilder-BY01KuVA.js",
     "name": "CourseBuilder",
     "src": "resources/js/Pages/Dashboard/Instructor/CourseBuilder.vue",
     "isDynamicEntry": true,
@@ -613,7 +613,7 @@
       "_AuthenticatedLayout-CBvGvRIn.js"
     ],
     "css": [
-      "assets/CourseBuilder-CYHXTjDN.css"
+      "assets/CourseBuilder-By-2UVRr.css"
     ]
   },
   "resources/js/Pages/Dashboard/Instructor/CourseIndex.vue": {
@@ -861,7 +861,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-kThnTkfb.js",
+    "file": "assets/app-Bee9WuFq.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -927,7 +927,7 @@
       "resources/js/Pages/Welcome.vue"
     ],
     "css": [
-      "assets/app-DOLGS9Dm.css"
+      "assets/app-Dx6Xs4Wx.css"
     ]
   }
 }

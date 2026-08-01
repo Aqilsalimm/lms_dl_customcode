@@ -1748,10 +1748,10 @@ const startQuizImport = () => {
                   </div>
                 </div>
 
-                <!-- Dynamic Moda Pelaksanaan Switcher (Gambar 2) -->
+                <!-- Dynamic Moda Pelaksanaan Switcher -->
                 <div>
                   <label class="block text-slate-600 text-xs font-black uppercase tracking-wider mb-2">Moda Pelaksanaan Kelas</label>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <label 
                       class="p-3.5 border-2 rounded-2xl cursor-pointer flex items-center gap-3 transition-all"
                       :class="form.delivery_mode === 'online' ? 'border-[#264790] bg-blue-50/70 text-[#264790]' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'"
@@ -1759,7 +1759,7 @@ const startQuizImport = () => {
                       <input type="radio" v-model="form.delivery_mode" value="online" class="w-4 h-4 text-[#264790] cursor-pointer" />
                       <div>
                         <p class="font-black text-xs flex items-center gap-1">💻 Online Class</p>
-                        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">PJJ via Zoom / Google Meet</p>
+                        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">PJJ via Zoom / Meet</p>
                       </div>
                     </label>
 
@@ -1770,7 +1770,18 @@ const startQuizImport = () => {
                       <input type="radio" v-model="form.delivery_mode" value="offline" class="w-4 h-4 text-amber-600 cursor-pointer" />
                       <div>
                         <p class="font-black text-xs flex items-center gap-1">📍 Offline Class</p>
-                        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">Tatap Muka / On-Site Venue</p>
+                        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">Tatap Muka / Venue</p>
+                      </div>
+                    </label>
+
+                    <label 
+                      class="p-3.5 border-2 rounded-2xl cursor-pointer flex items-center gap-3 transition-all"
+                      :class="form.delivery_mode === 'hybrid' ? 'border-blue-600 bg-blue-100/70 text-blue-950' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'"
+                    >
+                      <input type="radio" v-model="form.delivery_mode" value="hybrid" class="w-4 h-4 text-blue-600 cursor-pointer" />
+                      <div>
+                        <p class="font-black text-xs flex items-center gap-1">✨ Hybrid Mode</p>
+                        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">Online + Tatap Muka</p>
                       </div>
                     </label>
                   </div>
@@ -1796,8 +1807,8 @@ const startQuizImport = () => {
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <!-- Conditional Input: Link Meeting for Online vs Alamat Gedung for Offline -->
-                  <div v-if="!form.is_event_finished && form.delivery_mode === 'online'">
+                  <!-- Conditional Input: Link Meeting for Online/Hybrid vs Alamat Gedung for Offline/Hybrid -->
+                  <div v-if="!form.is_event_finished && (form.delivery_mode === 'online' || form.delivery_mode === 'hybrid')">
                     <label class="block text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-wide">Link Meeting (Zoom/GMeet)</label>
                     <input 
                       v-model="form.meeting_url" 
@@ -1807,7 +1818,7 @@ const startQuizImport = () => {
                     />
                   </div>
 
-                  <div v-if="!form.is_event_finished && form.delivery_mode === 'offline'" class="col-span-2">
+                  <div v-if="!form.is_event_finished && (form.delivery_mode === 'offline' || form.delivery_mode === 'hybrid')" :class="form.delivery_mode === 'hybrid' ? 'col-span-1' : 'col-span-2'">
                     <label class="block text-amber-900 text-xs font-black mb-1 uppercase tracking-wide">Alamat Lengkap / Lokasi Gedung (Tatap Muka)</label>
                     <textarea 
                       v-model="form.location_venue" 
@@ -1827,7 +1838,7 @@ const startQuizImport = () => {
                     />
                   </div>
 
-                  <div v-if="form.delivery_mode === 'online' || form.is_event_finished">
+                  <div v-if="form.delivery_mode === 'online' || form.delivery_mode === 'hybrid' || form.is_event_finished">
                     <label class="block text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-wide">Batas Kuota Maksimal</label>
                     <input 
                       v-model.number="form.max_participants" 
@@ -1852,6 +1863,7 @@ const startQuizImport = () => {
                 >
                   <option value="online">Online</option>
                   <option value="offline">Offline</option>
+                  <option value="hybrid">Hybrid (Online + Tatap Muka)</option>
                 </select>
               </div>
 

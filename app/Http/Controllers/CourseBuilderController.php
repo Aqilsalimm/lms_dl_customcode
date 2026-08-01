@@ -77,7 +77,7 @@ class CourseBuilderController extends Controller
             'price' => 'required|numeric|min:0',
             'level' => 'required|string|in:SD,SMP,SMA,Umum',
             'course_type' => 'required|string|in:async,live_class',
-            'delivery_mode' => 'nullable|string|in:online,offline',
+            'delivery_mode' => 'nullable|string|in:online,offline,hybrid',
             'location_venue' => 'nullable|string',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
@@ -86,7 +86,7 @@ class CourseBuilderController extends Controller
 
         $deliveryMode = $request->input('delivery_mode', 'online');
         $meetingUrl = $deliveryMode === 'offline' ? null : $request->meeting_url;
-        $locationVenue = $deliveryMode === 'offline' ? $request->location_venue : null;
+        $locationVenue = $deliveryMode === 'online' ? null : $request->location_venue;
 
         $moderationEnabled = \App\Models\Setting::where('key', 'instructor_course_moderation')->value('value');
         $isModerated = ($moderationEnabled === 'true' || $moderationEnabled === '1' || $moderationEnabled === true || $moderationEnabled === 1);
@@ -121,7 +121,8 @@ class CourseBuilderController extends Controller
             \App\Models\LiveClass::create([
                 'course_id' => $course->id,
                 'title' => $course->title,
-                'delivery_mode' => $deliveryMode,
+                'delivery_mode' => in_array($deliveryMode, ['offline', 'hybrid']) ? 'offline' : 'online',
+                'mode' => $deliveryMode,
                 'meeting_link' => $meetingUrl,
                 'location_venue' => $locationVenue,
                 'start_time' => $request->start_date,
@@ -206,7 +207,7 @@ class CourseBuilderController extends Controller
             'bg_color' => 'nullable|string',
             'icon_type' => 'nullable|string',
             'course_type' => 'nullable|string|in:async,live_class',
-            'delivery_mode' => 'nullable|string|in:online,offline',
+            'delivery_mode' => 'nullable|string|in:online,offline,hybrid',
             'location_venue' => 'nullable|string',
             'documentation_urls' => 'nullable|array',
             'start_date' => 'nullable|date',
@@ -258,11 +259,15 @@ class CourseBuilderController extends Controller
 
         // Synchronize or create primary LiveClass record for live classes
         if ($course->course_type === 'live_class') {
+            $liveClassMode = $course->delivery_mode ?? 'online';
+            $liveClassDeliveryMode = in_array($liveClassMode, ['offline', 'hybrid']) ? 'offline' : 'online';
+
             $liveClass = \App\Models\LiveClass::where('course_id', $course->id)->first();
             if ($liveClass) {
                 $liveClass->update([
                     'title' => $course->title,
-                    'delivery_mode' => $course->delivery_mode ?? 'online',
+                    'delivery_mode' => $liveClassDeliveryMode,
+                    'mode' => $liveClassMode,
                     'meeting_link' => $course->meeting_url,
                     'location_venue' => $course->location_venue,
                     'recording_url' => $course->recording_url,
@@ -274,7 +279,8 @@ class CourseBuilderController extends Controller
                 \App\Models\LiveClass::create([
                     'course_id' => $course->id,
                     'title' => $course->title,
-                    'delivery_mode' => $course->delivery_mode ?? 'online',
+                    'delivery_mode' => $liveClassDeliveryMode,
+                    'mode' => $liveClassMode,
                     'meeting_link' => $course->meeting_url,
                     'location_venue' => $course->location_venue,
                     'recording_url' => $course->recording_url,
