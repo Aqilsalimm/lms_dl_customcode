@@ -33,9 +33,14 @@ const activeLevel = ref(props.filters?.level || 'Semua Kursus');
 const showCourseTypeDropdown = ref(false);
 const showCategoryDropdown = ref(false);
 
+const categoriesList = computed(() => {
+  const raw = props.categories;
+  return Array.isArray(raw) ? raw : (raw && typeof raw === 'object' ? Object.values(raw) : []);
+});
+
 const selectedCategoryLabel = computed(() => {
   if (!selectedCategorySlug.value) return 'Semua Kategori';
-  const found = props.categories?.find(c => c.slug === selectedCategorySlug.value);
+  const found = categoriesList.value.find(c => c.slug === selectedCategorySlug.value);
   return found ? found.name : selectedCategorySlug.value;
 });
 
@@ -52,14 +57,14 @@ const courseTypeFilterLabel = computed(() => {
   return courseTypeFilter.value;
 });
 const hierarchicalCategories = computed(() => {
-  const rawCats = props.categories || [];
+  const rawCats = categoriesList.value;
   const list = [];
-  const parents = rawCats.filter(c => !c.parent_id);
-  const children = rawCats.filter(c => c.parent_id);
+  const parents = rawCats.filter(c => c && !c.parent_id);
+  const children = rawCats.filter(c => c && c.parent_id);
 
   parents.forEach(parent => {
     list.push({ ...parent, depth: 0 });
-    const subcats = children.filter(c => c.parent_id === parent.id);
+    const subcats = children.filter(c => c && c.parent_id === parent.id);
     subcats.forEach(sub => {
       list.push({ ...sub, depth: 1 });
     });
@@ -68,7 +73,7 @@ const hierarchicalCategories = computed(() => {
   // Handle remaining orphans
   const addedIds = new Set(list.map(c => c.id));
   rawCats.forEach(c => {
-    if (!addedIds.has(c.id)) {
+    if (c && !addedIds.has(c.id)) {
       list.push({ ...c, depth: c.parent_id ? 1 : 0 });
     }
   });
