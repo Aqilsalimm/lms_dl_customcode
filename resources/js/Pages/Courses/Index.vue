@@ -41,7 +41,13 @@ const categoriesList = computed(() => {
 const selectedCategoryLabel = computed(() => {
   if (!selectedCategorySlug.value) return 'Semua Kategori';
   const found = categoriesList.value.find(c => c.slug === selectedCategorySlug.value);
-  return found ? found.name : selectedCategorySlug.value;
+  if (found) return found.name;
+
+  // Fallback to "Semua Kategori" for conceptual level slugs
+  if (['sd', 'smp', 'sma', 'umum', 'workshop'].includes(selectedCategorySlug.value.toLowerCase())) {
+    return 'Semua Kategori';
+  }
+  return selectedCategorySlug.value;
 });
 
 const courseTypeFilterLabel = computed(() => {

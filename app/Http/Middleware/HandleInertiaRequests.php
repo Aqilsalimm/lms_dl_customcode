@@ -54,7 +54,7 @@ class HandleInertiaRequests extends Middleware
             : [];
 
         $categories = \Illuminate\Support\Facades\Cache::remember('shared_categories_list', 3600, function () {
-            return \App\Models\Category::select(['id', 'name', 'slug', 'description'])->get();
+            return \App\Models\Category::select(['id', 'name', 'slug', 'description', 'parent_id'])->get();
         });
 
         return [

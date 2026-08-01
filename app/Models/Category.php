@@ -22,6 +22,16 @@ class Category extends Model
                 $category->slug = Str::slug($category->slug);
             }
         });
+
+        static::saved(function ($category) {
+            \Illuminate\Support\Facades\Cache::forget('shared_categories_list');
+            \Illuminate\Support\Facades\Cache::forget('catalog_categories');
+        });
+
+        static::deleted(function ($category) {
+            \Illuminate\Support\Facades\Cache::forget('shared_categories_list');
+            \Illuminate\Support\Facades\Cache::forget('catalog_categories');
+        });
     }
 
     public function courses(): HasMany

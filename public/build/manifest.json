@@ -385,7 +385,7 @@
     ]
   },
   "resources/js/Pages/Courses/Index.vue": {
-    "file": "assets/Index-BAPqP_NL.js",
+    "file": "assets/Index-uUYl_Exk.js",
     "name": "Index",
     "src": "resources/js/Pages/Courses/Index.vue",
     "isDynamicEntry": true,
@@ -397,7 +397,7 @@
       "_GuestLayout-JkaGIXib.js"
     ],
     "css": [
-      "assets/Index-Bbci3ZQR.css"
+      "assets/Index-WtREJV55.css"
     ]
   },
   "resources/js/Pages/Courses/Learn.vue": {
@@ -863,7 +863,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-BhB9BjE8.js",
+    "file": "assets/app-C4nyuMj3.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
