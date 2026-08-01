@@ -76,8 +76,8 @@ const createCourse = () => {
     return;
   }
 
-  if (newCourseType.value === 'live_class' && newDeliveryMode.value === 'offline' && !newLocationVenue.value) {
-    alert('Alamat / Lokasi Gedung Tatap Muka wajib diisi untuk kelas Offline.');
+  if (newCourseType.value === 'live_class' && (newDeliveryMode.value === 'offline' || newDeliveryMode.value === 'hybrid') && !newLocationVenue.value) {
+    alert('Alamat / Lokasi Gedung Tatap Muka wajib diisi untuk kelas Offline & Hybrid.');
     return;
   }
 
@@ -89,8 +89,8 @@ const createCourse = () => {
     price: newCoursePrice.value,
     course_type: newCourseType.value,
     delivery_mode: newDeliveryMode.value,
-    location_venue: newDeliveryMode.value === 'offline' ? newLocationVenue.value : null,
-    meeting_url: newDeliveryMode.value === 'online' ? newMeetingUrl.value : null,
+    location_venue: (newDeliveryMode.value === 'offline' || newDeliveryMode.value === 'hybrid') ? newLocationVenue.value : null,
+    meeting_url: (newDeliveryMode.value === 'online' || newDeliveryMode.value === 'hybrid') ? newMeetingUrl.value : null,
   }, {
     onSuccess: (page) => {
       closeCreateModal();
@@ -388,20 +388,20 @@ const submitGift = () => {
           <!-- Moda Pelaksanaan Kelas (Hanya jika Live Class / Workshop dipilih) -->
           <div v-if="newCourseType === 'live_class'" class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex flex-col gap-3">
             <label class="block text-[#1A2B49] text-xs font-black uppercase tracking-wider">Moda Pelaksanaan Kelas</label>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <label 
-                class="p-3 border-2 rounded-xl cursor-pointer flex items-center gap-2.5 transition-all"
+                class="p-3 border-2 rounded-xl cursor-pointer flex items-center gap-2 transition-all"
                 :class="newDeliveryMode === 'online' ? 'border-[#264790] bg-blue-50/60 text-[#264790]' : 'border-slate-200 bg-white text-slate-600'"
               >
                 <input type="radio" v-model="newDeliveryMode" value="online" class="w-4 h-4 text-[#264790]" />
                 <div>
                   <p class="font-extrabold text-xs">Online Class</p>
-                  <p class="text-[10px] text-slate-400 font-semibold">PJJ via Zoom / Meet</p>
+                  <p class="text-[10px] text-slate-400 font-semibold">PJJ Zoom / Meet</p>
                 </div>
               </label>
 
               <label 
-                class="p-3 border-2 rounded-xl cursor-pointer flex items-center gap-2.5 transition-all"
+                class="p-3 border-2 rounded-xl cursor-pointer flex items-center gap-2 transition-all"
                 :class="newDeliveryMode === 'offline' ? 'border-amber-500 bg-amber-50/60 text-amber-900' : 'border-slate-200 bg-white text-slate-600'"
               >
                 <input type="radio" v-model="newDeliveryMode" value="offline" class="w-4 h-4 text-amber-600" />
@@ -410,10 +410,21 @@ const submitGift = () => {
                   <p class="text-[10px] text-slate-400 font-semibold">Tatap Muka / Venue</p>
                 </div>
               </label>
+
+              <label 
+                class="p-3 border-2 rounded-xl cursor-pointer flex items-center gap-2 transition-all"
+                :class="newDeliveryMode === 'hybrid' ? 'border-blue-600 bg-blue-100/70 text-blue-950' : 'border-slate-200 bg-white text-slate-600'"
+              >
+                <input type="radio" v-model="newDeliveryMode" value="hybrid" class="w-4 h-4 text-blue-600" />
+                <div>
+                  <p class="font-extrabold text-xs">Hybrid Mode</p>
+                  <p class="text-[10px] text-slate-400 font-semibold">Online + Tatap Muka</p>
+                </div>
+              </label>
             </div>
 
-            <!-- Dynamic Input for Location Venue if Offline -->
-            <div v-if="newDeliveryMode === 'offline'" class="mt-1">
+            <!-- Dynamic Input for Location Venue if Offline or Hybrid -->
+            <div v-if="newDeliveryMode === 'offline' || newDeliveryMode === 'hybrid'" class="mt-1">
               <label class="block text-amber-900 text-[11px] font-extrabold mb-1">Alamat Lengkap / Lokasi Gedung (Tatap Muka)</label>
               <textarea 
                 v-model="newLocationVenue" 
@@ -423,8 +434,8 @@ const submitGift = () => {
               ></textarea>
             </div>
 
-            <!-- Dynamic Input for Meeting Link if Online -->
-            <div v-if="newDeliveryMode === 'online'" class="mt-1">
+            <!-- Dynamic Input for Meeting Link if Online or Hybrid -->
+            <div v-if="newDeliveryMode === 'online' || newDeliveryMode === 'hybrid'" class="mt-1">
               <label class="block text-blue-900 text-[11px] font-extrabold mb-1">Link Zoom / Google Meet (Opsional)</label>
               <input 
                 v-model="newMeetingUrl" 
