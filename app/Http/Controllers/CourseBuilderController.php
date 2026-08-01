@@ -72,6 +72,7 @@ class CourseBuilderController extends Controller
     {
         $request->validate([
             'title' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
             'price' => 'required|numeric|min:0',
             'level' => 'required|string|in:SD,SMP,SMA,Umum',
@@ -91,7 +92,7 @@ class CourseBuilderController extends Controller
         $isModerated = ($moderationEnabled === 'true' || $moderationEnabled === '1' || $moderationEnabled === true || $moderationEnabled === 1);
         $initialStatus = $request->input('status', (auth()->user()->isAdmin() || !$isModerated) ? 'published' : 'draft');
 
-        $course = Course::create([
+        $courseData = [
             'instructor_id' => auth()->id(),
             'category_id' => $request->category_id,
             'title' => $request->title,
@@ -106,7 +107,13 @@ class CourseBuilderController extends Controller
             'status' => $initialStatus,
             'icon_type' => 'code',
             'bg_color' => '#44A6D9',
-        ]);
+        ];
+
+        if (!empty($request->slug)) {
+            $courseData['slug'] = \Illuminate\Support\Str::slug($request->slug);
+        }
+
+        $course = Course::create($courseData);
 
         \Illuminate\Support\Facades\Cache::flush();
 
@@ -185,6 +192,7 @@ class CourseBuilderController extends Controller
 
         $request->validate([
             'title' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255',
             'category_id' => 'nullable|exists:categories,id',
             'price' => 'required|numeric|min:0',
             'payment_type' => 'nullable|string|in:one-time,monthly',
@@ -212,10 +220,14 @@ class CourseBuilderController extends Controller
         ]);
 
         $data = $request->only([
-            'title', 'category_id', 'price', 'payment_type', 'access_duration_months', 'level', 'capacity', 'status',
+            'title', 'slug', 'category_id', 'price', 'payment_type', 'access_duration_months', 'level', 'capacity', 'status',
             'description', 'about', 'bg_color', 'icon_type', 'course_type', 'delivery_mode', 'location_venue', 'documentation_urls', 'start_date', 'end_date',
             'timezone', 'meeting_url', 'recording_url', 'max_participants', 'is_event_finished', 'tools'
         ]);
+
+        if (!empty($data['slug'])) {
+            $data['slug'] = \Illuminate\Support\Str::slug($data['slug']);
+        }
 
         if (isset($data['delivery_mode']) && $data['delivery_mode'] === 'offline') {
             $data['meeting_url'] = null;

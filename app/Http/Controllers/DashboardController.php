@@ -762,12 +762,16 @@ class DashboardController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:categories,slug',
             'description' => 'nullable|string',
             'parent_id' => 'nullable|exists:categories,id',
         ]);
 
+        $slug = !empty($request->slug) ? \Illuminate\Support\Str::slug($request->slug) : \Illuminate\Support\Str::slug($request->name);
+
         Category::create([
             'name' => $request->name,
+            'slug' => $slug,
             'description' => $request->description,
             'parent_id' => $request->parent_id ?: null,
         ]);
@@ -786,12 +790,16 @@ class DashboardController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:categories,slug,' . $category->id,
             'description' => 'nullable|string',
             'parent_id' => 'nullable|exists:categories,id|different:id',
         ]);
 
+        $slug = !empty($request->slug) ? \Illuminate\Support\Str::slug($request->slug) : \Illuminate\Support\Str::slug($request->name);
+
         $category->update([
             'name' => $request->name,
+            'slug' => $slug,
             'description' => $request->description,
             'parent_id' => $request->parent_id ?: null,
         ]);

@@ -64,6 +64,8 @@ class Course extends Model
         static::saving(function ($course) {
             if (empty($course->slug)) {
                 $course->slug = Str::slug($course->title ?: 'course') . '-' . Str::random(5);
+            } else {
+                $course->slug = Str::slug($course->slug);
             }
         });
 

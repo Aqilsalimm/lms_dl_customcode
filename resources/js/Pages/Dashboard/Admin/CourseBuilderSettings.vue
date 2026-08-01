@@ -58,6 +58,7 @@ const showCategoryModal = ref(false);
 const editingCategory = ref(null);
 const categoryForm = useForm({
   name: '',
+  slug: '',
   description: '',
   parent_id: ''
 });
@@ -125,6 +126,7 @@ const openAddCategory = () => {
 const openEditCategory = (category) => {
   editingCategory.value = category;
   categoryForm.name = category.name;
+  categoryForm.slug = category.slug || '';
   categoryForm.description = category.description || '';
   categoryForm.parent_id = category.parent_id || '';
   categoryForm.clearErrors();
@@ -940,6 +942,20 @@ const startQuizImport = () => {
               required
             />
             <span v-if="categoryForm.errors.name" class="text-xs text-red-500 mt-1 font-bold">{{ categoryForm.errors.name }}</span>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label class="block text-slate-650 text-xs font-bold uppercase tracking-wider flex items-center justify-between">
+              <span>Slug Kategori (URL Keyword)</span>
+              <span class="text-[10px] text-slate-400 font-normal capitalize">(Generate otomatis jika kosong)</span>
+            </label>
+            <input 
+              v-model="categoryForm.slug" 
+              type="text" 
+              placeholder="Contoh: it-software / sd / smp / sma / umum / workshop" 
+              class="w-full border-2 border-slate-200 hover:border-blue-500 focus:border-blue-600 rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium transition-colors text-sm"
+            />
+            <span v-if="categoryForm.errors.slug" class="text-xs text-red-500 mt-1 font-bold">{{ categoryForm.errors.slug }}</span>
           </div>
 
           <div class="flex flex-col gap-1.5">

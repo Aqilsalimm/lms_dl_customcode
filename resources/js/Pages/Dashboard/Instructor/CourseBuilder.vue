@@ -69,6 +69,7 @@ const currentStep = ref(1);
 // Settings Form
 const form = ref({
   title: props.course.title,
+  slug: props.course.slug || '',
   price: parseFloat(props.course.price),
   payment_type: props.course.payment_type || 'monthly',
   level: props.course.level,
@@ -552,6 +553,7 @@ const handleUpdate = (stayOnPage = false) => {
   formData.append('recording_url', form.value.recording_url || '');
   formData.append('max_participants', form.value.max_participants || '');
   formData.append('is_event_finished', form.value.is_event_finished ? 1 : 0);
+  formData.append('slug', form.value.slug || '');
   if (form.value.category_id) {
     formData.append('category_id', form.value.category_id);
   }
@@ -1643,6 +1645,20 @@ const startQuizImport = () => {
                   v-model="form.title" 
                   type="text" 
                   placeholder="e.g., Mastering HTML, CSS, Tailwind v4" 
+                  class="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-[#264790] focus:bg-white rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium transition-all duration-300"
+                />
+              </div>
+
+              <!-- Course Slug Editor -->
+              <div>
+                <label class="block text-slate-400 text-xs font-bold mb-2 uppercase tracking-wide flex items-center justify-between">
+                  <span>Course Slug (Custom URL Keyword)</span>
+                  <span class="text-[10px] text-slate-400 font-normal capitalize">(Generate otomatis dari Judul jika dikosongkan)</span>
+                </label>
+                <input 
+                  v-model="form.slug" 
+                  type="text" 
+                  placeholder="e.g., python-class-pemrograman" 
                   class="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-[#264790] focus:bg-white rounded-2xl px-4 py-3 outline-none text-[#1A2B49] font-medium transition-all duration-300"
                 />
               </div>

@@ -194,42 +194,69 @@ const isLoggedIn = computed(() => !!pageProps.auth?.user);
 const layananMenu = computed(() => [
   { 
     id: 'semua', 
+    slug: 'semua',
     title: usePage().props.translations?.menu_all || 'Semua Kursus', 
     desc: usePage().props.translations?.menu_all_desc || 'Seluruh Layanan Course, baik Offline atau Online', 
     filter: 'Semua Kursus' 
   },
   { 
     id: 'smp', 
+    slug: 'smp',
     title: usePage().props.translations?.menu_smp || 'Kelas SMP', 
     desc: usePage().props.translations?.menu_smp_desc || 'Seluruh Layanan Course khusus untuk anak kelas SMP', 
     filter: 'SMP' 
   },
   { 
     id: 'sd', 
+    slug: 'sd',
     title: usePage().props.translations?.menu_sd || 'Kelas SD', 
     desc: usePage().props.translations?.menu_sd_desc || 'Seluruh Layanan Course khusus untuk anak kelas Sekolah Dasar', 
     filter: 'SD' 
   },
   { 
     id: 'sma', 
+    slug: 'sma',
     title: usePage().props.translations?.menu_sma || 'Kelas SMA', 
     desc: usePage().props.translations?.menu_sma_desc || 'Seluruh Layanan Course khusus untuk anak kelas SMA', 
     filter: 'SMA' 
   },
   { 
     id: 'umum', 
+    slug: 'umum',
     title: usePage().props.translations?.menu_umum || 'Kelas Umum', 
     desc: usePage().props.translations?.menu_umum_desc || 'Seluruh Layanan Course khusus untuk Profesi atau Seminar Umum', 
     filter: 'Umum' 
   },
+  { 
+    id: 'workshop', 
+    slug: 'workshop',
+    title: usePage().props.translations?.menu_workshop || 'Workshop', 
+    desc: usePage().props.translations?.menu_workshop_desc || 'Seluruh Layanan Workshop & Pelatihan Interaktif', 
+    filter: 'Workshop' 
+  },
 ]);
 
-const handleLayananClick = (filterValue) => {
+const handleLayananClick = (item) => {
   isLayananOpen.value = false;
-  if (filterValue === 'Semua Kursus') {
-    router.get('/courses'); 
+  
+  // Find category slug dynamically from database categories shared via Inertia props
+  const dbCategories = usePage().props.categories || [];
+  const matchedCat = dbCategories.find(c => c.slug === item.slug || c.slug === item.id || (c.name && c.name.toLowerCase().includes(item.id)));
+  const targetSlug = matchedCat ? matchedCat.slug : item.slug;
+
+  if (window.location.pathname === '/courses') {
+    window.dispatchEvent(new CustomEvent('filter-courses-ajax', {
+      detail: {
+        category: item.id === 'semua' ? '' : targetSlug,
+        level: item.id === 'semua' ? 'Semua Kursus' : item.filter
+      }
+    }));
   } else {
-    router.get('/courses', { filter: filterValue });
+    if (item.id === 'semua') {
+      router.get('/courses'); 
+    } else {
+      router.get('/courses', { category: targetSlug, level: item.filter });
+    }
   }
 };
 
@@ -350,7 +377,7 @@ const Logo = () => {
                   <button 
                     v-for="item in layananMenu" 
                     :key="item.id"
-                    @click="handleLayananClick(item.filter)"
+                    @click="handleLayananClick(item)"
                     class="group flex flex-col items-start text-left text-[#1A2B49] hover:bg-slate-50 p-3 -m-3 rounded-2xl transition-colors w-full"
                   >
                     <h4 class="font-bold text-base mb-1 group-hover:text-[#44A6D9] transition-colors">{{ item.title }}</h4>

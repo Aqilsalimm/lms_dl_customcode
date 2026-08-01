@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { 
@@ -88,6 +88,24 @@ const fetchCoursesAjax = async (page = 1) => {
     isLoading.value = false;
   }
 };
+
+const handleFilterCoursesEvent = (e) => {
+  if (e.detail) {
+    selectedCategorySlug.value = e.detail.category || '';
+    if (e.detail.level) {
+      activeLevel.value = e.detail.level;
+    }
+    fetchCoursesAjax();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('filter-courses-ajax', handleFilterCoursesEvent);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('filter-courses-ajax', handleFilterCoursesEvent);
+});
 
 const selectCategory = (slug) => {
   selectedCategorySlug.value = slug;

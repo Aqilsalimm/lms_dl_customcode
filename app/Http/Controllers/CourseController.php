@@ -57,10 +57,25 @@ class CourseController extends Controller
             $query->where('title', 'like', '%' . $request->search . '%');
         }
 
-        // Filter by Category Slug
-        if ($request->has('category') && !empty($request->category)) {
-            $query->whereHas('category', function($q) use ($request) {
-                $q->where('slug', $request->category);
+        // Filter by Category Slug or Level Keyword
+        if ($request->has('category') && !empty($request->category) && $request->category !== 'semua' && $request->category !== 'Semua Kursus') {
+            $cat = strtolower($request->category);
+            $query->where(function($q) use ($cat) {
+                $q->whereHas('category', function($cq) use ($cat) {
+                    $cq->where('slug', $cat)->orWhere('name', 'like', "%{$cat}%");
+                });
+                if (in_array($cat, ['sd', 'smp', 'sma', 'umum', 'workshop'])) {
+                    $levelMap = [
+                        'sd' => ['SD', 'Kelas SD'],
+                        'smp' => ['SMP', 'Kelas SMP'],
+                        'sma' => ['SMA', 'Kelas SMA'],
+                        'umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+                        'workshop' => ['Workshop', 'Kelas Workshop', 'workshop'],
+                    ];
+                    if (isset($levelMap[$cat])) {
+                        $q->orWhereIn('level', $levelMap[$cat]);
+                    }
+                }
             });
         }
 
@@ -132,10 +147,25 @@ class CourseController extends Controller
             $query->where('title', 'like', '%' . $request->search . '%');
         }
 
-        // Filter by Category Slug
-        if ($request->has('category') && !empty($request->category)) {
-            $query->whereHas('category', function($q) use ($request) {
-                $q->where('slug', $request->category);
+        // Filter by Category Slug or Level Keyword
+        if ($request->has('category') && !empty($request->category) && $request->category !== 'semua' && $request->category !== 'Semua Kursus') {
+            $cat = strtolower($request->category);
+            $query->where(function($q) use ($cat) {
+                $q->whereHas('category', function($cq) use ($cat) {
+                    $cq->where('slug', $cat)->orWhere('name', 'like', "%{$cat}%");
+                });
+                if (in_array($cat, ['sd', 'smp', 'sma', 'umum', 'workshop'])) {
+                    $levelMap = [
+                        'sd' => ['SD', 'Kelas SD'],
+                        'smp' => ['SMP', 'Kelas SMP'],
+                        'sma' => ['SMA', 'Kelas SMA'],
+                        'umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+                        'workshop' => ['Workshop', 'Kelas Workshop', 'workshop'],
+                    ];
+                    if (isset($levelMap[$cat])) {
+                        $q->orWhereIn('level', $levelMap[$cat]);
+                    }
+                }
             });
         }
 

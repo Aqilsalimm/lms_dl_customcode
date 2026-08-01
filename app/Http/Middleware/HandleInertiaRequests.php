@@ -53,6 +53,10 @@ class HandleInertiaRequests extends Middleware
             ? json_decode(file_get_contents($translationsPath), true) 
             : [];
 
+        $categories = \Illuminate\Support\Facades\Cache::remember('shared_categories_list', 3600, function () {
+            return \App\Models\Category::select(['id', 'name', 'slug', 'description'])->get();
+        });
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -61,6 +65,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'locale' => $locale,
             'translations' => $translations,
+            'categories' => $categories,
             'settings' => $this->getPublicSettings(),
             'flash' => [
                 'success' => $request->session()->get('success'),
