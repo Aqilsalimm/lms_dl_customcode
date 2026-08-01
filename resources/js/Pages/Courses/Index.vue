@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { 
-  Search, Calendar, Clock, MapPin, Code, BookText, Globe, ChevronDown, Calculator, Video, Loader2 
+  Search, Calendar, Clock, MapPin, Code, BookText, Globe, ChevronDown, Calculator, Video, Loader2, Trash2 
 } from 'lucide-vue-next';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 
@@ -114,9 +114,15 @@ const fetchCoursesAjax = async (page = 1) => {
 
 const handleFilterCoursesEvent = (e) => {
   if (e.detail) {
+    // Reset other filters on menu change to prevent empty results bug
+    searchQuery.value = '';
+    courseTypeFilter.value = 'Semua Mode';
+    
     selectedCategorySlug.value = e.detail.category || '';
     if (e.detail.level) {
       activeLevel.value = e.detail.level;
+    } else {
+      activeLevel.value = 'Semua Kursus';
     }
     fetchCoursesAjax();
   }
@@ -131,6 +137,11 @@ onUnmounted(() => {
 });
 
 const selectCategory = (slug) => {
+  // Reset other filters on category change to prevent empty results bug
+  searchQuery.value = '';
+  courseTypeFilter.value = 'Semua Mode';
+  activeLevel.value = 'Semua Kursus';
+  
   selectedCategorySlug.value = slug;
   showCategoryDropdown.value = false;
   fetchCoursesAjax();
@@ -239,20 +250,22 @@ const gridColsClass = computed(() => {
           </div>
         </div>
 
-        <button 
-          @click="submitSearch"
-          class="bg-[#264790] hover:bg-[#1a2b49] text-white font-extrabold py-3.5 px-8 rounded-full shadow-md transition-colors text-sm whitespace-nowrap cursor-pointer"
-        >
-          {{ $t('find_class') || 'Cari Kelas' }}
-        </button>
-      </div>
-
-      <!-- Level Pill dynamic active tag -->
-      <div v-if="activeFilter !== 'Semua Kursus'" class="mb-6 flex">
-        <span class="bg-[#F9CC6B] text-[#1A2B49] text-xs font-extrabold px-4 py-2 rounded-full shadow-sm flex items-center gap-2">
-          {{ $t('showing_category') || 'Menampilkan Kategori:' }} Kelas {{ activeFilter }}
-          <button @click="clearFilter" class="hover:text-red-500 font-black text-sm outline-none pl-1">&times;</button>
-        </span>
+        <div class="flex gap-2 w-full md:w-auto">
+          <button 
+            @click="submitSearch"
+            class="flex-grow md:flex-grow-0 bg-[#264790] hover:bg-[#1a2b49] text-white font-extrabold py-3.5 px-8 rounded-full shadow-md transition-colors text-sm whitespace-nowrap cursor-pointer"
+          >
+            {{ $t('find_class') || 'Cari Kelas' }}
+          </button>
+          
+          <button 
+            @click="clearFilter"
+            class="bg-red-600 hover:bg-red-700 text-white font-bold p-3.5 rounded-full shadow-md transition-all duration-300 flex items-center justify-center cursor-pointer shrink-0 hover:scale-105"
+            title="Reset Filter"
+          >
+            <Trash2 :size="20" />
+          </button>
+        </div>
       </div>
 
       <div class="flex flex-col lg:flex-row gap-8 items-start">
