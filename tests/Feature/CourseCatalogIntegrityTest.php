@@ -229,4 +229,76 @@ class CourseCatalogIntegrityTest extends TestCase
             'title' => 'Web Dev Subcategory Class'
         ]);
     }
+
+    /**
+     * Test that filtering by category and level of the same concept uses OR logic
+     * and returns courses matching either category (including children) or level.
+     */
+    public function test_conceptual_or_filtering_for_category_and_level(): void
+    {
+        $workshopCategory = Category::create(['name' => 'Workshop', 'slug' => 'workshop']);
+        $subWorkshopCategory = Category::create([
+            'name' => 'Advanced Workshop',
+            'slug' => 'advanced-workshop',
+            'parent_id' => $workshopCategory->id
+        ]);
+        
+        $otherCategory = Category::create(['name' => 'Other Category', 'slug' => 'other-category']);
+        $instructor = User::factory()->create(['role' => 'instructor']);
+
+        // Course 1: Category is subcategory of workshop, level is 'Umum' (should match)
+        $course1 = Course::create([
+            'title' => 'Advanced Coding Workshop',
+            'slug' => 'advanced-coding-workshop',
+            'instructor_id' => $instructor->id,
+            'category_id' => $subWorkshopCategory->id,
+            'status' => 'published',
+            'level' => 'Umum',
+            'price' => 150000,
+            'course_type' => 'async'
+        ]);
+
+        // Course 2: Level is 'Workshop', category is 'Other Category' (should match)
+        $course2 = Course::create([
+            'title' => 'General Level Workshop Course',
+            'slug' => 'general-level-workshop-course',
+            'instructor_id' => $instructor->id,
+            'category_id' => $otherCategory->id,
+            'status' => 'published',
+            'level' => 'Workshop',
+            'price' => 250000,
+            'course_type' => 'async'
+        ]);
+
+        // Course 3: Neither matches (should NOT match)
+        $course3 = Course::create([
+            'title' => 'SD Mathematics Course',
+            'slug' => 'sd-mathematics-course',
+            'instructor_id' => $instructor->id,
+            'category_id' => $otherCategory->id,
+            'status' => 'published',
+            'level' => 'Kelas SD',
+            'price' => 100000,
+            'course_type' => 'async'
+        ]);
+
+        // Filter by category=workshop and level=Workshop (same concept)
+        $response = $this->get('/courses?category=workshop&level=Workshop');
+        $response->assertStatus(200);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Courses/Index')
+            ->has('courses.data', 2)
+            ->where('courses.data', function ($coursesData) use ($course1, $course2) {
+                $titles = collect($coursesData)->pluck('title')->all();
+                return in_array($course1->title, $titles) && in_array($course2->title, $titles);
+            })
+        );
+
+        // Filter via AJAX API
+        $ajaxResponse = $this->get('/api/courses/search?category=workshop&level=Workshop');
+        $ajaxResponse->assertStatus(200);
+        $ajaxResponse->assertJsonFragment(['title' => 'Advanced Coding Workshop'])
+                    ->assertJsonFragment(['title' => 'General Level Workshop Course'])
+                    ->assertJsonMissing(['title' => 'SD Mathematics Course']);
+    }
 }

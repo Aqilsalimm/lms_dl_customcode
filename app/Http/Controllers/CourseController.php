@@ -35,63 +35,106 @@ class CourseController extends Controller
             }
         }
 
-        // Filter by Level (SD, SMP, SMA, Umum)
-        if ($request->has('level') && !empty($request->level) && $request->level !== 'Semua Kursus') {
-            $levelMap = [
-                'Kelas SD' => ['SD', 'Kelas SD'],
-                'Kelas SMP' => ['SMP', 'Kelas SMP'],
-                'Kelas SMA' => ['SMA', 'Kelas SMA'],
-                'Umum / Profesional' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
-                'Kelas Umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
-                'SD' => ['SD', 'Kelas SD'],
-                'SMP' => ['SMP', 'Kelas SMP'],
-                'SMA' => ['SMA', 'Kelas SMA'],
-                'Umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
-            ];
-            $dbLevels = $levelMap[$request->level] ?? [$request->level];
-            $query->whereIn('level', $dbLevels);
+        $levelMap = [
+            'Kelas SD' => ['SD', 'Kelas SD'],
+            'Kelas SMP' => ['SMP', 'Kelas SMP'],
+            'Kelas SMA' => ['SMA', 'Kelas SMA'],
+            'Umum / Profesional' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+            'Kelas Umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+            'SD' => ['SD', 'Kelas SD'],
+            'SMP' => ['SMP', 'Kelas SMP'],
+            'SMA' => ['SMA', 'Kelas SMA'],
+            'Umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+            'Workshop' => ['Workshop', 'Kelas Workshop', 'workshop'],
+            'workshop' => ['Workshop', 'Kelas Workshop', 'workshop'],
+        ];
+
+        $levelFilter = $request->get('level');
+        $categoryFilter = $request->get('category');
+
+        $isSameConcept = false;
+        if (!empty($levelFilter) && !empty($categoryFilter) && $levelFilter !== 'Semua Kursus' && $categoryFilter !== 'semua' && $categoryFilter !== 'Semua Kursus') {
+            $lvl = strtolower($levelFilter);
+            $cat = strtolower($categoryFilter);
+            if (($cat === 'sd' && str_contains($lvl, 'sd')) ||
+                ($cat === 'smp' && str_contains($lvl, 'smp')) ||
+                ($cat === 'sma' && str_contains($lvl, 'sma')) ||
+                ($cat === 'umum' && str_contains($lvl, 'umum')) ||
+                ($cat === 'workshop' && str_contains($lvl, 'workshop'))) {
+                $isSameConcept = true;
+            }
+        }
+
+        if ($isSameConcept) {
+            // Apply combined OR query: Match category (including subcategories) OR level keyword
+            $query->where(function($q) use ($categoryFilter, $levelFilter, $levelMap) {
+                $cat = strtolower($categoryFilter);
+                $targetCategory = Category::where('slug', $cat)->orWhere('name', 'like', "%{$cat}%")->first();
+                $categoryIds = [];
+                if ($targetCategory) {
+                    $categoryIds[] = $targetCategory->id;
+                    $subcatIds = Category::where('parent_id', $targetCategory->id)->pluck('id')->toArray();
+                    $categoryIds = array_merge($categoryIds, $subcatIds);
+                }
+
+                $q->where(function($subQ) use ($categoryIds, $cat) {
+                    if (!empty($categoryIds)) {
+                        $subQ->whereIn('category_id', $categoryIds);
+                    } else {
+                        $subQ->whereHas('category', function($cq) use ($cat) {
+                            $cq->where('slug', $cat)->orWhere('name', 'like', "%{$cat}%");
+                        });
+                    }
+                });
+
+                $dbLevels = $levelMap[$levelFilter] ?? [$levelFilter];
+                $q->orWhereIn('level', $dbLevels);
+            });
+        } else {
+            // Apply separate filters as AND conditions (Standard catalog behavior)
+            if (!empty($levelFilter) && $levelFilter !== 'Semua Kursus') {
+                $dbLevels = $levelMap[$levelFilter] ?? [$levelFilter];
+                $query->whereIn('level', $dbLevels);
+            }
+
+            if (!empty($categoryFilter) && $categoryFilter !== 'semua' && $categoryFilter !== 'Semua Kursus') {
+                $cat = strtolower($categoryFilter);
+                $targetCategory = Category::where('slug', $cat)->orWhere('name', 'like', "%{$cat}%")->first();
+                $categoryIds = [];
+                if ($targetCategory) {
+                    $categoryIds[] = $targetCategory->id;
+                    $subcatIds = Category::where('parent_id', $targetCategory->id)->pluck('id')->toArray();
+                    $categoryIds = array_merge($categoryIds, $subcatIds);
+                }
+
+                $query->where(function($q) use ($cat, $categoryIds) {
+                    if (!empty($categoryIds)) {
+                        $q->whereIn('category_id', $categoryIds);
+                    } else {
+                        $q->whereHas('category', function($cq) use ($cat) {
+                            $cq->where('slug', $cat)->orWhere('name', 'like', "%{$cat}%");
+                        });
+                    }
+                    
+                    if (in_array($cat, ['sd', 'smp', 'sma', 'umum', 'workshop'])) {
+                        $innerLevelMap = [
+                            'sd' => ['SD', 'Kelas SD'],
+                            'smp' => ['SMP', 'Kelas SMP'],
+                            'sma' => ['SMA', 'Kelas SMA'],
+                            'umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+                            'workshop' => ['Workshop', 'Kelas Workshop', 'workshop'],
+                        ];
+                        if (isset($innerLevelMap[$cat])) {
+                            $q->orWhereIn('level', $innerLevelMap[$cat]);
+                        }
+                    }
+                });
+            }
         }
 
         // Filter by Search Query
         if ($request->has('search') && !empty($request->search)) {
             $query->where('title', 'like', '%' . $request->search . '%');
-        }
-
-        // Filter by Category Slug or Level Keyword
-        if ($request->has('category') && !empty($request->category) && $request->category !== 'semua' && $request->category !== 'Semua Kursus') {
-            $cat = strtolower($request->category);
-            
-            // Find parent category and its children subcategories
-            $targetCategory = Category::where('slug', $cat)->orWhere('name', 'like', "%{$cat}%")->first();
-            $categoryIds = [];
-            if ($targetCategory) {
-                $categoryIds[] = $targetCategory->id;
-                $subcatIds = Category::where('parent_id', $targetCategory->id)->pluck('id')->toArray();
-                $categoryIds = array_merge($categoryIds, $subcatIds);
-            }
-
-            $query->where(function($q) use ($cat, $categoryIds) {
-                if (!empty($categoryIds)) {
-                    $q->whereIn('category_id', $categoryIds);
-                } else {
-                    $q->whereHas('category', function($cq) use ($cat) {
-                        $cq->where('slug', $cat)->orWhere('name', 'like', "%{$cat}%");
-                    });
-                }
-                
-                if (in_array($cat, ['sd', 'smp', 'sma', 'umum', 'workshop'])) {
-                    $levelMap = [
-                        'sd' => ['SD', 'Kelas SD'],
-                        'smp' => ['SMP', 'Kelas SMP'],
-                        'sma' => ['SMA', 'Kelas SMA'],
-                        'umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
-                        'workshop' => ['Workshop', 'Kelas Workshop', 'workshop'],
-                    ];
-                    if (isset($levelMap[$cat])) {
-                        $q->orWhereIn('level', $levelMap[$cat]);
-                    }
-                }
-            });
         }
 
         $perPage = (int) (\App\Models\Setting::getValue('courses_per_page') ?: 12);
@@ -140,63 +183,106 @@ class CourseController extends Controller
             }
         }
 
-        // Filter by Level (SD, SMP, SMA, Umum)
-        if ($request->has('level') && !empty($request->level) && $request->level !== 'Semua Kursus') {
-            $levelMap = [
-                'Kelas SD' => ['SD', 'Kelas SD'],
-                'Kelas SMP' => ['SMP', 'Kelas SMP'],
-                'Kelas SMA' => ['SMA', 'Kelas SMA'],
-                'Umum / Profesional' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
-                'Kelas Umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
-                'SD' => ['SD', 'Kelas SD'],
-                'SMP' => ['SMP', 'Kelas SMP'],
-                'SMA' => ['SMA', 'Kelas SMA'],
-                'Umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
-            ];
-            $dbLevels = $levelMap[$request->level] ?? [$request->level];
-            $query->whereIn('level', $dbLevels);
+        $levelMap = [
+            'Kelas SD' => ['SD', 'Kelas SD'],
+            'Kelas SMP' => ['SMP', 'Kelas SMP'],
+            'Kelas SMA' => ['SMA', 'Kelas SMA'],
+            'Umum / Profesional' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+            'Kelas Umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+            'SD' => ['SD', 'Kelas SD'],
+            'SMP' => ['SMP', 'Kelas SMP'],
+            'SMA' => ['SMA', 'Kelas SMA'],
+            'Umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+            'Workshop' => ['Workshop', 'Kelas Workshop', 'workshop'],
+            'workshop' => ['Workshop', 'Kelas Workshop', 'workshop'],
+        ];
+
+        $levelFilter = $request->get('level');
+        $categoryFilter = $request->get('category');
+
+        $isSameConcept = false;
+        if (!empty($levelFilter) && !empty($categoryFilter) && $levelFilter !== 'Semua Kursus' && $categoryFilter !== 'semua' && $categoryFilter !== 'Semua Kursus') {
+            $lvl = strtolower($levelFilter);
+            $cat = strtolower($categoryFilter);
+            if (($cat === 'sd' && str_contains($lvl, 'sd')) ||
+                ($cat === 'smp' && str_contains($lvl, 'smp')) ||
+                ($cat === 'sma' && str_contains($lvl, 'sma')) ||
+                ($cat === 'umum' && str_contains($lvl, 'umum')) ||
+                ($cat === 'workshop' && str_contains($lvl, 'workshop'))) {
+                $isSameConcept = true;
+            }
+        }
+
+        if ($isSameConcept) {
+            // Apply combined OR query: Match category (including subcategories) OR level keyword
+            $query->where(function($q) use ($categoryFilter, $levelFilter, $levelMap) {
+                $cat = strtolower($categoryFilter);
+                $targetCategory = Category::where('slug', $cat)->orWhere('name', 'like', "%{$cat}%")->first();
+                $categoryIds = [];
+                if ($targetCategory) {
+                    $categoryIds[] = $targetCategory->id;
+                    $subcatIds = Category::where('parent_id', $targetCategory->id)->pluck('id')->toArray();
+                    $categoryIds = array_merge($categoryIds, $subcatIds);
+                }
+
+                $q->where(function($subQ) use ($categoryIds, $cat) {
+                    if (!empty($categoryIds)) {
+                        $subQ->whereIn('category_id', $categoryIds);
+                    } else {
+                        $subQ->whereHas('category', function($cq) use ($cat) {
+                            $cq->where('slug', $cat)->orWhere('name', 'like', "%{$cat}%");
+                        });
+                    }
+                });
+
+                $dbLevels = $levelMap[$levelFilter] ?? [$levelFilter];
+                $q->orWhereIn('level', $dbLevels);
+            });
+        } else {
+            // Apply separate filters as AND conditions (Standard catalog behavior)
+            if (!empty($levelFilter) && $levelFilter !== 'Semua Kursus') {
+                $dbLevels = $levelMap[$levelFilter] ?? [$levelFilter];
+                $query->whereIn('level', $dbLevels);
+            }
+
+            if (!empty($categoryFilter) && $categoryFilter !== 'semua' && $categoryFilter !== 'Semua Kursus') {
+                $cat = strtolower($categoryFilter);
+                $targetCategory = Category::where('slug', $cat)->orWhere('name', 'like', "%{$cat}%")->first();
+                $categoryIds = [];
+                if ($targetCategory) {
+                    $categoryIds[] = $targetCategory->id;
+                    $subcatIds = Category::where('parent_id', $targetCategory->id)->pluck('id')->toArray();
+                    $categoryIds = array_merge($categoryIds, $subcatIds);
+                }
+
+                $query->where(function($q) use ($cat, $categoryIds) {
+                    if (!empty($categoryIds)) {
+                        $q->whereIn('category_id', $categoryIds);
+                    } else {
+                        $q->whereHas('category', function($cq) use ($cat) {
+                            $cq->where('slug', $cat)->orWhere('name', 'like', "%{$cat}%");
+                        });
+                    }
+                    
+                    if (in_array($cat, ['sd', 'smp', 'sma', 'umum', 'workshop'])) {
+                        $innerLevelMap = [
+                            'sd' => ['SD', 'Kelas SD'],
+                            'smp' => ['SMP', 'Kelas SMP'],
+                            'sma' => ['SMA', 'Kelas SMA'],
+                            'umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
+                            'workshop' => ['Workshop', 'Kelas Workshop', 'workshop'],
+                        ];
+                        if (isset($innerLevelMap[$cat])) {
+                            $q->orWhereIn('level', $innerLevelMap[$cat]);
+                        }
+                    }
+                });
+            }
         }
 
         // Filter by Search Query
         if ($request->has('search') && !empty($request->search)) {
             $query->where('title', 'like', '%' . $request->search . '%');
-        }
-
-        // Filter by Category Slug or Level Keyword
-        if ($request->has('category') && !empty($request->category) && $request->category !== 'semua' && $request->category !== 'Semua Kursus') {
-            $cat = strtolower($request->category);
-            
-            // Find parent category and its children subcategories
-            $targetCategory = Category::where('slug', $cat)->orWhere('name', 'like', "%{$cat}%")->first();
-            $categoryIds = [];
-            if ($targetCategory) {
-                $categoryIds[] = $targetCategory->id;
-                $subcatIds = Category::where('parent_id', $targetCategory->id)->pluck('id')->toArray();
-                $categoryIds = array_merge($categoryIds, $subcatIds);
-            }
-
-            $query->where(function($q) use ($cat, $categoryIds) {
-                if (!empty($categoryIds)) {
-                    $q->whereIn('category_id', $categoryIds);
-                } else {
-                    $q->whereHas('category', function($cq) use ($cat) {
-                        $cq->where('slug', $cat)->orWhere('name', 'like', "%{$cat}%");
-                    });
-                }
-                
-                if (in_array($cat, ['sd', 'smp', 'sma', 'umum', 'workshop'])) {
-                    $levelMap = [
-                        'sd' => ['SD', 'Kelas SD'],
-                        'smp' => ['SMP', 'Kelas SMP'],
-                        'sma' => ['SMA', 'Kelas SMA'],
-                        'umum' => ['Umum', 'Kelas Umum', 'Umum / Profesional'],
-                        'workshop' => ['Workshop', 'Kelas Workshop', 'workshop'],
-                    ];
-                    if (isset($levelMap[$cat])) {
-                        $q->orWhereIn('level', $levelMap[$cat]);
-                    }
-                }
-            });
         }
 
         $perPage = (int) (\App\Models\Setting::getValue('courses_per_page') ?: 12);
