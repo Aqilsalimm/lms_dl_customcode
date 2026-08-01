@@ -240,8 +240,9 @@ const handleLayananClick = (item) => {
   isLayananOpen.value = false;
   
   // Find category slug dynamically from database categories shared via Inertia props
-  const dbCategories = usePage().props.categories || [];
-  const matchedCat = dbCategories.find(c => c.slug === item.slug || c.slug === item.id || (c.name && c.name.toLowerCase().includes(item.id)));
+  const rawCategories = usePage().props.categories;
+  const dbCategories = Array.isArray(rawCategories) ? rawCategories : (rawCategories && typeof rawCategories === 'object' ? Object.values(rawCategories) : []);
+  const matchedCat = dbCategories.find(c => c && (c.slug === item.slug || c.slug === item.id || (c.name && c.name.toLowerCase().includes(item.id))));
   const targetSlug = matchedCat ? matchedCat.slug : item.slug;
 
   if (window.location.pathname === '/courses') {
