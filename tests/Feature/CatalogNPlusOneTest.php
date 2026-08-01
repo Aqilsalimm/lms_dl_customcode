@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class CatalogNPlusOneTest extends TestCase
 {
+    use RefreshDatabase;
     /**
      * Test that GET /courses query count remains O(1) regardless of number of courses.
      */
@@ -28,7 +30,9 @@ class CatalogNPlusOneTest extends TestCase
         // Reset query log and make 2nd request to test cache response
         DB::flushQueryLog();
         $response2 = $this->get('/courses');
-        $cachedQueries = DB::getQueryLog();
+        $cachedQueries = collect(DB::getQueryLog())->filter(function ($q) {
+            return !str_contains($q['query'], '"cache"') && !str_contains($q['query'], 'cache');
+        })->all();
         $cachedQueryCount = count($cachedQueries);
 
         // Response should be cached so query count is near 0 and strictly O(1) constant

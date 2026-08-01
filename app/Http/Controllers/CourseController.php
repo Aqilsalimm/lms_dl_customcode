@@ -60,10 +60,25 @@ class CourseController extends Controller
         // Filter by Category Slug or Level Keyword
         if ($request->has('category') && !empty($request->category) && $request->category !== 'semua' && $request->category !== 'Semua Kursus') {
             $cat = strtolower($request->category);
-            $query->where(function($q) use ($cat) {
-                $q->whereHas('category', function($cq) use ($cat) {
-                    $cq->where('slug', $cat)->orWhere('name', 'like', "%{$cat}%");
-                });
+            
+            // Find parent category and its children subcategories
+            $targetCategory = Category::where('slug', $cat)->orWhere('name', 'like', "%{$cat}%")->first();
+            $categoryIds = [];
+            if ($targetCategory) {
+                $categoryIds[] = $targetCategory->id;
+                $subcatIds = Category::where('parent_id', $targetCategory->id)->pluck('id')->toArray();
+                $categoryIds = array_merge($categoryIds, $subcatIds);
+            }
+
+            $query->where(function($q) use ($cat, $categoryIds) {
+                if (!empty($categoryIds)) {
+                    $q->whereIn('category_id', $categoryIds);
+                } else {
+                    $q->whereHas('category', function($cq) use ($cat) {
+                        $cq->where('slug', $cat)->orWhere('name', 'like', "%{$cat}%");
+                    });
+                }
+                
                 if (in_array($cat, ['sd', 'smp', 'sma', 'umum', 'workshop'])) {
                     $levelMap = [
                         'sd' => ['SD', 'Kelas SD'],
@@ -150,10 +165,25 @@ class CourseController extends Controller
         // Filter by Category Slug or Level Keyword
         if ($request->has('category') && !empty($request->category) && $request->category !== 'semua' && $request->category !== 'Semua Kursus') {
             $cat = strtolower($request->category);
-            $query->where(function($q) use ($cat) {
-                $q->whereHas('category', function($cq) use ($cat) {
-                    $cq->where('slug', $cat)->orWhere('name', 'like', "%{$cat}%");
-                });
+            
+            // Find parent category and its children subcategories
+            $targetCategory = Category::where('slug', $cat)->orWhere('name', 'like', "%{$cat}%")->first();
+            $categoryIds = [];
+            if ($targetCategory) {
+                $categoryIds[] = $targetCategory->id;
+                $subcatIds = Category::where('parent_id', $targetCategory->id)->pluck('id')->toArray();
+                $categoryIds = array_merge($categoryIds, $subcatIds);
+            }
+
+            $query->where(function($q) use ($cat, $categoryIds) {
+                if (!empty($categoryIds)) {
+                    $q->whereIn('category_id', $categoryIds);
+                } else {
+                    $q->whereHas('category', function($cq) use ($cat) {
+                        $cq->where('slug', $cat)->orWhere('name', 'like', "%{$cat}%");
+                    });
+                }
+                
                 if (in_array($cat, ['sd', 'smp', 'sma', 'umum', 'workshop'])) {
                     $levelMap = [
                         'sd' => ['SD', 'Kelas SD'],

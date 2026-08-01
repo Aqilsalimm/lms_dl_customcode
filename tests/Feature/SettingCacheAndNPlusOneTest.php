@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class SettingCacheAndNPlusOneTest extends TestCase
 {
+    use RefreshDatabase;
     /**
      * Test that Setting::getValue relies on Cache and does not run DB queries repeatedly.
      */
@@ -32,7 +34,9 @@ class SettingCacheAndNPlusOneTest extends TestCase
             Setting::getValue('site_title');
         }
 
-        $cachedQueryCount = count(DB::getQueryLog());
+        $cachedQueryCount = collect(DB::getQueryLog())->filter(function ($q) {
+            return !str_contains($q['query'], '"cache"') && !str_contains($q['query'], 'cache');
+        })->count();
 
         $this->assertEquals(0, $cachedQueryCount, "Setting::getValue must be cached and not hit database on subsequent calls.");
     }

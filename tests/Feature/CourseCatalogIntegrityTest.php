@@ -187,4 +187,46 @@ class CourseCatalogIntegrityTest extends TestCase
             ->where('courses.data.0.title', 'Draft Course to be Published')
         );
     }
+
+    /**
+     * Test parent category filtering returns courses in subcategories.
+     */
+    public function test_parent_category_filter_includes_subcategories(): void
+    {
+        $parentCategory = Category::create(['name' => 'IT & Software', 'slug' => 'it-software']);
+        $subCategory = Category::create([
+            'name' => 'Web Development', 
+            'slug' => 'web-development', 
+            'parent_id' => $parentCategory->id
+        ]);
+        
+        $instructor = User::factory()->create(['role' => 'instructor']);
+
+        $course = Course::create([
+            'title' => 'Web Dev Subcategory Class',
+            'slug' => 'web-dev-subcategory-class',
+            'instructor_id' => $instructor->id,
+            'category_id' => $subCategory->id,
+            'status' => 'published',
+            'level' => 'Umum',
+            'price' => 200000,
+            'course_type' => 'async'
+        ]);
+
+        // Filter by parent category slug
+        $response = $this->get('/courses?category=it-software');
+        $response->assertStatus(200);
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('Courses/Index')
+            ->has('courses.data', 1)
+            ->where('courses.data.0.title', 'Web Dev Subcategory Class')
+        );
+
+        // Filter via AJAX API
+        $ajaxResponse = $this->get('/api/courses/search?category=it-software');
+        $ajaxResponse->assertStatus(200);
+        $ajaxResponse->assertJsonFragment([
+            'title' => 'Web Dev Subcategory Class'
+        ]);
+    }
 }

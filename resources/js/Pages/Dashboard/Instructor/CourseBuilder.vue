@@ -162,11 +162,33 @@ const setPricingModel = (model) => {
   }
 };
 
-// Filter categories locally by search
+// Filter categories locally by search and arrange them hierarchically
 const filteredCategories = computed(() => {
-  if (!searchCategoryQuery.value) return props.categories;
-  return props.categories.filter(cat => 
-    cat.name.toLowerCase().includes(searchCategoryQuery.value.toLowerCase())
+  const rawCats = props.categories || [];
+  const list = [];
+  const parents = rawCats.filter(c => !c.parent_id);
+  const children = rawCats.filter(c => c.parent_id);
+
+  parents.forEach(parent => {
+    list.push({ ...parent, depth: 0 });
+    const subcats = children.filter(c => c.parent_id === parent.id);
+    subcats.forEach(sub => {
+      list.push({ ...sub, depth: 1 });
+    });
+  });
+
+  // Handle remaining orphan categories if any
+  const addedIds = new Set(list.map(c => c.id));
+  rawCats.forEach(c => {
+    if (!addedIds.has(c.id)) {
+      list.push({ ...c, depth: c.parent_id ? 1 : 0 });
+    }
+  });
+
+  if (!searchCategoryQuery.value) return list;
+  const q = searchCategoryQuery.value.toLowerCase();
+  return list.filter(cat => 
+    cat.name.toLowerCase().includes(q)
   );
 });
 
@@ -2357,15 +2379,16 @@ const startQuizImport = () => {
                 <div 
                   v-for="cat in filteredCategories" 
                   :key="cat.id" 
-                  class="flex items-center justify-between text-xs text-slate-600 font-bold hover:text-[#264790] cursor-pointer"
+                  class="flex items-center justify-between text-xs text-slate-650 hover:text-[#264790] cursor-pointer py-1 transition-all rounded-lg px-2 hover:bg-slate-50/50"
+                  :class="cat.depth > 0 ? 'ml-5 pl-4 border-l border-slate-100' : 'font-extrabold'"
                   @click="form.category_id = cat.id"
                 >
                   <div class="flex items-center gap-2">
                     <span :class="form.category_id === cat.id ? 'bg-[#264790] border-transparent' : 'bg-white border-slate-200'" class="w-4 h-4 border rounded flex items-center justify-center transition-colors">
                       <Check v-if="form.category_id === cat.id" :size="10" class="text-white" />
                     </span>
-                    <span class="text-slate-400">📁</span>
-                    <span>{{ cat.name }}</span>
+                    <span class="text-slate-400">{{ cat.depth > 0 ? '↳ 📁' : '📁' }}</span>
+                    <span :class="cat.depth === 0 ? 'text-[#1A2B49]' : 'text-slate-500'">{{ cat.name }}</span>
                   </div>
                 </div>
               </div>

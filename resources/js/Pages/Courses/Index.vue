@@ -51,7 +51,30 @@ const courseTypeFilterLabel = computed(() => {
   }
   return courseTypeFilter.value;
 });
+const hierarchicalCategories = computed(() => {
+  const rawCats = props.categories || [];
+  const list = [];
+  const parents = rawCats.filter(c => !c.parent_id);
+  const children = rawCats.filter(c => c.parent_id);
 
+  parents.forEach(parent => {
+    list.push({ ...parent, depth: 0 });
+    const subcats = children.filter(c => c.parent_id === parent.id);
+    subcats.forEach(sub => {
+      list.push({ ...sub, depth: 1 });
+    });
+  });
+
+  // Handle remaining orphans
+  const addedIds = new Set(list.map(c => c.id));
+  rawCats.forEach(c => {
+    if (!addedIds.has(c.id)) {
+      list.push({ ...c, depth: c.parent_id ? 1 : 0 });
+    }
+  });
+
+  return list;
+});
 // Centralized AJAX Fetcher Function
 const fetchCoursesAjax = async (page = 1) => {
   isLoading.value = true;
@@ -184,11 +207,13 @@ const gridColsClass = computed(() => {
               Semua Kategori
             </div>
             <div 
-              v-for="cat in categories" 
+              v-for="cat in hierarchicalCategories" 
               :key="cat.id"
               @click="selectCategory(cat.slug)" 
-              class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm font-semibold text-[#1A2B49]"
+              class="px-4 py-2 hover:bg-slate-50 rounded-xl cursor-pointer text-sm text-[#1A2B49] flex items-center gap-1.5"
+              :class="cat.depth > 0 ? 'pl-8 text-slate-500 font-medium' : 'font-bold'"
             >
+              <span v-if="cat.depth > 0" class="text-slate-300">↳</span>
               {{ cat.name }}
             </div>
           </div>
