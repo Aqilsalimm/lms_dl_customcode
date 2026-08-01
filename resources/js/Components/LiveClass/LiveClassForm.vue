@@ -17,8 +17,14 @@ const form = useForm({
   title: props.liveClass?.title || '',
   course_id: props.liveClass?.course_id || props.courseId || null,
   delivery_mode: props.liveClass?.delivery_mode || 'online',
+  mode: props.liveClass?.mode || props.liveClass?.delivery_mode || 'online',
   meeting_link: props.liveClass?.meeting_link || '',
   location_venue: props.liveClass?.location_venue || '',
+  venue_name: props.liveClass?.venue_name || '',
+  venue_address: props.liveClass?.venue_address || props.liveClass?.location_venue || '',
+  gmaps_url: props.liveClass?.gmaps_url || '',
+  gmaps_embed_url: props.liveClass?.gmaps_embed_url || '',
+  offline_capacity: props.liveClass?.offline_capacity || null,
   recording_url: props.liveClass?.recording_url || '',
   documentation_urls: (props.liveClass?.documentation_urls && Array.isArray(props.liveClass.documentation_urls) && props.liveClass.documentation_urls.length > 0)
     ? [...props.liveClass.documentation_urls]
@@ -93,7 +99,7 @@ const submit = () => {
         {{ props.liveClass ? 'Edit Sesi Kelas Live / Hybrid' : 'Tambah Sesi Kelas Live / Hybrid' }}
       </h3>
       <p class="text-xs text-slate-400 font-semibold mt-1">
-        Atur modalitas (Online vs Offline), lokasi, serta materi & galeri dokumentasi pasca-acara.
+        Atur modalitas (Online, Offline, atau Hybrid), lokasi, serta materi & galeri dokumentasi pasca-acara.
       </p>
     </div>
 
@@ -113,19 +119,19 @@ const submit = () => {
     <!-- Radio Selection Mode -->
     <div>
       <label class="block text-xs font-extrabold text-slate-600 uppercase tracking-wider mb-3">Moda Pelaksanaan Kelas</label>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <!-- Online Radio -->
         <label 
           class="p-4 border-2 rounded-2xl cursor-pointer flex items-center justify-between transition-all duration-200 hover:shadow-sm"
-          :class="form.delivery_mode === 'online' ? 'border-[#264790] bg-[#264790]/5 text-[#264790]' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
+          :class="form.mode === 'online' ? 'border-[#264790] bg-[#264790]/5 text-[#264790]' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
         >
-          <div class="flex items-center gap-3">
-            <input type="radio" v-model="form.delivery_mode" value="online" class="w-4 h-4 text-[#264790] focus:ring-0 cursor-pointer" />
+          <div class="flex items-center gap-2">
+            <input type="radio" v-model="form.mode" value="online" @change="form.delivery_mode = 'online'" class="w-4 h-4 text-[#264790] focus:ring-0 cursor-pointer" />
             <div>
-              <p class="font-extrabold text-xs flex items-center gap-1.5">
-                <Video :size="16" class="text-[#44A6D9]" /> Online Class
+              <p class="font-extrabold text-xs flex items-center gap-1">
+                <Video :size="14" class="text-[#44A6D9]" /> Online
               </p>
-              <p class="text-[11px] text-slate-400 font-semibold mt-0.5">PJJ via Zoom / Google Meet</p>
+              <p class="text-[10px] text-slate-400 font-semibold mt-0.5">PJJ Zoom / Meet</p>
             </div>
           </div>
         </label>
@@ -133,23 +139,39 @@ const submit = () => {
         <!-- Offline Radio -->
         <label 
           class="p-4 border-2 rounded-2xl cursor-pointer flex items-center justify-between transition-all duration-200 hover:shadow-sm"
-          :class="form.delivery_mode === 'offline' ? 'border-amber-500 bg-amber-50/50 text-amber-900' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
+          :class="form.mode === 'offline' ? 'border-amber-500 bg-amber-50/50 text-amber-900' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
         >
-          <div class="flex items-center gap-3">
-            <input type="radio" v-model="form.delivery_mode" value="offline" class="w-4 h-4 text-amber-600 focus:ring-0 cursor-pointer" />
+          <div class="flex items-center gap-2">
+            <input type="radio" v-model="form.mode" value="offline" @change="form.delivery_mode = 'offline'" class="w-4 h-4 text-amber-600 focus:ring-0 cursor-pointer" />
             <div>
-              <p class="font-extrabold text-xs flex items-center gap-1.5">
-                <MapPin :size="16" class="text-amber-600" /> Offline Class
+              <p class="font-extrabold text-xs flex items-center gap-1">
+                <MapPin :size="14" class="text-amber-600" /> Offline
               </p>
-              <p class="text-[11px] text-slate-400 font-semibold mt-0.5">Tatap Muka / On-Site Venue</p>
+              <p class="text-[10px] text-slate-400 font-semibold mt-0.5">Tatap Muka Venue</p>
+            </div>
+          </div>
+        </label>
+
+        <!-- Hybrid Radio -->
+        <label 
+          class="p-4 border-2 rounded-2xl cursor-pointer flex items-center justify-between transition-all duration-200 hover:shadow-sm"
+          :class="form.mode === 'hybrid' ? 'border-blue-500 bg-blue-50/50 text-blue-900' : 'border-slate-200 text-slate-600 hover:border-slate-300'"
+        >
+          <div class="flex items-center gap-2">
+            <input type="radio" v-model="form.mode" value="hybrid" @change="form.delivery_mode = 'offline'" class="w-4 h-4 text-blue-600 focus:ring-0 cursor-pointer" />
+            <div>
+              <p class="font-extrabold text-xs flex items-center gap-1">
+                <Sparkles :size="14" class="text-blue-600" /> Hybrid Mode
+              </p>
+              <p class="text-[10px] text-slate-400 font-semibold mt-0.5">Online + Onsite</p>
             </div>
           </div>
         </label>
       </div>
     </div>
 
-    <!-- Conditional Input 1: Online Meeting Link -->
-    <div v-if="form.delivery_mode === 'online'" class="p-5 bg-sky-50/50 rounded-2xl border border-sky-100 flex flex-col gap-2">
+    <!-- Conditional Input 1: Online Meeting Link (for Online & Hybrid) -->
+    <div v-if="form.mode === 'online' || form.mode === 'hybrid'" class="p-5 bg-sky-50/50 rounded-2xl border border-sky-100 flex flex-col gap-2">
       <label class="block text-xs font-extrabold text-sky-900 uppercase tracking-wider flex items-center gap-1.5">
         <Link2 :size="14" class="text-[#44A6D9]" /> Link Zoom / Google Meet
       </label>
@@ -162,18 +184,57 @@ const submit = () => {
       <span v-if="form.errors.meeting_link" class="text-xs font-bold text-rose-500">{{ form.errors.meeting_link }}</span>
     </div>
 
-    <!-- Conditional Input 2: Offline Location Venue -->
-    <div v-if="form.delivery_mode === 'offline'" class="p-5 bg-amber-50/50 rounded-2xl border border-amber-200/60 flex flex-col gap-2">
-      <label class="block text-xs font-extrabold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
-        <MapPin :size="14" class="text-amber-600" /> Alamat Lengkap / Lokasi Gedung (Tatap Muka)
-      </label>
-      <textarea 
-        v-model="form.location_venue" 
-        rows="2" 
-        placeholder="Gedung Utama Lt. 3, Ruang Lab Komputer 2, Jl. Sudirman No. 45..." 
-        class="w-full rounded-xl border-amber-300/80 px-4 py-2.5 text-xs font-bold text-[#1A2B49] focus:border-amber-600 bg-white outline-none"
-      ></textarea>
-      <span v-if="form.errors.location_venue" class="text-xs font-bold text-rose-500">{{ form.errors.location_venue }}</span>
+    <!-- Conditional Input 2: Offline/Hybrid Location & Capacity -->
+    <div v-if="form.mode === 'offline' || form.mode === 'hybrid'" class="p-5 bg-amber-50/50 rounded-2xl border border-amber-200/60 flex flex-col gap-4">
+      <div>
+        <label class="block text-xs font-extrabold text-amber-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+          <MapPin :size="14" class="text-amber-600" /> Nama Gedung / Ruang Venue
+        </label>
+        <input 
+          v-model="form.venue_name" 
+          type="text" 
+          placeholder="Gedung Utama LMS Drastha, Ruang 302" 
+          class="w-full rounded-xl border-amber-300/80 px-4 py-2.5 text-xs font-bold text-[#1A2B49] focus:border-amber-600 bg-white outline-none" 
+        />
+      </div>
+
+      <div>
+        <label class="block text-xs font-extrabold text-amber-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+          Alamat Lengkap Venue Fisik
+        </label>
+        <textarea 
+          v-model="form.venue_address" 
+          rows="2" 
+          placeholder="Jl. Raya Citra Surya Mas No. 12, Sukodono, Sidoarjo, Jawa Timur..." 
+          class="w-full rounded-xl border-amber-300/80 px-4 py-2.5 text-xs font-bold text-[#1A2B49] focus:border-amber-600 bg-white outline-none"
+        ></textarea>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-extrabold text-amber-900 uppercase tracking-wider mb-1">
+            Kapasitas Kursi Fisik (Offline Capacity)
+          </label>
+          <input 
+            v-model="form.offline_capacity" 
+            type="number" 
+            placeholder="60" 
+            class="w-full rounded-xl border-amber-300/80 px-4 py-2.5 text-xs font-bold text-[#1A2B49] focus:border-amber-600 bg-white outline-none" 
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-extrabold text-amber-900 uppercase tracking-wider mb-1">
+            URL Embed Google Maps (Iframe)
+          </label>
+          <input 
+            v-model="form.gmaps_embed_url" 
+            type="url" 
+            placeholder="https://www.google.com/maps/embed?pb=..." 
+            class="w-full rounded-xl border-amber-300/80 px-4 py-2.5 text-xs font-bold text-[#1A2B49] focus:border-amber-600 bg-white outline-none" 
+          />
+        </div>
+      </div>
     </div>
 
     <!-- Jadwal Mulai & Selesai -->

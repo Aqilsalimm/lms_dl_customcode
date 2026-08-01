@@ -1,4 +1,4 @@
-const CACHE_NAME = 'drastha-lms-v4';
+const CACHE_NAME = 'drastha-lms-v5';
 const PRECACHE_ASSETS = [
     '/favicon.ico',
     '/images/logo/logo_dl.png',
@@ -38,6 +38,7 @@ self.addEventListener('fetch', e => {
         url.pathname.startsWith('/courses') ||
         url.pathname.startsWith('/dashboard') ||
         url.pathname.startsWith('/live-classes') ||
+        url.pathname.startsWith('/live-class') ||
         url.pathname.startsWith('/cart') ||
         url.pathname.startsWith('/checkout') ||
         url.pathname.startsWith('/blogs') ||

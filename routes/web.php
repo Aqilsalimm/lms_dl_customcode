@@ -303,6 +303,7 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::post('/live-classes', [\App\Http\Controllers\LiveClassController::class, 'store'])->name('live-classes.store');
     Route::put('/live-classes/{liveClass}', [\App\Http\Controllers\LiveClassController::class, 'update'])->name('live-classes.update');
     Route::delete('/live-classes/{liveClass}', [\App\Http\Controllers\LiveClassController::class, 'destroy'])->name('live-classes.destroy');
+    Route::post('/live-classes/{liveClass}/attendance', [\App\Http\Controllers\LiveClassController::class, 'selectAttendance'])->middleware(['throttle:10,1'])->name('live-classes.select-attendance');
 
     // Web Push Subscriptions
     Route::get('/push-subscriptions/key', [\App\Http\Controllers\PushSubscriptionController::class, 'key'])->name('push.key');
