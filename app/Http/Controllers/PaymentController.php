@@ -281,16 +281,16 @@ class PaymentController extends Controller
      */
     public function completeMockPayment(Request $request, Order $order)
     {
-        if ($order->user_id !== auth()->id()) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        $serverKey = config('midtrans.server_key');
-        if (!empty($serverKey) && !str_contains($serverKey, 'placeholder')) {
-            return response()->json(['message' => 'Not allowed in production/configured mode'], 403);
-        }
+        abort_unless(app()->environment('local', 'testing'), 403, 'Not allowed in production mode');
+        abort_unless($order->user_id === auth()->id(), 403, 'Unauthorized action.');
 
         DB::transaction(function () use ($order) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->first();
+
+            if ($order->status !== 'pending') {
+                return;
+            }
+
             $order->update([
                 'status' => 'completed',
                 'payment_type' => 'mock_payment'
