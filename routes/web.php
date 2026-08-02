@@ -21,26 +21,11 @@ Route::get('/loaderio-0229882d7a9cb322b9c89ff53e4c2bb2.txt', function () {
     return 'loaderio-0229882d7a9cb322b9c89ff53e4c2bb2';
 });
 
-// Utility Route: Clear Application Cache on Live Server
-Route::get('/clear-app-cache', function () {
-    \Illuminate\Support\Facades\Cache::flush();
-    return response()->json([
-        'success' => true,
-        'message' => 'Cache server Laravel berhasil dibersihkan! Silakan buka kembali /courses',
-        'timestamp' => now()->toDateTimeString()
-    ]);
-});
-
-// Utility Route: Publish All Draft Courses on Live Server
-Route::get('/publish-all-courses', function () {
-    $updatedCount = \App\Models\Course::where('status', 'draft')->update(['status' => 'published']);
-    \Illuminate\Support\Facades\Cache::flush();
-    return response()->json([
-        'success' => true,
-        'message' => "Berhasil memperbarui {$updatedCount} kursus berstatus draft menjadi published!",
-        'timestamp' => now()->toDateTimeString()
-    ]);
-});
+// NOTE: Utility routes /clear-app-cache and /publish-all-courses were removed.
+// They were unauthenticated GET endpoints that allowed anyone to flush the
+// application cache (which also destroys the database-backed session store)
+// or mass-publish every draft course. Use `php artisan cache:clear` on the
+// server instead, and publish courses through the authenticated course builder.
 
 // Public AJAX API Endpoint for Dynamic Course Filtering
 Route::get('/api/courses/search', [CourseController::class, 'apiSearch']);
@@ -332,3 +317,7 @@ Route::get('/blogs', [BlogController::class, 'index'])->name('blogs.index');
 Route::get('/blogs/{slug}', [BlogController::class, 'show'])->name('blogs.show');
 
 require __DIR__.'/auth.php';
+
+if (app()->environment('local', 'testing')) {
+    require __DIR__.'/local_dev.php';
+}
