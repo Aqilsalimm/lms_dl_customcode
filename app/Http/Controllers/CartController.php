@@ -50,9 +50,8 @@ class CartController extends Controller
             return redirect()->route('courses.index')->with('warning', 'Pilihlah kelas terlebih dahulu sebelum checkout.');
         }
 
-        $clientKey = \App\Models\Setting::where('key', 'midtrans_client_key')->value('value') ?: config('midtrans.client_key', 'SB-Mid-client-placeholder');
-        $sandboxMode = \App\Models\Setting::where('key', 'midtrans_sandbox_mode')->value('value');
-        $isSandbox = $sandboxMode === null ? !config('midtrans.is_production', false) : filter_var($sandboxMode, FILTER_VALIDATE_BOOLEAN);
+        $clientKey = \App\Services\Payment\MidtransConfig::clientKey() ?: 'SB-Mid-client-placeholder';
+        $isSandbox = \App\Services\Payment\MidtransConfig::isSandbox();
 
         return Inertia::render('Checkout/Index', [
             'cartItems' => $cartItems,

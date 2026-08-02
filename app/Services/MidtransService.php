@@ -11,19 +11,13 @@ class MidtransService
 {
     public function __construct()
     {
-        $serverKey = \App\Models\Setting::where('key', 'midtrans_server_key')->value('value');
-        $sandboxMode = \App\Models\Setting::where('key', 'midtrans_sandbox_mode')->value('value');
+        $serverKey = \App\Services\Payment\MidtransConfig::serverKey();
         
         if (empty($serverKey)) {
-            $serverKey = config('midtrans.server_key') ?: 'SB-Mid-server-placeholder';
+            $serverKey = 'SB-Mid-server-placeholder';
         }
         
-        $isProduction = false;
-        if ($sandboxMode !== null) {
-            $isProduction = !filter_var($sandboxMode, FILTER_VALIDATE_BOOLEAN);
-        } else {
-            $isProduction = config('midtrans.is_production', false);
-        }
+        $isProduction = !\App\Services\Payment\MidtransConfig::isSandbox();
 
         Config::$serverKey = $serverKey;
         Config::$isProduction = $isProduction;
