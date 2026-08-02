@@ -95,8 +95,9 @@ class PaymentController extends Controller
         );
 
         $isFree = $finalAmount <= 0;
-        $orderStatus = ($autoCompleteOrders || $isFree) ? 'completed' : 'pending';
-        $paymentType = ($autoCompleteOrders || $isFree) ? 'auto_complete' : null;
+        $isFree = $finalAmount <= 0;
+        $orderStatus = 'pending';
+        $paymentType = null;
 
         // Create Order
         $order = Order::create([
@@ -110,42 +111,8 @@ class PaymentController extends Controller
             'discount_amount' => $discountAmount,
         ]);
 
-        if ($order->status === 'completed') {
-            if ($couponId) {
-                Coupon::find($couponId)->increment('uses');
-            }
-
-            // Enroll User
-            if ($order->buyable_type === Course::class) {
-                Enrollment::firstOrCreate([
-                    'user_id' => $order->user_id,
-                    'course_id' => $order->buyable_id,
-                ], [
-                    'enrolled_at' => now(),
-                ]);
-            } elseif ($order->buyable_type === Bundle::class) {
-                $bundle = Bundle::find($order->buyable_id);
-                if ($bundle) {
-                    Enrollment::firstOrCreate([
-                        'user_id' => $order->user_id,
-                        'bundle_id' => $bundle->id,
-                    ], [
-                        'enrolled_at' => now(),
-                    ]);
-
-                    foreach ($bundle->courses as $course) {
-                        Enrollment::firstOrCreate([
-                            'user_id' => $order->user_id,
-                            'course_id' => $course->id,
-                        ], [
-                            'enrolled_at' => now(),
-                        ]);
-                    }
-                }
-            }
-
-            // Allocate Revenue Share to Instructor
-            $this->allocateRevenueShare($order);
+        if ($autoCompleteOrders || $isFree) {
+            app(\App\Services\Payment\OrderSettlementService::class)->settle($order, 'auto_complete');
 
             return response()->json([
                 'completed' => true,
@@ -231,56 +198,13 @@ class PaymentController extends Controller
         $transactionStatus = $payload['transaction_status'] ?? '';
         $paymentType = $payload['payment_type'] ?? '';
         
-        DB::transaction(function () use ($order, $transactionStatus, $paymentType) {
-            if (in_array($transactionStatus, ['settlement', 'capture'])) {
-                if ($order->status !== 'completed') {
-                    $order->update([
-                        'status' => 'completed',
-                        'payment_type' => $paymentType
-                    ]);
-
-                    if ($order->coupon_id) {
-                        Coupon::find($order->coupon_id)->increment('uses');
-                    }
-
-                    // Enroll User
-                    if ($order->buyable_type === Course::class) {
-                        Enrollment::firstOrCreate([
-                            'user_id' => $order->user_id,
-                            'course_id' => $order->buyable_id,
-                        ], [
-                            'enrolled_at' => now(),
-                        ]);
-                    } elseif ($order->buyable_type === Bundle::class) {
-                        $bundle = Bundle::find($order->buyable_id);
-                        if ($bundle) {
-                            Enrollment::firstOrCreate([
-                                'user_id' => $order->user_id,
-                                'bundle_id' => $bundle->id,
-                            ], [
-                                'enrolled_at' => now(),
-                            ]);
-
-                            foreach ($bundle->courses as $course) {
-                                Enrollment::firstOrCreate([
-                                    'user_id' => $order->user_id,
-                                    'course_id' => $course->id,
-                                ], [
-                                    'enrolled_at' => now(),
-                                ]);
-                            }
-                        }
-                    }
-
-                    // Allocate Revenue Share to Instructor
-                    $this->allocateRevenueShare($order);
-                }
-            } elseif (in_array($transactionStatus, ['pending'])) {
-                $order->update(['status' => 'pending']);
-            } elseif (in_array($transactionStatus, ['deny', 'expire', 'cancel'])) {
-                $order->update(['status' => 'failed']);
-            }
-        });
+        if (in_array($transactionStatus, ['settlement', 'capture'])) {
+            app(\App\Services\Payment\OrderSettlementService::class)->settle($order, $paymentType);
+        } elseif (in_array($transactionStatus, ['pending'])) {
+            $order->update(['status' => 'pending']);
+        } elseif (in_array($transactionStatus, ['deny', 'expire', 'cancel'])) {
+            $order->update(['status' => 'failed']);
+        }
 
         return response()->json(['message' => 'Notification handled successfully']);
     }
@@ -293,54 +217,7 @@ class PaymentController extends Controller
         abort_unless(app()->environment('local', 'testing'), 403, 'Not allowed in production mode');
         abort_unless($order->user_id === auth()->id(), 403, 'Unauthorized action.');
 
-        DB::transaction(function () use ($order) {
-            $order = Order::whereKey($order->id)->lockForUpdate()->first();
-
-            if ($order->status !== 'pending') {
-                return;
-            }
-
-            $order->update([
-                'status' => 'completed',
-                'payment_type' => 'mock_payment'
-            ]);
-
-            if ($order->coupon_id) {
-                Coupon::find($order->coupon_id)->increment('uses');
-            }
-
-            // Enroll User
-            if ($order->buyable_type === Course::class) {
-                Enrollment::firstOrCreate([
-                    'user_id' => $order->user_id,
-                    'course_id' => $order->buyable_id,
-                ], [
-                    'enrolled_at' => now(),
-                ]);
-            } elseif ($order->buyable_type === Bundle::class) {
-                $bundle = Bundle::find($order->buyable_id);
-                if ($bundle) {
-                    Enrollment::firstOrCreate([
-                        'user_id' => $order->user_id,
-                        'bundle_id' => $bundle->id,
-                    ], [
-                        'enrolled_at' => now(),
-                    ]);
-
-                    foreach ($bundle->courses as $course) {
-                        Enrollment::firstOrCreate([
-                            'user_id' => $order->user_id,
-                            'course_id' => $course->id,
-                        ], [
-                            'enrolled_at' => now(),
-                        ]);
-                    }
-                }
-            }
-
-            // Allocate Revenue Share to Instructor
-            $this->allocateRevenueShare($order);
-        });
+        app(\App\Services\Payment\OrderSettlementService::class)->settle($order, 'mock_payment');
 
         return response()->json(['message' => 'Mock payment succeeded. User enrolled!']);
     }
@@ -439,28 +316,7 @@ class PaymentController extends Controller
         ]);
     }
 
-    /**
-     * Allocate revenue share to instructor based on settings percentage
-     */
-    private function allocateRevenueShare(Order $order)
-    {
-        if ($order->amount <= 0) {
-            return;
-        }
 
-        $buyable = $order->buyable_type::find($order->buyable_id);
-        if ($buyable && isset($buyable->instructor_id)) {
-            $instructor = User::find($buyable->instructor_id);
-            if ($instructor) {
-                $percentage = (float) (\App\Models\Setting::where('key', 'sharing_percentage_instructor')->value('value') ?? 70);
-                $shareAmount = ($order->amount * $percentage) / 100;
-
-                if ($shareAmount > 0) {
-                    $instructor->increment('balance', $shareAmount);
-                }
-            }
-        }
-    }
 
     /**
      * Cancel a pending order
