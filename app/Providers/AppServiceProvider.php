@@ -58,7 +58,9 @@ class AppServiceProvider extends ServiceProvider
 
         Vite::prefetch(concurrency: 3);
 
-        if (request()->secure() || str_contains(request()->header('X-Forwarded-Proto', ''), 'https')) {
+        if (str_starts_with(config('app.url'), 'https://')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        } elseif (request()->secure() || str_contains(request()->header('X-Forwarded-Proto', ''), 'https')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
 
