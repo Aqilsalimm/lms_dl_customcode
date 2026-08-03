@@ -16,7 +16,29 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // -----------------------------------------------------------------
+        // Force Predis client (pure PHP) on shared hosting environments
+        // -----------------------------------------------------------------
+        // Many shared hosting providers do NOT include the `ext-redis`
+        // (phpredis) PHP extension. When Laravel tries to instantiate
+        // the phpredis client the request fails with:
+        //   "Unable to load dynamic library 'redis' (...)"
+        // Predis is a pure-PHP Redis client bundled via Composer and
+        // works on any host that has PHP 8.2+ — no native extension
+        // required. We force the client here, BEFORE the Redis
+        // facade / config is resolved, so the boot path never tries
+        // to load the missing `redis.so` shared object.
         //
+        // Reference: config/database.php line 148
+        //   'client' => env('REDIS_CLIENT', extension_loaded('redis')
+        //       ? 'phpredis' : 'predis')
+        //
+        // If your hosting DOES provide ext-redis and you want to use
+        // it, simply set REDIS_CLIENT=phpredis in your .env and remove
+        // (or invert) the line below.
+        if (! env('REDIS_CLIENT')) {
+            config(['database.redis.client' => 'predis']);
+        }
     }
 
     /**
