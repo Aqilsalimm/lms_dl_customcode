@@ -51,6 +51,7 @@ class LoginOtpTest extends TestCase
 
         // 3. Assert redirect to login/otp
         $response->assertRedirect('/login/otp');
+        $response->assertHeader('Location', '/login/otp');
 
         // 4. Assert user is NOT logged in (still a guest)
         $this->assertGuest();
@@ -65,6 +66,16 @@ class LoginOtpTest extends TestCase
             'email' => $user->email,
             'used' => false,
         ]);
+
+        // Follow-up request must still see the OTP session created after logout.
+        // This catches production regressions where an absolute redirect switches
+        // host/protocol and the browser consequently drops the session cookie.
+        $response = $this->get('/login/otp');
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('Auth/LoginOtp')
+            ->where('email', $user->email)
+        );
     }
 
     /**

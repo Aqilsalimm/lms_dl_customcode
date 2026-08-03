@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
@@ -99,7 +101,7 @@ class AuthenticatedSessionController extends Controller
                 \Illuminate\Support\Facades\Log::error('Failed to send OTP email: ' . $e->getMessage());
             }
 
-            return redirect()->route('login.otp', absolute: false);
+            return new RedirectResponse(route('login.otp', absolute: false));
         }
 
         // If 2FA is disabled or doesn't apply to this user's role:
@@ -114,7 +116,7 @@ class AuthenticatedSessionController extends Controller
     public function showOtpForm(Request $request): Response|RedirectResponse
     {
         if (!session()->has('login_otp_email')) {
-            return redirect()->route('login', absolute: false);
+            return new RedirectResponse(route('login', absolute: false));
         }
 
         return Inertia::render('Auth/LoginOtp', [
@@ -134,7 +136,7 @@ class AuthenticatedSessionController extends Controller
 
         $email = session('login_otp_email');
         if (!$email) {
-            return redirect()->route('login');
+            return new RedirectResponse(route('login', absolute: false));
         }
 
         $otp = Otp::where('email', $email)
@@ -178,7 +180,7 @@ class AuthenticatedSessionController extends Controller
     {
         $email = session('login_otp_email');
         if (!$email) {
-            return redirect()->route('login');
+            return new RedirectResponse(route('login', absolute: false));
         }
 
         $user = User::where('email', $email)->firstOrFail();
