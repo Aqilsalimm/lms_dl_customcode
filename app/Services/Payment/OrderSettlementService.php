@@ -25,7 +25,7 @@ class OrderSettlementService
         DB::transaction(function () use ($order, $paymentType) {
             $order->lockForUpdate();
 
-            if ($order->status === 'completed') {
+            if ($order->status !== 'pending') {
                 return;
             }
 

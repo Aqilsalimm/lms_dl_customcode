@@ -103,9 +103,9 @@ class Module extends Model
             $postTest = $this->assessments()->where('type', 'post_test')->first();
             if ($postTest) {
                 $passedAttempt = WorkshopAssessmentAttempt::where('user_id', $user->id)
-                    ->where('workshop_assessment_id', $postTest->id)
+                    ->where('assessment_id', $postTest->id)
                     ->where('status', 'completed')
-                    ->where('passed', true)
+                    ->where('is_passed', true)
                     ->exists();
                 if (!$passedAttempt) {
                     $assessmentPassed = false;

@@ -35,6 +35,15 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('password'),
         ]);
 
+        $devAdmin = User::firstOrCreate([
+            'email' => 'dev-admin@drasthabest.com'
+        ], [
+            'name' => 'Dev Admin',
+            'role' => 'admin',
+            'password' => bcrypt('password'),
+            'status' => 'active'
+        ]);
+
         $instructor = User::firstOrCreate([
             'email' => 'instructor@drastha.com'
         ], [

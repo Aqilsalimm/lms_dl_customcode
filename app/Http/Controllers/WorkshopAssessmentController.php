@@ -26,6 +26,30 @@ class WorkshopAssessmentController extends Controller
     }
 
     /**
+     * Helper to validate that a user may sit a given assessment.
+     *
+     * Mirrors the check already performed by showStudentAssessment(): admins
+     * and the owning instructor always pass, everybody else must hold a live
+     * enrollment for the course the assessment belongs to.
+     */
+    protected function authorizeAssessmentAccess(WorkshopAssessment $assessment, $user): void
+    {
+        $course = $assessment->course;
+
+        if (!$course) {
+            abort(404, 'Kelas untuk tes ini tidak ditemukan.');
+        }
+
+        if ($user->isAdmin() || $course->instructor_id === $user->id) {
+            return;
+        }
+
+        if (!$user->hasEnrolled($course->id)) {
+            abort(403, 'Anda tidak terdaftar di kelas ini.');
+        }
+    }
+
+    /**
      * Store or update an assessment (pre_test or post_test) for a course.
      */
     public function storeOrUpdate(Request $request, Course $course)
@@ -129,10 +153,10 @@ class WorkshopAssessmentController extends Controller
         $targetModuleId = $request->input('module_id');
 
         DB::transaction(function () use ($course, $validated, $targetModuleId) {
-            $defaultDuration = (int) (\App\Models\Setting::where('key', 'test_builder_default_duration')->value('value') ?: 30);
-            $defaultPrePassing = (int) (\App\Models\Setting::where('key', 'test_builder_pre_passing_score')->value('value') ?: 70);
-            $defaultPostPassing = (int) (\App\Models\Setting::where('key', 'test_builder_post_passing_score')->value('value') ?: 70);
-            $defaultMaxAttempts = (int) (\App\Models\Setting::where('key', 'test_builder_default_max_attempts')->value('value') ?: 3);
+            $defaultDuration = (int) (\App\Models\Setting::getValue('test_builder_default_duration') ?: 30);
+            $defaultPrePassing = (int) (\App\Models\Setting::getValue('test_builder_pre_passing_score') ?: 70);
+            $defaultPostPassing = (int) (\App\Models\Setting::getValue('test_builder_post_passing_score') ?: 70);
+            $defaultMaxAttempts = (int) (\App\Models\Setting::getValue('test_builder_default_max_attempts') ?: 3);
 
             foreach ($validated['assessments'] as $assessmentData) {
                 $modId = $assessmentData['module_id'] ?? $targetModuleId;
@@ -269,6 +293,12 @@ class WorkshopAssessmentController extends Controller
             abort(403, 'Tes ini belum diterbitkan.');
         }
 
+        // Only people who actually have access to the course may sit its tests.
+        // Without this an authenticated stranger could start (and later submit)
+        // a post-test for a course they never bought, which issues a
+        // certificate in submitAttempt().
+        $this->authorizeAssessmentAccess($assessment, $user);
+
         // Validate time window if set
         $now = Carbon::now();
         if ($assessment->start_time && $now->lessThan($assessment->start_time)) {
@@ -330,6 +360,15 @@ class WorkshopAssessmentController extends Controller
      */
     public function submitAttempt(Request $request, WorkshopAssessmentAttempt $attempt)
     {
+        // An attempt may only ever be submitted by the user it belongs to.
+        // Without this check any authenticated user could post answers to
+        // somebody else's attempt, overwrite their score and — for a passing
+        // post-test — flip their enrollment to completed and mint a
+        // certificate in their name.
+        if ($attempt->user_id !== auth()->id()) {
+            abort(403, 'Anda tidak memiliki akses ke percobaan tes ini.');
+        }
+
         if ($attempt->status === 'completed') {
             return response()->json(['message' => 'Anda sudah menyelesaikan tes ini.'], 403);
         }
@@ -369,7 +408,7 @@ class WorkshopAssessmentController extends Controller
         $passingScore = $assessment->passing_score;
         if ($passingScore <= 0) {
             $settingKey = ($assessment->type === 'pre_test') ? 'test_builder_pre_passing_score' : 'test_builder_post_passing_score';
-            $passingScore = (int) (\App\Models\Setting::where('key', $settingKey)->value('value') ?: 70);
+            $passingScore = (int) (\App\Models\Setting::getValue($settingKey) ?: 70);
         }
         $isPassed = ($score >= $passingScore);
 
@@ -389,9 +428,17 @@ class WorkshopAssessmentController extends Controller
                 $enrollment->update(['status' => 'completed']);
             }
 
+            $certificate = \App\Models\Certificate::firstOrCreate([
+                'course_id' => $assessment->course_id,
+                'type' => 'course_completion',
+            ], [
+                'title' => 'Certificate of Completion',
+            ]);
+
             \App\Models\UserCertificate::firstOrCreate([
                 'user_id' => $attempt->user_id,
                 'course_id' => $assessment->course_id,
+                'certificate_id' => $certificate->id,
             ], [
                 'certificate_code' => 'CERT-' . strtoupper(uniqid()) . '-' . $attempt->user_id,
                 'claimed_at' => Carbon::now(),

@@ -27,6 +27,13 @@ class CertificateController extends Controller
             abort(403, 'Selesaikan seluruh materi dan kuis pada bab ini terlebih dahulu untuk mengunduh sertifikat.');
         }
 
+        $filename = 'Sertifikat_' . \Illuminate\Support\Str::slug($module->title) . '_' . \Illuminate\Support\Str::slug($user->name) . '.pdf';
+        $storagePath = 'certificates/sessions/' . $user->id . '_' . $module->id . '.pdf';
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($storagePath)) {
+            return response()->download(storage_path('app/public/' . $storagePath), $filename);
+        }
+
         // 2. Prepare Data
         $bgPath = null;
         if ($module->certificate_bg_path && file_exists(storage_path('app/public/' . $module->certificate_bg_path))) {
@@ -39,7 +46,7 @@ class CertificateController extends Controller
             'background' => $bgPath,
             'nameYPosition' => $module->text_name_y_position ?: 44,
             'titleYPosition' => $module->text_title_y_position ?: 56,
-            'certCode' => 'S-CERT-' . strtoupper(Str::random(4)) . '-' . $module->id . '-' . $user->id,
+            'certCode' => 'S-CERT-' . strtoupper(\Illuminate\Support\Str::random(4)) . '-' . $module->id . '-' . $user->id,
             'date' => now()->translatedFormat('d F Y'),
         ];
 
@@ -47,9 +54,10 @@ class CertificateController extends Controller
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('certificates.session_template', $data)
             ->setPaper('a4', 'landscape');
 
+        \Illuminate\Support\Facades\Storage::disk('public')->put($storagePath, $pdf->output());
+
         // 4. Return PDF Download Response
-        $filename = 'Sertifikat_' . Str::slug($module->title) . '_' . Str::slug($user->name) . '.pdf';
-        return $pdf->download($filename);
+        return response()->download(storage_path('app/public/' . $storagePath), $filename);
     }
     /**
      * Get list of certificates and unlock status for active student
@@ -170,7 +178,7 @@ class CertificateController extends Controller
      */
     public function store(Request $request, Course $course)
     {
-        if (!auth()->user()->isAdmin() && $course->instructor_id !== auth()->id()) {
+        if (\Illuminate\Support\Facades\Gate::denies('update', $course)) {
             abort(403);
         }
 
@@ -201,7 +209,7 @@ class CertificateController extends Controller
      */
     public function destroy(Certificate $certificate)
     {
-        if (!auth()->user()->isAdmin() && $certificate->course->instructor_id !== auth()->id()) {
+        if (\Illuminate\Support\Facades\Gate::denies('update', $certificate)) {
             abort(403);
         }
 
@@ -241,7 +249,7 @@ class CertificateController extends Controller
                 $certType = $cert->type;
             }
 
-            if (!$user || (!$user->isAdmin() && $user->id !== $course->instructor_id)) {
+            if (\Illuminate\Support\Facades\Gate::denies('update', $course)) {
                 abort(404, 'Sertifikat tidak ditemukan atau kode tidak valid.');
             }
 
@@ -251,11 +259,11 @@ class CertificateController extends Controller
         }
 
         $settings = [
-            'cert_authorised_name' => \App\Models\Setting::where('key', 'cert_authorised_name')->value('value') ?: 'Management Drastha Learning',
-            'cert_company_name' => \App\Models\Setting::where('key', 'cert_company_name')->value('value') ?: 'Drastha Learning Inc.',
-            'cert_page' => \App\Models\Setting::where('key', 'cert_page')->value('value') ?: 'certificate',
-            'cert_signature' => \App\Models\Setting::where('key', 'cert_signature')->value('value') ?: '/images/signature-placeholder.png',
-            'cert_show_instructor' => filter_var(\App\Models\Setting::where('key', 'cert_show_instructor')->value('value') ?: 'true', FILTER_VALIDATE_BOOLEAN),
+            'cert_authorised_name' => \App\Models\Setting::getValue('cert_authorised_name') ?: 'Management Drastha Learning',
+            'cert_company_name' => \App\Models\Setting::getValue('cert_company_name') ?: 'Drastha Learning Inc.',
+            'cert_page' => \App\Models\Setting::getValue('cert_page') ?: 'certificate',
+            'cert_signature' => \App\Models\Setting::getValue('cert_signature') ?: '/images/signature-placeholder.png',
+            'cert_show_instructor' => filter_var(\App\Models\Setting::getValue('cert_show_instructor') ?: 'true', FILTER_VALIDATE_BOOLEAN),
         ];
 
         return Inertia::render('Courses/Certificate', [
@@ -269,3 +277,5 @@ class CertificateController extends Controller
         ]);
     }
 }
+
+

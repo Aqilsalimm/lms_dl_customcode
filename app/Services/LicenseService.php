@@ -30,7 +30,7 @@ class LicenseService
      */
     public function isValid(): bool
     {
-        $licenseKey = Setting::where('key', 'license_key')->value('value');
+        $licenseKey = Setting::getValue('license_key');
         if (empty($licenseKey)) {
             return false;
         }

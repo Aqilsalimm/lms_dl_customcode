@@ -39,7 +39,7 @@ class WorkshopAssessment extends Model
     public function getEffectiveDurationMinutesAttribute(): int
     {
         if ($this->use_global_settings) {
-            return (int) (\App\Models\Setting::where('key', 'test_builder_default_duration')->value('value') ?: 30);
+            return (int) (\App\Models\Setting::getValue('test_builder_default_duration') ?: 30);
         }
         return (int) ($this->duration_minutes ?: 30);
     }
@@ -51,7 +51,7 @@ class WorkshopAssessment extends Model
     {
         if ($this->use_global_settings) {
             $settingKey = ($this->type === 'pre_test') ? 'test_builder_pre_passing_score' : 'test_builder_post_passing_score';
-            return (int) (\App\Models\Setting::where('key', $settingKey)->value('value') ?: 70);
+            return (int) (\App\Models\Setting::getValue($settingKey) ?: 70);
         }
         return (int) ($this->passing_score ?: 70);
     }
@@ -62,7 +62,7 @@ class WorkshopAssessment extends Model
     public function getEffectiveMaxAttemptsAttribute(): int
     {
         if ($this->use_global_settings) {
-            return (int) (\App\Models\Setting::where('key', 'test_builder_default_max_attempts')->value('value') ?: 3);
+            return (int) (\App\Models\Setting::getValue('test_builder_default_max_attempts') ?: 3);
         }
         return (int) ($this->max_attempts !== null ? $this->max_attempts : 3);
     }

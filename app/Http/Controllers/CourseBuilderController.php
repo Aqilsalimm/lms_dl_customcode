@@ -70,6 +70,8 @@ class CourseBuilderController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorizeBuilderAccess();
+
         $request->validate([
             'title' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255',
@@ -88,7 +90,7 @@ class CourseBuilderController extends Controller
         $meetingUrl = $deliveryMode === 'offline' ? null : $request->meeting_url;
         $locationVenue = $deliveryMode === 'online' ? null : $request->location_venue;
 
-        $moderationEnabled = \App\Models\Setting::where('key', 'instructor_course_moderation')->value('value');
+        $moderationEnabled = \App\Models\Setting::getValue('instructor_course_moderation');
         $isModerated = ($moderationEnabled === 'true' || $moderationEnabled === '1' || $moderationEnabled === true || $moderationEnabled === 1);
         $initialStatus = $request->input('status', (auth()->user()->isAdmin() || !$isModerated) ? 'published' : 'draft');
 
@@ -144,7 +146,7 @@ class CourseBuilderController extends Controller
     public function builder(Course $course)
     {
         // Authorize
-        if (!auth()->user()->isAdmin() && $course->instructor_id !== auth()->id()) {
+        if (\Illuminate\Support\Facades\Gate::denies('update', $course)) {
             abort(403);
         }
 
@@ -178,13 +180,13 @@ class CourseBuilderController extends Controller
      */
     public function update(Request $request, Course $course)
     {
-        if (!auth()->user()->isAdmin() && $course->instructor_id !== auth()->id()) {
+        if (\Illuminate\Support\Facades\Gate::denies('update', $course)) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         // Intercept published status for instructors if course moderation is enabled
         if (!auth()->user()->isAdmin()) {
-            $moderationEnabled = \App\Models\Setting::where('key', 'instructor_course_moderation')->value('value');
+            $moderationEnabled = \App\Models\Setting::getValue('instructor_course_moderation');
             $isModerated = ($moderationEnabled === 'true' || $moderationEnabled === '1' || $moderationEnabled === true || $moderationEnabled === 1);
             if ($isModerated && $request->status === 'published') {
                 $request->merge(['status' => 'pending']);
@@ -308,7 +310,7 @@ class CourseBuilderController extends Controller
      */
     public function destroy(Course $course)
     {
-        if (!auth()->user()->isAdmin() && $course->instructor_id !== auth()->id()) {
+        if (\Illuminate\Support\Facades\Gate::denies('delete', $course)) {
             abort(403);
         }
 
@@ -322,6 +324,8 @@ class CourseBuilderController extends Controller
      */
     public function import(Request $request)
     {
+        $this->authorizeBuilderAccess();
+
         $request->validate([
             'file' => 'required|mimes:csv,txt,xlsx,xls|max:10240', // max 10MB
         ]);
@@ -338,9 +342,30 @@ class CourseBuilderController extends Controller
 
     // --- MODULES (SECTIONS) MANAGEMENT ---
     
-    private function validateCourseOwner(Course $course)
+    /**
+     * Only admins and instructors may create courses or bulk-import them.
+     * store() and import() are otherwise reachable by any authenticated user,
+     * letting a student create courses owned by themselves.
+     */
+    private function authorizeBuilderAccess(): void
     {
-        if (!auth()->user()->isAdmin() && $course->instructor_id !== auth()->id()) {
+        if (\Illuminate\Support\Facades\Gate::denies('create', Course::class)) {
+            abort(403, 'Unauthorized access');
+        }
+    }
+
+    private function validateCourseOwner($resource)
+    {
+        $course = $resource instanceof Course ? $resource : null;
+        if ($resource instanceof \App\Models\Module) $course = $resource->course;
+        if ($resource instanceof \App\Models\Lesson || $resource instanceof \App\Models\Quiz) $course = $resource->module->course;
+        if ($resource instanceof \App\Models\QuizQuestion) $course = $resource->quiz->module->course;
+
+        if (!$course) {
+            abort(404);
+        }
+
+        if (\Illuminate\Support\Facades\Gate::denies('update', $course)) {
             abort(403, 'Unauthorized course access');
         }
     }
@@ -720,9 +745,28 @@ class CourseBuilderController extends Controller
      */
     public function uploadLessonAsset(Request $request)
     {
+        // Only admins and instructors may push files onto the public disk.
+        // This endpoint previously accepted uploads from any authenticated
+        // account, including students.
+        if (\Illuminate\Support\Facades\Gate::denies('create', \App\Models\Course::class)) {
+            abort(403, 'Anda tidak memiliki akses untuk mengunggah berkas materi.');
+        }
+
         $request->validate([
-            'file' => 'required|file|max:512000', // max 500MB
-            'asset_type' => 'nullable|string|in:featured_image,attachment'
+            'asset_type' => 'nullable|string|in:featured_image,attachment',
+            // Extensions are whitelisted: files land on the public disk and
+            // their URL is handed straight back, so an unrestricted upload
+            // here is a stored-XSS (and, under mod_php, an RCE) primitive.
+            'file' => [
+                'required',
+                'file',
+                'max:512000', // max 500MB
+                // NB: svg is deliberately excluded — it is served from the same
+                // origin and can carry script.
+                $request->input('asset_type') === 'featured_image'
+                    ? 'mimes:jpg,jpeg,png,gif,webp'
+                    : 'mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,rar,mp3,mp4,mov,avi,mkv,wav',
+            ],
         ]);
 
         $file = $request->file('file');

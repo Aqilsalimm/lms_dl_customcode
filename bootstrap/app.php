@@ -11,8 +11,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->trustProxies(at: '*');
-        
+        // Trusted proxies are configured in config/trustedproxy.php (driven by
+        // the TRUSTED_PROXIES env var). Previously this was `at: '*'`, which
+        // trusts the X-Forwarded-For header from ANY client — that lets a
+        // caller spoof their IP and therefore bypass every IP-based throttle
+        // (login, OTP, LoginRequest::throttleKey). Leave TRUSTED_PROXIES unset
+        // when the app is not behind a proxy.
+
         $middleware->redirectGuestsTo(function (\Illuminate\Http\Request $request) {
             if ($request->is('api/*') || $request->wantsJson()) {
                 return null;
@@ -31,9 +36,13 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        // Only the Midtrans server-to-server webhook may skip CSRF. It is
+        // authenticated by signature verification inside the controller.
+        // The previous 'payment/*' wildcard also exempted payment/checkout,
+        // payment/cancel and payment/mock-complete, which are browser-driven
+        // and must keep CSRF protection.
         $middleware->validateCsrfTokens(except: [
             'payment/notification',
-            'payment/*',
         ]);
 
         $middleware->alias([

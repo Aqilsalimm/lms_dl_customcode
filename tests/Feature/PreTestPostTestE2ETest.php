@@ -93,7 +93,7 @@ class PreTestPostTestE2ETest extends TestCase
         // 2. Uji Coba Siswa (Kondisi Terkunci)
         // Accessing Syllabus (Lesson 1) directly
         $this->actingAs($student);
-        $response = $this->get(route('courses.learn', ['slug' => $course->slug, 'lesson' => $lesson->id]));
+        $response = $this->get(route('courses.learn', ['course' => $course->slug, 'lesson' => $lesson->id]));
         
         // Render Learn.vue check: Module is_pre_completed should be false. 
         $response->assertStatus(200);
@@ -116,7 +116,7 @@ class PreTestPostTestE2ETest extends TestCase
         ]);
 
         // Verify Syllabus Unlocked
-        $responseAfter = $this->get(route('courses.learn', ['slug' => $course->slug, 'lesson' => $lesson->id]));
+        $responseAfter = $this->get(route('courses.learn', ['course' => $course->slug, 'lesson' => $lesson->id]));
         $responseAfter->assertStatus(200);
         $responseAfter->assertInertia(fn ($page) => $page
             ->component('Courses/Learn')

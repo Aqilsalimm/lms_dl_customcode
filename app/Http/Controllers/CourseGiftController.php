@@ -107,3 +107,4 @@ class CourseGiftController extends Controller
         return back()->with('success', "Kelas \"{$course->title}\" berhasil dihadiahkan kepada {$student->name}.");
     }
 }
+

@@ -39,23 +39,5 @@ class AppServiceProvider extends ServiceProvider
             }
             return new \App\Mail\Transports\BrevoApiTransport($config['key'] ?? env('BREVO_API_KEY'));
         });
-
-        // Automatically ensure a dedicated dev admin account exists in local development
-        if (app()->environment('local') && !app()->runningInConsole()) {
-            try {
-                if (\Illuminate\Support\Facades\Schema::hasTable('users')) {
-                    \App\Models\User::firstOrCreate([
-                        'email' => 'dev-admin@drasthabest.com'
-                    ], [
-                        'name' => 'Dev Admin',
-                        'role' => 'admin',
-                        'password' => bcrypt('password'),
-                        'status' => 'active'
-                    ]);
-                }
-            } catch (\Exception $e) {
-                // Ignore database connection/migration errors during boot
-            }
-        }
     }
 }

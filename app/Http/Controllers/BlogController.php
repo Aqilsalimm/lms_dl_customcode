@@ -72,7 +72,7 @@ class BlogController extends Controller
         }
 
         // Check if instructor is allowed to access
-        $allowedInstructorsJson = Setting::where('key', 'allowed_blog_instructors')->value('value');
+        $allowedInstructorsJson = Setting::getValue('allowed_blog_instructors');
         $allowedInstructors = $allowedInstructorsJson ? json_decode($allowedInstructorsJson, true) : [];
 
         if ($user->isInstructor() && !$user->isAdmin()) {
@@ -82,7 +82,7 @@ class BlogController extends Controller
         }
 
         // Fetch settings or supply defaults
-        $categoriesJson = Setting::where('key', 'blog_categories')->value('value');
+        $categoriesJson = Setting::getValue('blog_categories');
         $categories = $categoriesJson ? json_decode($categoriesJson, true) : [
             ["id" => "1", "name" => "Coding", "parent_id" => null],
             ["id" => "2", "name" => "Web Development", "parent_id" => "1"],
@@ -90,15 +90,15 @@ class BlogController extends Controller
             ["id" => "4", "name" => "Data Science", "parent_id" => null]
         ];
 
-        $tagsJson = Setting::where('key', 'blog_tags')->value('value');
+        $tagsJson = Setting::getValue('blog_tags');
         $tags = $tagsJson ? json_decode($tagsJson, true) : ["PHP", "Laravel", "Vue", "JavaScript", "HTML", "CSS"];
 
-        $authorsJson = Setting::where('key', 'blog_authors')->value('value');
+        $authorsJson = Setting::getValue('blog_authors');
         $authors = $authorsJson ? json_decode($authorsJson, true) : ["Admin Drastha", "Dondo Ferdinanto, SE.", "Agil Salim"];
 
-        $template = Setting::where('key', 'blog_template')->value('value') ?: '1';
+        $template = Setting::getValue('blog_template') ?: '1';
 
-        $pendingRequestJson = Setting::where('key', 'pending_blog_settings')->value('value');
+        $pendingRequestJson = Setting::getValue('pending_blog_settings');
         $pendingRequest = $pendingRequestJson ? json_decode($pendingRequestJson, true) : null;
 
         // Fetch all instructors for Admin setup
@@ -141,7 +141,7 @@ class BlogController extends Controller
 
         // Check if instructor is allowed to save anything
         if ($user->isInstructor() && !$user->isAdmin()) {
-            $allowedInstructorsJson = Setting::where('key', 'allowed_blog_instructors')->value('value');
+            $allowedInstructorsJson = Setting::getValue('allowed_blog_instructors');
             $allowedInstructors = $allowedInstructorsJson ? json_decode($allowedInstructorsJson, true) : [];
             if (!in_array($user->id, $allowedInstructors)) {
                 return redirect()->route('dashboard')->with('error', 'Akses ditolak.');
@@ -199,7 +199,7 @@ class BlogController extends Controller
             return redirect()->back()->with('error', 'Hanya Super Admin yang dapat menyetujui pengaturan.');
         }
 
-        $pendingRequestJson = Setting::where('key', 'pending_blog_settings')->value('value');
+        $pendingRequestJson = Setting::getValue('pending_blog_settings');
         if (!$pendingRequestJson) {
             return redirect()->back()->with('error', 'Tidak ada usulan perubahan yang tertunda.');
         }

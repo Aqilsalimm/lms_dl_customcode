@@ -1,7 +1,8 @@
-const CACHE_NAME = 'drastha-lms-v5';
+const CACHE_NAME = 'drastha-lms-v6';
 const PRECACHE_ASSETS = [
     '/favicon.ico',
     '/images/logo/logo_dl.png',
+    '/offline.html',
 ];
 
 self.addEventListener('install', e => {
@@ -71,10 +72,18 @@ self.addEventListener('fetch', e => {
         e.respondWith(
             caches.match(e.request).then(cachedResponse => {
                 const fetchPromise = fetch(e.request).then(networkResponse => {
-                    if (networkResponse.status === 200) {
-                        caches.open(CACHE_NAME).then(cache => cache.put(e.request, networkResponse));
+                    // Cek response yang valid dan berasal dari origin yang sama
+                    if (!networkResponse || !networkResponse.ok || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+                        return networkResponse;
                     }
-                    return networkResponse.clone();
+                    
+                    // Clone response SEBELUM dimasukkan ke cache (karena cache.put mengonsumsi body stream)
+                    const responseToCache = networkResponse.clone();
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(e.request, responseToCache);
+                    });
+                    
+                    return networkResponse;
                 }).catch(() => {});
 
                 return cachedResponse || fetchPromise;
@@ -86,7 +95,9 @@ self.addEventListener('fetch', e => {
     // Dynamic HTML/Navigation requests: always fetch from network, DO NOT cache HTML in Service Worker
     e.respondWith(
         fetch(e.request).catch(() => {
-            return caches.match(e.request);
+            return caches.match(e.request).then(response => {
+                return response || caches.match('/offline.html');
+            });
         })
     );
 });

@@ -289,6 +289,11 @@ class WorkshopAssessmentTest extends TestCase
             'status' => 'published',
         ]);
 
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+        ]);
+
         $assessment = WorkshopAssessment::create([
             'course_id' => $course->id,
             'type' => 'pre_test',
@@ -371,6 +376,11 @@ class WorkshopAssessmentTest extends TestCase
             'status' => 'published',
         ]);
 
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+        ]);
+
         // Closed test (end_time in the past)
         $assessment = WorkshopAssessment::create([
             'course_id' => $course->id,
@@ -404,11 +414,17 @@ class WorkshopAssessmentTest extends TestCase
             'status' => 'published',
         ]);
 
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+        ]);
+
         $assessment = WorkshopAssessment::create([
             'course_id' => $course->id,
             'type' => 'pre_test',
             'title' => 'Pre-test Fisika',
             'passing_score' => 60,
+            'use_global_settings' => false,
             'max_attempts' => 3,
             'is_published' => true,
         ]);
@@ -447,11 +463,17 @@ class WorkshopAssessmentTest extends TestCase
             'status' => 'published',
         ]);
 
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+        ]);
+
         $assessment = WorkshopAssessment::create([
             'course_id' => $course->id,
             'type' => 'pre_test',
             'title' => 'Pre-test Fisika',
             'passing_score' => 60,
+            'use_global_settings' => false,
             'max_attempts' => 2,
             'is_published' => true,
         ]);
@@ -500,11 +522,17 @@ class WorkshopAssessmentTest extends TestCase
             'status' => 'published',
         ]);
 
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+        ]);
+
         $assessment = WorkshopAssessment::create([
             'course_id' => $course->id,
             'type' => 'pre_test',
             'title' => 'Pre-test Fisika',
             'passing_score' => 60,
+            'use_global_settings' => false,
             'max_attempts' => 2,
             'is_published' => true,
         ]);
@@ -546,11 +574,17 @@ class WorkshopAssessmentTest extends TestCase
             'status' => 'published',
         ]);
 
+        Enrollment::create([
+            'user_id' => $student->id,
+            'course_id' => $course->id,
+        ]);
+
         $assessment = WorkshopAssessment::create([
             'course_id' => $course->id,
             'type' => 'pre_test',
             'title' => 'Pre-test Fisika',
             'passing_score' => 60,
+            'use_global_settings' => false,
             'max_attempts' => 0, // unlimited
             'is_published' => true,
         ]);
@@ -608,7 +642,8 @@ class WorkshopAssessmentTest extends TestCase
                     'description' => 'Petunjuk Pre-Test',
                     'duration_minutes' => 15,
                     'passing_score' => 70,
-                    'max_attempts' => 2,
+                    'use_global_settings' => false,
+            'max_attempts' => 2,
                     'questions' => [
                         [
                             'question_text' => 'Soal Pre-Test 1',
@@ -624,7 +659,8 @@ class WorkshopAssessmentTest extends TestCase
                     'description' => 'Petunjuk Post-Test',
                     'duration_minutes' => 20,
                     'passing_score' => 80,
-                    'max_attempts' => 1,
+                    'use_global_settings' => false,
+            'max_attempts' => 1,
                     'questions' => [
                         [
                             'question_text' => 'Soal Post-Test 1',
@@ -651,6 +687,7 @@ class WorkshopAssessmentTest extends TestCase
             'course_id' => $course->id,
             'type' => 'pre_test',
             'title' => 'Pre-Test Workshop A',
+            'use_global_settings' => false,
             'max_attempts' => 2,
         ]);
 
@@ -667,6 +704,7 @@ class WorkshopAssessmentTest extends TestCase
             'course_id' => $course->id,
             'type' => 'post_test',
             'title' => 'Post-Test Workshop A',
+            'use_global_settings' => false,
             'max_attempts' => 1,
         ]);
 

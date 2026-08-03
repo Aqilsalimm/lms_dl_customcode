@@ -17,8 +17,7 @@ class UserManageController extends Controller
      */
     public function index()
     {
-        $currentUser = auth()->user();
-        if (!$currentUser || !$currentUser->isAdmin()) {
+        if (\Illuminate\Support\Facades\Gate::denies('viewAny', User::class)) {
             abort(403, 'Unauthorized access.');
         }
 
@@ -129,3 +128,4 @@ class UserManageController extends Controller
         return Excel::download(new UsersExport, 'users_drastha_lms.xlsx');
     }
 }
+

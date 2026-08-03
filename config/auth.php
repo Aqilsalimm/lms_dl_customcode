@@ -114,4 +114,19 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Application Feature Flags
+    |--------------------------------------------------------------------------
+    |
+    | Toggles for optional authentication flows. Set OTP_REGISTRATION=false in
+    | your .env to allow registration without the email OTP verification step.
+    |
+    */
+
+    'features' => [
+        'otp_registration' => env('OTP_REGISTRATION', true),
+    ],
+
 ];
+

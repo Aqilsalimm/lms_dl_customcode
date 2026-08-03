@@ -705,13 +705,13 @@ class DashboardController extends Controller
         $tags = Tag::all();
 
         $testBuilderSettings = [
-            'pre_passing_score' => (int) (\App\Models\Setting::where('key', 'test_builder_pre_passing_score')->value('value') ?: 70),
-            'post_passing_score' => (int) (\App\Models\Setting::where('key', 'test_builder_post_passing_score')->value('value') ?: 70),
-            'default_duration' => (int) (\App\Models\Setting::where('key', 'test_builder_default_duration')->value('value') ?: 30),
-            'default_max_attempts' => (int) (\App\Models\Setting::where('key', 'test_builder_default_max_attempts')->value('value') ?: 3),
-            'auto_enable' => filter_var(\App\Models\Setting::where('key', 'test_builder_auto_enable')->value('value') ?: 'true', FILTER_VALIDATE_BOOLEAN),
-            'show_explanations' => filter_var(\App\Models\Setting::where('key', 'test_builder_show_explanations')->value('value') ?: 'true', FILTER_VALIDATE_BOOLEAN),
-            'enforce_prerequisites' => filter_var(\App\Models\Setting::where('key', 'test_builder_enforce_prerequisites')->value('value') ?: 'true', FILTER_VALIDATE_BOOLEAN),
+            'pre_passing_score' => (int) (\App\Models\Setting::getValue('test_builder_pre_passing_score') ?: 70),
+            'post_passing_score' => (int) (\App\Models\Setting::getValue('test_builder_post_passing_score') ?: 70),
+            'default_duration' => (int) (\App\Models\Setting::getValue('test_builder_default_duration') ?: 30),
+            'default_max_attempts' => (int) (\App\Models\Setting::getValue('test_builder_default_max_attempts') ?: 3),
+            'auto_enable' => filter_var(\App\Models\Setting::getValue('test_builder_auto_enable') ?: 'true', FILTER_VALIDATE_BOOLEAN),
+            'show_explanations' => filter_var(\App\Models\Setting::getValue('test_builder_show_explanations') ?: 'true', FILTER_VALIDATE_BOOLEAN),
+            'enforce_prerequisites' => filter_var(\App\Models\Setting::getValue('test_builder_enforce_prerequisites') ?: 'true', FILTER_VALIDATE_BOOLEAN),
         ];
 
         return Inertia::render('Dashboard/Admin/CourseBuilderSettings', [
@@ -1048,7 +1048,7 @@ class DashboardController extends Controller
             // Security: If the user is an instructor, force 'pending' if they requested 'published'
             // BUT ONLY if the moderation setting is enabled.
             if (!auth()->user()->isAdmin() && $status === 'published') {
-                $moderationEnabled = \App\Models\Setting::where('key', 'instructor_course_moderation')->value('value');
+                $moderationEnabled = \App\Models\Setting::getValue('instructor_course_moderation');
                 // We assume true if setting is not found, or check if it's strictly 'true' or 1.
                 // In settings page, it's a toggle.
                 if (filter_var($moderationEnabled, FILTER_VALIDATE_BOOLEAN)) {

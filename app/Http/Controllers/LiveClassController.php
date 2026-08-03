@@ -140,9 +140,8 @@ class LiveClassController extends Controller
 
     public function store(Request $request)
     {
-        $user = $request->user();
-        if (!$user || (!$user->isAdmin() && !$user->isInstructor())) {
-            abort(403, 'Akses tidak sah: Anda tidak memiliki wewenang instruktur.');
+        if (\Illuminate\Support\Facades\Gate::denies('create', LiveClass::class)) {
+            abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk membuat sesi kelas.');
         }
 
         $validated = $request->validate([
@@ -179,7 +178,7 @@ class LiveClassController extends Controller
 
         if (!empty($validated['course_id'])) {
             $course = Course::find($validated['course_id']);
-            if ($course && !$user->isAdmin() && $course->instructor_id !== $user->id) {
+            if ($course && \Illuminate\Support\Facades\Gate::denies('update', $course)) {
                 abort(403, 'Akses ditolak: Anda bukan instruktur kelas ini.');
             }
         }
@@ -229,7 +228,7 @@ class LiveClassController extends Controller
     {
         $user = $request->user();
         $course = $liveClass->course;
-        if (!$user || (!$user->isAdmin() && (!$user->isInstructor() || ($course && $course->instructor_id !== $user->id)))) {
+        if (\Illuminate\Support\Facades\Gate::denies('update', $liveClass)) {
             abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk mengubah sesi kelas ini.');
         }
 
@@ -300,7 +299,7 @@ class LiveClassController extends Controller
     {
         $user = $request->user();
         $course = $liveClass->course;
-        if (!$user || (!$user->isAdmin() && (!$user->isInstructor() || ($course && $course->instructor_id !== $user->id)))) {
+        if (\Illuminate\Support\Facades\Gate::denies('delete', $liveClass)) {
             abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk menghapus sesi kelas ini.');
         }
 

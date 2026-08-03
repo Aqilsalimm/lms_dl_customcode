@@ -45,7 +45,7 @@ class CoursesImport implements ToModel, WithHeadingRow
 
         // Intercept published status for instructors if course moderation is enabled
         if (auth()->check() && !auth()->user()->isAdmin()) {
-            $moderationEnabled = \App\Models\Setting::where('key', 'instructor_course_moderation')->value('value');
+            $moderationEnabled = \App\Models\Setting::getValue('instructor_course_moderation');
             $isModerated = ($moderationEnabled === 'true' || $moderationEnabled === '1' || $moderationEnabled === true || $moderationEnabled === 1);
             if ($isModerated && $status === 'published') {
                 $status = 'pending';

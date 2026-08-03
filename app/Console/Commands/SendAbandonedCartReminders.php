@@ -29,12 +29,12 @@ class SendAbandonedCartReminders extends Command
             return Command::SUCCESS;
         }
 
-        $delaySetting = Setting::where('key', 'abandoned_cart_reminder_delay')->value('value') ?: 60;
+        $delaySetting = Setting::getValue('abandoned_cart_reminder_delay') ?: 60;
         $delay = (int) $delaySetting;
 
-        $subject = Setting::where('key', 'abandoned_cart_email_subject')->value('value') 
+        $subject = Setting::getValue('abandoned_cart_email_subject') 
             ?: 'Ayo selesaikan pembelian kelas Anda di Drastha Learning!';
-        $bodyTemplate = Setting::where('key', 'abandoned_cart_email_body')->value('value') 
+        $bodyTemplate = Setting::getValue('abandoned_cart_email_body') 
             ?: "Halo {student_name},\n\nKami melihat Anda meninggalkan kelas berikut di keranjang belanja Anda:\n{course_names}\n\nJangan biarkan semangat belajar Anda padam! Klik tautan berikut untuk melanjutkan checkout Anda:\n{checkout_link}\n\nSalam Hangat,\nTim Drastha Learning";
 
         $cutoffTime = now()->subMinutes($delay);

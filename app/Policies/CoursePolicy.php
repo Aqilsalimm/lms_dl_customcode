@@ -4,102 +4,94 @@ namespace App\Policies;
 
 use App\Models\Course;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
+use Illuminate\Auth\Access\HandlesAuthorization;
 
 class CoursePolicy
 {
-    /**
-     * Determine whether the user can view any models.
-     */
-    public function viewAny(User $user): bool
+    use HandlesAuthorization;
+
+    public function viewAny(User $user)
     {
+        return $user->isAdmin() || $user->isInstructor();
+    }
+
+    public function view(User $user, Course $model)
+    {
+        if ($user->isAdmin()) return true;
+        if ($user->isInstructor() && isset($model->instructor_id)) {
+            return $model->instructor_id === $user->id;
+        }
         return false;
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
-    public function view(User $user, Course $course): bool
+    public function create(User $user)
     {
+        return $user->isAdmin() || $user->isInstructor();
+    }
+
+    public function update(User $user, Course $model)
+    {
+        if ($user->isAdmin()) return true;
+        if ($user->isInstructor() && isset($model->instructor_id)) {
+            return $model->instructor_id === $user->id;
+        }
         return false;
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
-    public function create(User $user): bool
+    public function delete(User $user, Course $model)
     {
+        if ($user->isAdmin()) return true;
+        if ($user->isInstructor() && isset($model->instructor_id)) {
+            return $model->instructor_id === $user->id;
+        }
         return false;
     }
 
-    /**
-     * Determine whether the user can update the model.
-     */
-    public function update(User $user, Course $course): bool
+    public function report(User $user, Course $model)
     {
+        if ($user->isAdmin()) return true;
+        if ($user->isInstructor()) {
+            return $model->instructor_id === $user->id;
+        }
         return false;
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
-    public function delete(User $user, Course $course): bool
+    public function gift(User $user, Course $model)
     {
+        if ($user->isAdmin()) return true;
+        if ($user->isInstructor()) {
+            return $model->instructor_id === $user->id;
+        }
         return false;
     }
 
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, Course $course): bool
+    public function joinLiveSession(User $user, Course $model)
     {
-        return false;
-    }
+        if ($user->isAdmin()) return true;
+        if ($user->isInstructor() && $model->instructor_id === $user->id) return true;
 
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, Course $course): bool
-    {
-        return false;
-    }
+        // Ensure user is enrolled
+        $isEnrolled = \App\Models\Enrollment::where('user_id', $user->id)
+            ->where('course_id', $model->id)
+            ->whereIn('status', ['active', 'completed'])
+            ->exists();
 
-    /**
-     * Tentukan apakah user boleh masuk ke ruang Live Class (Zoom/Meet).
-     */
-    public function joinLiveSession(User $user, Course $course)
-    {
-        // Admin always has access
-        if ($user->isAdmin()) {
-            return true;
+        if (!$isEnrolled) return false;
+
+        // Ensure pre-test is completed if it exists
+        $preTest = \App\Models\WorkshopAssessment::where('course_id', $model->id)
+            ->where('type', 'pre_test')
+            ->where('is_published', true)
+            ->first();
+
+        if ($preTest) {
+            $passedPreTest = \App\Models\WorkshopAssessmentAttempt::where('assessment_id', $preTest->id)
+                ->where('user_id', $user->id)
+                ->where('is_passed', true)
+                ->exists();
+            if (!$passedPreTest) return false;
         }
 
-        // Course instructor always has access
-        if ($course->instructor_id === $user->id) {
-            return true;
-        }
-
-        // 1. Cek dasar: Apakah kelas ini memang tipe live/workshop?
-        $courseType = $course->course_type ?? $course->type ?? null;
-        if ($courseType !== 'live_class' && $courseType !== 'live') {
-            return false;
-        }
-
-        // 2. Cek pendaftaran: Apakah user memang terdaftar/membeli kelas ini?
-        // (Asumsi Anda punya tabel atau relasi enrollments)
-        if (! $user->enrollments()->where('course_id', $course->id)->exists()) {
-            return false;
-        }
-
-        // 3. Cek keberadaan Pre-test: Apakah kelas ini punya Pre-test?
-        $preTest = $course->assessments()->where('type', 'pre_test')->first();
-        
-        // Jika tidak ada Pre-test yang diatur, langsung loloskan
-        if (!$preTest) {
-            return true;
-        }
-
-        // 4. Cek Kelulusan Pre-test: Gunakan fungsi helper yang kita buat di Model User
-        return $user->hasPassedAssessment($course->id, 'pre_test');
+        return true;
     }
 }

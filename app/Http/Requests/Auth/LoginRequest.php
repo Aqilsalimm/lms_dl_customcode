@@ -43,11 +43,11 @@ class LoginRequest extends FormRequest
         $this->ensureIsNotRateLimited();
 
         // 1. Validate Fraud Protection (reCAPTCHA)
-        $fraudEnabled = \App\Models\Setting::where('key', 'fraud_protection_enabled')->value('value');
+        $fraudEnabled = \App\Models\Setting::getValue('fraud_protection_enabled');
         if (filter_var($fraudEnabled, FILTER_VALIDATE_BOOLEAN)) {
-            $method = \App\Models\Setting::where('key', 'fraud_protection_method')->value('value');
+            $method = \App\Models\Setting::getValue('fraud_protection_method');
             if (in_array($method, ['recaptcha_v2', 'recaptcha_v3'])) {
-                $secret = \App\Models\Setting::where('key', 'recaptcha_secret_key')->value('value');
+                $secret = \App\Models\Setting::getValue('recaptcha_secret_key');
                 $gResponse = $this->input('g-recaptcha-response');
                 if ($secret && $gResponse) {
                     $verify = @file_get_contents("https://www.google.com/recaptcha/api/siteverify?secret={$secret}&response={$gResponse}");
@@ -72,7 +72,7 @@ class LoginRequest extends FormRequest
         }
 
         // 2. Limit Concurrent Login Sessions
-        $limitSessions = \App\Models\Setting::where('key', 'limit_login_sessions')->value('value');
+        $limitSessions = \App\Models\Setting::getValue('limit_login_sessions');
         if (filter_var($limitSessions, FILTER_VALIDATE_BOOLEAN)) {
             $user = Auth::user();
             if (config('session.driver') === 'database' && \Illuminate\Support\Facades\Schema::hasTable('sessions')) {

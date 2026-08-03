@@ -90,7 +90,7 @@ class PaymentController extends Controller
         }
 
         $autoCompleteOrders = filter_var(
-            \App\Models\Setting::where('key', 'auto_complete_ecommerce_orders')->value('value'),
+            \App\Models\Setting::getValue('auto_complete_ecommerce_orders'),
             FILTER_VALIDATE_BOOLEAN
         );
 

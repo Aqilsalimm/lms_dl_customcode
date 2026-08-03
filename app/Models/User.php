@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 
 #[Fillable(['name', 'email', 'password', 'role', 'status', 'photo', 'google_id', 'google_token'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'google_token', 'google_id', 'balance'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */

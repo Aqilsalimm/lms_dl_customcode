@@ -49,10 +49,18 @@ laporan-pentest-medium-threats.txt
 catatan.txt
 playwright-report/
 test-results/
-/tests/*
+!/tests/Feature/
+!/tests/Unit/
+
+# Internal audit & AI workflow artifacts (contain sensitive findings — do NOT publish)
+/.agents/
+/.clinerules/
+/PROJECT_AUDIT_REPORT.md
+/REMEDIATION_PLAN_FOR_AI.md
 opencode.json
 scratch/
 public/test.php
 dockerfile.opencode
-/.agents/*
 drastha-test.js
+.opencodeignore
+/.auth/*

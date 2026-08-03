@@ -38,9 +38,11 @@ Route::redirect('/admission', '/', 301);
 Route::get('/', function () {
     $courses = \Illuminate\Support\Facades\Cache::remember('homepage_courses', 3600, function () {
         return Course::where('status', 'published')
-            ->with(['category', 'instructor', 'lessons'])
+            ->select('id', 'title', 'slug', 'thumbnail', 'price', 'status', 'instructor_id', 'category_id', 'created_at')
+            ->with(['category:id,name,slug', 'instructor:id,name,photo', 'lessons'])
             ->latest()
-            ->get();
+            ->get()
+            ->makeHidden(['description', 'meta_desc']);
     });
         
     return Inertia::render('Welcome', [

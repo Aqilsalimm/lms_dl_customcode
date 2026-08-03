@@ -4,9 +4,10 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use App\Models\Setting;
 
-class LmsNotification extends Notification
+class LmsNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -37,7 +38,7 @@ class LmsNotification extends Notification
 
         // Retrieve settings based on role
         $settingKey = 'notification_' . $this->recipientRole;
-        $settingJson = Setting::where('key', $settingKey)->value('value');
+        $settingJson = Setting::getValue($settingKey);
         
         if ($settingJson) {
             $settings = json_decode($settingJson, true);

@@ -170,7 +170,7 @@ class CartController extends Controller
         $bundle->courses()->attach($cartIds);
 
         $autoCompleteOrders = filter_var(
-            \App\Models\Setting::where('key', 'auto_complete_ecommerce_orders')->value('value'),
+            \App\Models\Setting::getValue('auto_complete_ecommerce_orders'),
             FILTER_VALIDATE_BOOLEAN
         );
 

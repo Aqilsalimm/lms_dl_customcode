@@ -38,13 +38,13 @@ class AuthenticatedSessionController extends Controller
         $user = Auth::user();
 
         // Check if Email Verification is enforced
-        $emailVerifyEnabled = filter_var(\App\Models\Setting::where('key', 'email_verification_enabled')->value('value') ?? 'true', FILTER_VALIDATE_BOOLEAN);
+        $emailVerifyEnabled = filter_var(\App\Models\Setting::getValue('email_verification_enabled') ?? 'true', FILTER_VALIDATE_BOOLEAN);
         $needsEmailVerification = $emailVerifyEnabled && is_null($user->email_verified_at);
 
         // Check if 2FA is enabled dynamically from settings table
-        $twoFactorEnabled = filter_var(\App\Models\Setting::where('key', 'two_factor_auth_enabled')->value('value') ?? 'false', FILTER_VALIDATE_BOOLEAN);
+        $twoFactorEnabled = filter_var(\App\Models\Setting::getValue('two_factor_auth_enabled') ?? 'false', FILTER_VALIDATE_BOOLEAN);
 
-        $twoFactorLocationsRaw = \App\Models\Setting::where('key', 'two_factor_auth_locations')->value('value');
+        $twoFactorLocationsRaw = \App\Models\Setting::getValue('two_factor_auth_locations');
         $twoFactorLocations = [];
         if ($twoFactorLocationsRaw) {
             try {

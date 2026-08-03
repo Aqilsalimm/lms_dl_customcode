@@ -9,6 +9,7 @@ use Tests\TestCase;
 
 class CacheLifecycleTest extends TestCase
 {
+    use \Illuminate\Foundation\Testing\RefreshDatabase;
     /**
      * Test Setting cache invalidates when setting model is updated or deleted.
      */

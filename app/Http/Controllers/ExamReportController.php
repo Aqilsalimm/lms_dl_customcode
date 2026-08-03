@@ -26,43 +26,15 @@ class ExamReportController extends Controller
         }
 
         // 2. Base Query & Filters
-        $datePreset = $request->input('date_preset', '30_days');
-        $courseId = $request->input('course_id');
-        $type = $request->input('assessment_type', 'all');
-        $status = $request->input('status', 'all');
-        $search = trim($request->input('search', ''));
-
-        // Calculate Date Range
-        $now = Carbon::now();
-        $startDate = null;
-        $endDate = $now->copy()->endOfDay();
-
-        switch ($datePreset) {
-            case '7_days':
-                $startDate = $now->copy()->subDays(7)->startOfDay();
-                break;
-            case '30_days':
-                $startDate = $now->copy()->subDays(30)->startOfDay();
-                break;
-            case 'this_month':
-                $startDate = $now->copy()->startOfMonth();
-                break;
-            case 'this_quarter':
-                $startDate = $now->copy()->startOfQuarter();
-                break;
-            case 'custom':
-                if ($request->filled('start_date')) {
-                    $startDate = Carbon::parse($request->start_date)->startOfDay();
-                }
-                if ($request->filled('end_date')) {
-                    $endDate = Carbon::parse($request->end_date)->endOfDay();
-                }
-                break;
-            case 'all':
-            default:
-                $startDate = null;
-                break;
-        }
+        $filters = $request->only([
+            'date_preset', 'course_id', 'assessment_type', 'status', 'search', 'start_date', 'end_date'
+        ]);
+        
+        $datePreset = $filters['date_preset'] ?? '30_days';
+        $courseId = $filters['course_id'] ?? null;
+        $type = $filters['assessment_type'] ?? 'all';
+        $status = $filters['status'] ?? 'all';
+        $search = trim($filters['search'] ?? '');
 
         // Available Courses for Filter Dropdown
         $coursesQuery = Course::query();
@@ -72,56 +44,13 @@ class ExamReportController extends Controller
         $coursesList = $coursesQuery->select('id', 'title')->orderBy('title')->get();
         $instructorCourseIds = $user->isAdmin() ? null : $coursesList->pluck('id')->toArray();
 
-        // Base Attempts Query
-        $attemptsQuery = WorkshopAssessmentAttempt::with([
-            'user:id,name,email,photo,role',
-            'assessment:id,course_id,module_id,title,type,passing_score',
-            'assessment.course:id,title',
-            'assessment.module:id,title',
-            'userAnswers.question:id,question_text,correct_answer,points'
-        ])
-        ->where('status', 'completed')
-        ->whereHas('assessment', function ($q) use ($instructorCourseIds, $courseId, $type) {
-            if ($instructorCourseIds !== null) {
-                $q->whereIn('course_id', $instructorCourseIds);
-            }
-            if ($courseId) {
-                $q->where('course_id', $courseId);
-            }
-            if ($type && $type !== 'all') {
-                $q->where('type', $type);
-            }
-        });
+        $repository = new \App\Repositories\ExamReportRepository();
+        $dateRange = $repository->calculateDateRange($datePreset, $filters['start_date'] ?? null, $filters['end_date'] ?? null);
+        $startDate = $dateRange['start'];
+        $endDate = $dateRange['end'];
 
-        // Apply Date Range
-        if ($startDate) {
-            $attemptsQuery->whereBetween('completed_at', [$startDate, $endDate]);
-        }
+        $allFilteredAttempts = $repository->getFilteredAttempts($filters, $instructorCourseIds);
 
-        // Apply Status Filter
-        if ($status === 'passed') {
-            $attemptsQuery->where('is_passed', true);
-        } elseif ($status === 'failed') {
-            $attemptsQuery->where('is_passed', false);
-        } elseif ($status === 'flagged') {
-            $attemptsQuery->where(function ($q) {
-                $q->where('total_score', '<', 40)
-                  ->orWhereRaw('TIMESTAMPDIFF(SECOND, started_at, completed_at) < 30');
-            });
-        }
-
-        // Apply Search Filter
-        if (!empty($search)) {
-            $attemptsQuery->where(function ($q) use ($search) {
-                $q->whereHas('user', function ($uq) use ($search) {
-                    $uq->where('name', 'like', "%{$search}%")
-                       ->orWhere('email', 'like', "%{$search}%");
-                })
-                ->orWhere('id', 'like', "%{$search}%");
-            });
-        }
-
-        $allFilteredAttempts = (clone $attemptsQuery)->latest('completed_at')->get();
 
         // 3. Compute Executive Summary KPIs
         $totalVolume = $allFilteredAttempts->count();
@@ -360,3 +289,4 @@ class ExamReportController extends Controller
         ]);
     }
 }
+

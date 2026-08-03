@@ -88,7 +88,7 @@ class GoogleController extends Controller
         }
 
         // Limit Concurrent Login Sessions
-        $limitSessions = \App\Models\Setting::where('key', 'limit_login_sessions')->value('value');
+        $limitSessions = \App\Models\Setting::getValue('limit_login_sessions');
         if (filter_var($limitSessions, FILTER_VALIDATE_BOOLEAN)) {
             $hasActiveSession = \DB::table('sessions')
                 ->where('user_id', $user->id)
@@ -108,10 +108,10 @@ class GoogleController extends Controller
         }
 
         // --- DYNAMIC OTP VERIFICATION FLOW ---
-        $twoFactorEnabled = filter_var(\App\Models\Setting::where('key', 'two_factor_auth_enabled')->value('value') ?? 'false', FILTER_VALIDATE_BOOLEAN);
+        $twoFactorEnabled = filter_var(\App\Models\Setting::getValue('two_factor_auth_enabled') ?? 'false', FILTER_VALIDATE_BOOLEAN);
 
         if ($twoFactorEnabled) {
-            $twoFactorLocationsRaw = \App\Models\Setting::where('key', 'two_factor_auth_locations')->value('value');
+            $twoFactorLocationsRaw = \App\Models\Setting::getValue('two_factor_auth_locations');
             $twoFactorLocations = [];
             if ($twoFactorLocationsRaw) {
                 try {

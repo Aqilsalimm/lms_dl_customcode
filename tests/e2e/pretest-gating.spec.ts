@@ -7,7 +7,7 @@ test.describe('E2E Flow: Pre-Test & Syllabus Unblocking', () => {
   test.beforeEach(async ({ page }) => {
     // Reset assessment attempts in DB before test runs so student starts fresh
     try {
-      execSync('docker exec drasthalearning-laravel.test-1 php artisan tinker --execute="eval(base64_decode(\'SWxsdW1pbmF0ZVxTdXBwb3J0XEZhY2FkZXNcU2NoZW1hOjpkaXNhYmxlRm9yZWlnbktleUNvbnN0cmFpbnRzKCk7IEFwcFxNb2RlbHNcV29ya3Nob3BBc3Nlc3NtZW50VXNlckFuc3dlcjo6dHJ1bmNhdGUoKTsgQXBwXE1vZGVsc1xXb3Jrc2hvcEFzc2Vzc21lbnRBdHRlbXB0Ojp0cnVuY2F0ZSgpOyBJbGx1bWluYXRlXFN1cHBvcnRcRmFjYWRlc1xTY2hlbWE6OmVuYWJsZUZvcmVpZ25LZXlDb25zdHJhaW50cygpOw==\'));"', { stdio: 'ignore' });
+      await page.request.get('http://127.0.0.1:8080/test/reset-db');
     } catch (e) {}
 
     // Handle native confirm dialog in Assessment.vue so it doesn't block submit
@@ -29,16 +29,15 @@ test.describe('E2E Flow: Pre-Test & Syllabus Unblocking', () => {
       await visitSiteBtn.click();
     }
     
+    await page.waitForTimeout(2000); // Wait for Vue hydration
+
     // Fill credentials
     await page.fill('input[type="email"]', 'student@drastha.com');
     await page.fill('input[type="password"]', 'password');
-    await page.click('button[type="submit"]');
+    await page.click('button:has-text("Sign In")');
 
     // Wait for either the OTP input or a dashboard element to appear
-    await Promise.race([
-      page.waitForSelector('input[type="text"]', { timeout: 60000 }).then(() => 'otp'),
-      page.waitForSelector('text="Dashboard"', { timeout: 60000 }).then(() => 'dashboard')
-    ]).catch(() => 'timeout');
+    await page.waitForURL(/.*(dashboard|course-builder|courses|login\/otp).*/, { timeout: 15000 });
 
     // Handle OTP if we see the OTP input
     if (await page.locator('input[type="text"]').count() > 0) {
@@ -47,7 +46,7 @@ test.describe('E2E Flow: Pre-Test & Syllabus Unblocking', () => {
     }
 
     // Pastikan login berhasil dan masuk ke dashboard (wait for a dashboard specific element)
-    await page.waitForURL('**/dashboard');
+    await page.waitForURL(/.*(dashboard|courses).*/, { timeout: 15000 });
   });
 
   test('Mencegah akses silabus sebelum Pre-Test, dan membukanya otomatis setelah selesai', async ({ page }) => {

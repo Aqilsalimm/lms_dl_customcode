@@ -20,7 +20,9 @@ class CourseController extends Controller
             return redirect()->to('/?login=true')->with('error', 'Please log in to view courses.');
         }
 
-        $query = Course::where('status', 'published')->with(['category', 'instructor', 'lessons']);
+        $query = Course::where('status', 'published')
+            ->select('id', 'title', 'slug', 'thumbnail', 'price', 'status', 'instructor_id', 'category_id', 'course_type', 'level', 'created_at')
+            ->with(['category:id,name,slug', 'instructor:id,name,photo', 'lessons']);
 
         // Filter by Course Type (async / live_class)
         if ($request->has('type') && !empty($request->type) && $request->type !== 'Semua Mode' && $request->type !== 'all') {
@@ -168,7 +170,7 @@ class CourseController extends Controller
      */
     public function apiSearch(Request $request)
     {
-        $query = Course::where('status', 'published')->with(['category', 'instructor', 'lessons']);
+        $query = Course::where('status', 'published')->select('id', 'title', 'slug', 'thumbnail', 'price', 'status', 'instructor_id', 'category_id', 'course_type', 'level', 'created_at')->with(['category:id,name,slug', 'instructor:id,name,photo', 'lessons']);
 
         // Filter by Course Type (async / live_class)
         if ($request->has('type') && !empty($request->type) && $request->type !== 'Semua Mode' && $request->type !== 'all') {
@@ -739,11 +741,11 @@ class CourseController extends Controller
 
         // Get certificate specific settings keys
         $settings = [
-            'cert_authorised_name' => \App\Models\Setting::where('key', 'cert_authorised_name')->value('value') ?: 'John Doe',
-            'cert_company_name' => \App\Models\Setting::where('key', 'cert_company_name')->value('value') ?: 'Drastha Learning Inc.',
-            'cert_page' => \App\Models\Setting::where('key', 'cert_page')->value('value') ?: 'certificate',
-            'cert_signature' => \App\Models\Setting::where('key', 'cert_signature')->value('value') ?: '/images/signature-placeholder.png',
-            'cert_show_instructor' => filter_var(\App\Models\Setting::where('key', 'cert_show_instructor')->value('value') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+            'cert_authorised_name' => \App\Models\Setting::getValue('cert_authorised_name') ?: 'John Doe',
+            'cert_company_name' => \App\Models\Setting::getValue('cert_company_name') ?: 'Drastha Learning Inc.',
+            'cert_page' => \App\Models\Setting::getValue('cert_page') ?: 'certificate',
+            'cert_signature' => \App\Models\Setting::getValue('cert_signature') ?: '/images/signature-placeholder.png',
+            'cert_show_instructor' => filter_var(\App\Models\Setting::getValue('cert_show_instructor') ?: 'false', FILTER_VALIDATE_BOOLEAN),
         ];
 
         return Inertia::render('Courses/Certificate', [
@@ -783,7 +785,7 @@ class CourseController extends Controller
         $isAuthor = $course->instructor_id === $user->id;
         
         $allowAccessWithoutEnroll = filter_var(
-            \App\Models\Setting::where('key', 'course_content_access')->value('value'),
+            \App\Models\Setting::getValue('course_content_access'),
             FILTER_VALIDATE_BOOLEAN
         );
 

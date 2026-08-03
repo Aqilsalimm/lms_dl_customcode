@@ -41,6 +41,15 @@ class RegisteredUserController extends Controller
             'photo.max' => 'Ukuran file foto profil maksimal adalah 1MB.',
         ]);
 
+        if (config('auth.features.otp_registration', true)) {
+            $verifiedEmail = $request->session()->get('registration_otp_verified_email');
+            if ($verifiedEmail !== $request->email) {
+                throw ValidationException::withMessages([
+                    'otp' => __('Tolong verifikasi email Anda dengan OTP terlebih dahulu sebelum mendaftar.'),
+                ]);
+            }
+        }
+
         $photoPath = null;
         if ($request->hasFile('photo')) {
             $photoPath = $request->file('photo')->store('profile-photos', 'public');
@@ -60,6 +69,10 @@ class RegisteredUserController extends Controller
         ]);
 
         event(new Registered($user));
+
+        if (config('auth.features.otp_registration', true)) {
+            $request->session()->forget('registration_otp_verified_email');
+        }
 
         Auth::login($user);
 
