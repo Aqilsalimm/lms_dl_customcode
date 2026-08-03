@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $middleware->append(\App\Http\Middleware\SecurityHeadersMiddleware::class);
+        $middleware->append(\App\Http\Middleware\SlowQueryLogger::class);
 
         $middleware->web(append: [
             \App\Http\Middleware\CheckMaintenanceMode::class,
