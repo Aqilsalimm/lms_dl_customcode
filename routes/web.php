@@ -186,7 +186,7 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::get('/dashboard/settings/course-builder/download-quiz-template', [DashboardController::class, 'downloadQuizTemplate'])->name('dashboard.settings.course-builder.download-quiz-template');
     Route::post('/dashboard/settings/course-builder/import-quiz', [DashboardController::class, 'importQuizzes'])->name('dashboard.settings.course-builder.import-quiz');
     Route::post('/dashboard/settings/course-builder/test-builder', [DashboardController::class, 'updateTestBuilderSettings'])->name('dashboard.settings.course-builder.test-builder.update');
-    Route::post('/dashboard/settings/course-builder/user-management', [DashboardController::class, 'updateUserManagementSettings'])->name('dashboard.settings.course-builder.user-management.update');
+    Route::post('/dashboard/users-manage/settings', [\App\Http\Controllers\Admin\UserManageController::class, 'updateSettings'])->name('dashboard.users.settings.update');
 
     // Course Builder Routes
     Route::prefix('course-builder')->name('course-builder.')->group(function () {

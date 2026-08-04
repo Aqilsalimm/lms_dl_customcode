@@ -50,11 +50,16 @@ class UserManageController extends Controller
 
         $revenueShare = Setting::getValue('instructor_revenue_share', '70');
 
+        $userManagementSettings = [
+            'silent_delete' => filter_var(Setting::getValue('user_silent_delete') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+        ];
+
         return Inertia::render('Dashboard/Admin/UserManage', [
             'users' => $users,
             'pendingInstructors' => $pendingInstructors,
             'trashedUsers' => $trashedUsers,
-            'globalRevenueShare' => $revenueShare
+            'globalRevenueShare' => $revenueShare,
+            'userManagementSettings' => $userManagementSettings,
         ]);
     }
 
@@ -225,5 +230,25 @@ class UserManageController extends Controller
 
         return back()->with('success', 'Akun pengguna berhasil dipulihkan.');
     }
-}
 
+    /**
+     * Update User Management global settings (e.g. Silent Delete toggle).
+     */
+    public function updateSettings(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'silent_delete' => 'required|boolean',
+        ]);
+
+        \App\Models\Setting::updateOrCreate(
+            ['key' => 'user_silent_delete'],
+            ['value' => $request->silent_delete ? 'true' : 'false']
+        );
+
+        return redirect()->back()->with('success', 'Pengaturan Penghapusan Pengguna berhasil diperbarui.');
+    }
+}
