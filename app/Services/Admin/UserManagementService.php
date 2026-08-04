@@ -3,10 +3,13 @@
 namespace App\Services\Admin;
 
 use App\Jobs\SendUserInvitationEmail;
+use App\Mail\AccountDeactivatedMail;
 use App\Models\Otp;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
 
@@ -60,7 +63,25 @@ class UserManagementService
             }
 
             $otp->update(['used' => true]);
+
+            $targetName = $target->name;
+            $targetEmail = $target->email;
+
             $target->delete();
+
+            // Silent Delete toggle (Settings LMS -> Course Settings):
+            // ON  = penonaktifan diam-diam, tanpa notifikasi email ke pengguna.
+            // OFF = kirim notifikasi email penonaktifan ke pengguna.
+            $silentDelete = filter_var(
+                Setting::getValue('user_silent_delete', 'false'),
+                FILTER_VALIDATE_BOOLEAN
+            );
+
+            if (! $silentDelete && $targetEmail) {
+                DB::afterCommit(fn () => Mail::to($targetEmail)->queue(
+                    new AccountDeactivatedMail($targetName)
+                ));
+            }
         });
     }
 }

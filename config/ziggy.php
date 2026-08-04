@@ -92,6 +92,7 @@ return [
             'dashboard.students.search', 'dashboard.courses.gift', 'dashboard.reports.exam', 'assessments.analytics',
             // Admin specific
             'dashboard.users.manage', 'dashboard.users.approve', 'dashboard.users.reject', 'dashboard.users.role', 'dashboard.users.export',
+            'dashboard.users.store', 'dashboard.users.send-delete-otp', 'dashboard.users.destroy', 'dashboard.users.restore',
             'dashboard.settings', 'dashboard.settings.update',
             'dashboard.admin.withdrawals', 'dashboard.admin.withdrawals.complete', 'dashboard.admin.withdrawals.reject',
             'dashboard.settings.withdrawal-methods', 'dashboard.settings.withdrawal-methods.store', 'dashboard.settings.withdrawal-methods.update', 'dashboard.settings.withdrawal-methods.destroy',
@@ -100,6 +101,7 @@ return [
             'dashboard.settings.course-builder.tags.store', 'dashboard.settings.course-builder.tags.update', 'dashboard.settings.course-builder.tags.destroy',
             'dashboard.settings.course-builder.download-template', 'dashboard.settings.course-builder.import', 'dashboard.settings.course-builder.courses',
             'dashboard.settings.course-builder.download-quiz-template', 'dashboard.settings.course-builder.import-quiz',
+            'dashboard.settings.course-builder.test-builder.update', 'dashboard.settings.course-builder.user-management.update',
             'blogs.approve', 'dashboard.settings.blog.approve-settings', 'dashboard.settings.blog.reject-settings', 'notifications.test-trigger',
         ],
     ],

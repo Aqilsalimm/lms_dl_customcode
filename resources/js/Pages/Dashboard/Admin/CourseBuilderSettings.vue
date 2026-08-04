@@ -11,7 +11,8 @@ import {
 const props = defineProps({
   categories: Array,
   tags: Array,
-  testBuilderSettings: Object
+  testBuilderSettings: Object,
+  userManagementSettings: Object
 });
 
 const page = usePage();
@@ -45,6 +46,23 @@ const saveTestBuilderSettings = () => {
   testBuilderForm.post(route('dashboard.settings.course-builder.test-builder.update'), {
     onFinish: () => {
       isSavingTestBuilder.value = false;
+    }
+  });
+};
+
+// User Management (Silent Delete) Form
+const userManagementForm = useForm({
+  silent_delete: props.userManagementSettings?.silent_delete ?? false,
+});
+
+const isSavingUserManagement = ref(false);
+
+const saveUserManagementSettings = () => {
+  isSavingUserManagement.value = true;
+  userManagementForm.post(route('dashboard.settings.course-builder.user-management.update'), {
+    preserveScroll: true,
+    onFinish: () => {
+      isSavingUserManagement.value = false;
     }
   });
 };
@@ -897,6 +915,57 @@ const startQuizImport = () => {
                   class="bg-[#264790] hover:bg-[#1f3a76] text-white px-8 py-3.5 rounded-2xl font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <Save :size="16" /> {{ isSavingTestBuilder ? 'Menyimpan...' : 'Simpan Pengaturan Test Builder' }}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- USER MANAGEMENT: SILENT DELETE -->
+          <div class="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm flex flex-col gap-6">
+            <div class="border-b border-slate-100 pb-4 flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-extrabold text-[#1A2B49]">Manajemen Penghapusan Pengguna (Silent Delete)</h3>
+                <p class="text-xs text-slate-500 mt-1">Atur perilaku notifikasi saat administrator menonaktifkan (soft-delete) akun pengguna dari halaman Manajemen Pengguna.</p>
+              </div>
+              <div class="w-10 h-10 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center">
+                <Trash2 :size="20" />
+              </div>
+            </div>
+
+            <form @submit.prevent="saveUserManagementSettings" class="flex flex-col gap-6">
+              <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-150">
+                <div>
+                  <label class="block text-slate-800 text-xs font-bold flex items-center gap-2">
+                    <span>Mode Silent Delete</span>
+                    <span :class="userManagementForm.silent_delete ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase">
+                      {{ userManagementForm.silent_delete ? 'Aktif (Senyap)' : 'Nonaktif (Notifikasi)' }}
+                    </span>
+                  </label>
+                  <p class="text-[10px] text-slate-500 font-normal mt-0.5 font-medium">
+                    ON (Senyap): Akun dinonaktifkan diam-diam tanpa mengirim email pemberitahuan ke pengguna. <br />
+                    OFF (Notifikasi): Sistem mengirim email pemberitahuan penonaktifan akun ke pengguna terkait.
+                  </p>
+                </div>
+                <button 
+                  type="button" 
+                  @click="userManagementForm.silent_delete = !userManagementForm.silent_delete"
+                  :class="userManagementForm.silent_delete ? 'bg-[#264790]' : 'bg-slate-200'"
+                  class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                >
+                  <span 
+                    :class="userManagementForm.silent_delete ? 'translate-x-5' : 'translate-x-0'"
+                    class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                  ></span>
+                </button>
+              </div>
+
+              <div class="flex justify-end">
+                <button 
+                  type="submit" 
+                  :disabled="isSavingUserManagement"
+                  class="bg-[#264790] hover:bg-[#1f3a76] text-white px-8 py-3.5 rounded-2xl font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <Save :size="16" /> {{ isSavingUserManagement ? 'Menyimpan...' : 'Simpan Pengaturan Penghapusan' }}
                 </button>
               </div>
             </form>

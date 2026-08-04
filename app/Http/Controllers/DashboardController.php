@@ -729,11 +729,37 @@ class DashboardController extends Controller
             'enforce_prerequisites' => filter_var(\App\Models\Setting::getValue('test_builder_enforce_prerequisites') ?: 'true', FILTER_VALIDATE_BOOLEAN),
         ];
 
+        $userManagementSettings = [
+            'silent_delete' => filter_var(\App\Models\Setting::getValue('user_silent_delete') ?: 'false', FILTER_VALIDATE_BOOLEAN),
+        ];
+
         return Inertia::render('Dashboard/Admin/CourseBuilderSettings', [
             'categories' => $categories,
             'tags' => $tags,
             'testBuilderSettings' => $testBuilderSettings,
+            'userManagementSettings' => $userManagementSettings,
         ]);
+    }
+
+    /**
+     * Update User Management global settings (e.g. Silent Delete toggle).
+     */
+    public function updateUserManagementSettings(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'silent_delete' => 'required|boolean',
+        ]);
+
+        \App\Models\Setting::updateOrCreate(
+            ['key' => 'user_silent_delete'],
+            ['value' => $request->silent_delete ? 'true' : 'false']
+        );
+
+        return redirect()->back()->with('success', 'Pengaturan Penghapusan Pengguna berhasil diperbarui.');
     }
 
     /**

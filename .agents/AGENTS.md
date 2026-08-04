@@ -28,3 +28,4 @@ To maintain response latency below **<100ms** and prevent server crashes on Shar
 ### 5. Check the Rules
 
 - Check on Folders /.agents for more information about rules, prd, erd, architecture, and roles on this project.
+- **Ziggy Route Registry:** Refer to `/.agents/ziggy_routes_registry.md` for a complete list of named routes available to the frontend. Use this file to quickly find route URIs and names without needing to audit the Laravel router again.
