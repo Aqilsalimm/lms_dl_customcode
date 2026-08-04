@@ -13,13 +13,15 @@ class AccountDeactivatedMail extends Mailable
     use Queueable, SerializesModels;
 
     public string $userName;
+    public ?string $customMessage;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(string $userName)
+    public function __construct(string $userName, ?string $customMessage = null)
     {
         $this->userName = $userName;
+        $this->customMessage = $customMessage;
     }
 
     /**
@@ -41,6 +43,7 @@ class AccountDeactivatedMail extends Mailable
             view: 'emails.account-deactivated',
             with: [
                 'userName' => $this->userName,
+                'customMessage' => $this->customMessage,
             ],
         );
     }

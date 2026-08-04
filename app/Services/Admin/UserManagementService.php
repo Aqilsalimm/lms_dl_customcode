@@ -43,26 +43,9 @@ class UserManagementService
         });
     }
 
-    public function deleteWithOtp(User $actor, User $target, string $plainCode): void
+    public function deleteUser(User $actor, User $target, ?string $customMessage = null): void
     {
-        DB::transaction(function () use ($actor, $target, $plainCode): void {
-            $otp = Otp::query()
-                ->where('user_id', $actor->id)
-                ->where('email', $actor->email)
-                ->where('purpose', Otp::PURPOSE_USER_DELETE)
-                ->where('used', false)
-                ->where('expires_at', '>', now())
-                ->latest('id')
-                ->lockForUpdate()
-                ->first();
-
-            if (! $otp || ! Hash::check($plainCode, $otp->otp_code)) {
-                throw ValidationException::withMessages([
-                    'otp_code' => 'Kode OTP tidak valid atau telah kedaluwarsa.',
-                ]);
-            }
-
-            $otp->update(['used' => true]);
+        DB::transaction(function () use ($actor, $target, $customMessage): void {
 
             $targetName = $target->name;
             $targetEmail = $target->email;
@@ -79,7 +62,7 @@ class UserManagementService
 
             if (! $silentDelete && $targetEmail) {
                 DB::afterCommit(fn () => Mail::to($targetEmail)->queue(
-                    new AccountDeactivatedMail($targetName)
+                    new AccountDeactivatedMail($targetName, $customMessage)
                 ));
             }
         });

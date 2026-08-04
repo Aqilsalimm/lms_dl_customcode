@@ -36,7 +36,7 @@ const submitAddUser = () => {
 const showDeleteModal = ref(false);
 const userToDelete = ref(null);
 const deleteForm = useForm({
-    otp_code: ''
+    custom_message: ''
 });
 
 const openDeleteModal = (user) => {
@@ -45,14 +45,6 @@ const openDeleteModal = (user) => {
     deleteForm.reset();
 };
 
-const sendDeleteOtp = () => {
-    router.post(route('dashboard.users.send-delete-otp'), {}, {
-        preserveScroll: true,
-        onSuccess: () => {
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'OTP Terkirim', showConfirmButton: false, timer: 3000 });
-        }
-    });
-};
 
 const submitDeleteUser = () => {
     deleteForm.delete(route('dashboard.users.destroy', userToDelete.value.id), {
@@ -530,20 +522,11 @@ const formatDate = (dateString) => {
                 <p class="text-slate-600 text-sm mb-4">
                     Anda akan menonaktifkan pengguna <strong>{{ userToDelete?.name }}</strong>. Akun dapat dipulihkan dari tab Riwayat Terhapus.
                 </p>
-                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800">
-                    Untuk melanjutkan penghapusan, silakan minta kode OTP yang akan dikirimkan ke email Anda.
+                <div v-if="!userManagementSettings.silent_delete" class="mb-4">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Pesan Penonaktifan (Opsional)</label>
+                    <textarea v-model="deleteForm.custom_message" rows="3" placeholder="Contoh: Pelanggaran ketentuan layanan..." class="w-full border-slate-200 rounded-xl px-4 py-2.5 focus:ring focus:ring-red-100 focus:border-red-400 text-sm"></textarea>
+                    <p class="text-xs text-slate-500 mt-1">Pesan ini akan dilampirkan dalam email notifikasi yang dikirim ke pengguna.</p>
                 </div>
-
-                <div class="mb-4 flex items-end gap-3">
-                    <div class="flex-1">
-                        <label class="block text-sm font-bold text-slate-700 mb-1">Kode OTP</label>
-                        <input v-model="deleteForm.otp_code" type="text" maxlength="6" placeholder="Buka email..." class="w-full border-slate-200 rounded-xl px-4 py-2.5 focus:ring focus:ring-red-100 focus:border-red-400 text-center tracking-[0.2em] font-mono text-lg" required>
-                    </div>
-                    <button type="button" @click="sendDeleteOtp" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm transition-colors border border-slate-200">
-                        Kirim OTP
-                    </button>
-                </div>
-                <div v-if="deleteForm.errors.otp_code" class="text-red-500 text-xs mb-4 text-center">{{ deleteForm.errors.otp_code }}</div>
 
                 <div class="mt-6 flex justify-end gap-3">
                     <button type="button" @click="showDeleteModal = false" class="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>

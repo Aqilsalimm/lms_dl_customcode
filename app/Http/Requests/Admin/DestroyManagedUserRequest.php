@@ -16,7 +16,7 @@ class DestroyManagedUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'otp_code' => ['required', 'digits:6'],
+            'custom_message' => ['nullable', 'string', 'max:500'],
         ];
     }
 }

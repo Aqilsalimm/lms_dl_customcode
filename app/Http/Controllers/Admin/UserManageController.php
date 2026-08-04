@@ -164,51 +164,14 @@ class UserManageController extends Controller
     }
 
     /**
-     * Send OTP for Delete User confirmation.
-     */
-    public function sendDeleteOtp(Request $request)
-    {
-        $currentUser = auth()->user();
-        if (!$currentUser || !$currentUser->isAdmin()) {
-            abort(403, 'Unauthorized access.');
-        }
-
-        $rateLimitKey = "admin-user-delete-otp:{$currentUser->id}";
-        if (RateLimiter::tooManyAttempts($rateLimitKey, 3)) {
-            return back()->with('error', 'Terlalu banyak permintaan OTP. Coba lagi dalam '.RateLimiter::availableIn($rateLimitKey).' detik.');
-        }
-        RateLimiter::hit($rateLimitKey, 60);
-
-        // Invalidate old unused OTPs
-        Otp::where('user_id', $currentUser->id)
-            ->where('purpose', Otp::PURPOSE_USER_DELETE)
-            ->where('used', false)->update(['used' => true]);
-
-        $code = random_int(100000, 999999);
-
-        Otp::create([
-            'user_id'    => $currentUser->id,
-            'email'      => $currentUser->email,
-            'otp_code'   => Hash::make((string) $code),
-            'purpose'    => Otp::PURPOSE_USER_DELETE,
-            'expires_at' => now()->addMinutes(10),
-            'used'       => false,
-        ]);
-
-        Mail::to($currentUser->email)->queue(new OtpMail($code));
-
-        return back()->with('success', 'Kode OTP konfirmasi hapus telah dikirim ke email Anda.');
-    }
-
-    /**
      * Soft Delete a user.
      */
     public function destroy(DestroyManagedUserRequest $request, User $user)
     {
-        $this->userManagement->deleteWithOtp(
+        $this->userManagement->deleteUser(
             $request->user(),
             $user,
-            $request->validated('otp_code'),
+            $request->validated('custom_message')
         );
 
         return back()->with('success', 'Pengguna berhasil dihapus.');
