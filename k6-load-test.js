@@ -35,5 +35,5 @@ export default function () {
   });
 
   // Simulate user typing credentials
-  sleep(2);
+  sleep(5);
 }

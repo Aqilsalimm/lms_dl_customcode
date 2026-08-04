@@ -17,7 +17,9 @@ self.addEventListener('activate', e => {
         caches.keys().then(keys => {
             return Promise.all(
                 keys.map(key => {
-                    if (key !== CACHE_NAME) {
+                    // Only delete OUR old caches. Never touch caches that
+                    // belong to other apps / scopes hosted on the same origin.
+                    if (key !== CACHE_NAME && key.startsWith('drastha-lms-')) {
                         return caches.delete(key);
                     }
                 })
@@ -102,8 +104,25 @@ self.addEventListener('fetch', e => {
     );
 });
 
+// Message handler: allows the /help/clear-cache page to instruct the active
+// Service Worker to purge all of OUR caches on demand (Opsi C support).
+self.addEventListener('message', e => {
+    if (e.data && e.data.type === 'CLEAN_CACHES') {
+        e.waitUntil(
+            caches.keys().then(keys =>
+                Promise.all(
+                    keys
+                        .filter(key => key.startsWith('drastha-lms-'))
+                        .map(key => caches.delete(key))
+                )
+            )
+        );
+    }
+});
+
 // Web Push Notification Event Listener
 self.addEventListener('push', e => {
+
     if (!(self.Notification && self.Notification.permission === 'granted')) {
         return;
     }

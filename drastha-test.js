@@ -5,9 +5,9 @@ import { check, sleep } from 'k6';
 export const options = {
   stages: [
     { duration: '20s', target: 30 },   // Ramp-up 1: 40 user awal
-    { duration: '35s', target: 60 },   // Ramp-up 2: 80 user
-    { duration: '45s', target: 90 },  // Beban Puncak: 120 user aktif bersamaan
-    { duration: '1m',  target: 90 },  // Tahan di 120 user selama 1 menit
+    { duration: '40s', target: 60 },   // Ramp-up 2: 80 user
+    { duration: '60s', target: 90 },  // Beban Puncak: 120 user aktif bersamaan
+    { duration: '70s',  target: 90 },  // Tahan di 120 user selama 1 menit
     { duration: '20s', target: 0 },    // Ramp-down: Selesai
   ],
   // Mengabaikan error validasi handshake SSL sementara jika ada perbedaan sertifikat SNI
@@ -52,5 +52,5 @@ export default function () {
   });
 
   // Jeda realistis peserta besok membaca/mengerjakan soal (10 detik)
-  sleep(5);
+  sleep(6);
 }

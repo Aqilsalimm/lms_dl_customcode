@@ -1,4 +1,24 @@
 <script setup>
+// Bump this on every release where Swal flow / auth-modal logic changes.
+// Any browser still holding a stale flag under the OLD key will re-run the
+// popup flow once under the new key, which is what we want when the SW is
+// serving a cached, pre-fix build.
+const SWAL_POPUP_VERSION = '2026-08-04-v2';
+
+const hasShownPopupForThisVersion = (key) => {
+  try {
+    return window.sessionStorage.getItem(`swal_seen:${SWAL_POPUP_VERSION}:${key}`) === '1';
+  } catch (_) {
+    return false;
+  }
+};
+
+const markPopupShown = (key) => {
+  try {
+    window.sessionStorage.setItem(`swal_seen:${SWAL_POPUP_VERSION}:${key}`, '1');
+  } catch (_) { /* noop */ }
+};
+
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { 
@@ -43,11 +63,19 @@ onMounted(() => {
       isLoginModalOpen.value = true;
     });
 
-    loginPromptInterval = setInterval(() => {
+    // Anti double-popup #1: the periodic prompt only ever fires ONCE per page
+    // lifetime. Previously it would reopen the modal every 20s and combine
+    // with the auth_timeout Swal to produce two overlapping popups.
+    if (!sessionStorage.getItem(`swal_seen:${SWAL_POPUP_VERSION}:periodic_prompt`)) {
+      sessionStorage.setItem(`swal_seen:${SWAL_POPUP_VERSION}:periodic_prompt`, '1');
       if (!isLoggedIn.value && !isLoginModalOpen.value) {
-        isLoginModalOpen.value = true;
+        setTimeout(() => {
+          if (!isLoggedIn.value && !isLoginModalOpen.value) {
+            isLoginModalOpen.value = true;
+          }
+        }, 20000);
       }
-    }, 20000);
+    }
 
     // Listener for Google OAuth Popup
     window.addEventListener('message', (event) => {
@@ -94,19 +122,24 @@ onMounted(() => {
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
       
-      Swal.fire({
-        title: 'Sesi Berakhir',
-        text: 'Sistem telah keluar secara otomatis karena tidak adanya aktivitas. Silakan login kembali.',
-        icon: 'warning',
-        confirmButtonText: 'OK',
-        buttonsStyling: false,
-        customClass: {
-          popup: 'rounded-[2rem] p-8 border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white text-slate-800 font-sans select-none',
-          title: 'text-xl font-extrabold text-[#1A2B49] mb-2',
-          htmlContainer: 'text-sm font-semibold text-slate-500 leading-relaxed my-4',
-          confirmButton: 'bg-[#F9CC6B] hover:bg-[#e5bc62] text-[#1A2B49] font-black px-8 py-3 rounded-full text-xs shadow-md transition-all outline-none focus:ring-4 focus:ring-[#F9CC6B]/20 active:scale-95 cursor-pointer',
-        }
-      });
+      // Anti double-popup #2: if a stale SW served an old flash, this guard
+      // makes sure the Swal only fires once per browser session.
+      if (!hasShownPopupForThisVersion('auth_timeout')) {
+        markPopupShown('auth_timeout');
+        Swal.fire({
+          title: 'Sesi Berakhir',
+          text: 'Sistem telah keluar secara otomatis karena tidak adanya aktivitas. Silakan login kembali.',
+          icon: 'warning',
+          confirmButtonText: 'OK',
+          buttonsStyling: false,
+          customClass: {
+            popup: 'rounded-[2rem] p-8 border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] bg-white text-slate-800 font-sans select-none',
+            title: 'text-xl font-extrabold text-[#1A2B49] mb-2',
+            htmlContainer: 'text-sm font-semibold text-slate-500 leading-relaxed my-4',
+            confirmButton: 'bg-[#F9CC6B] hover:bg-[#e5bc62] text-[#1A2B49] font-black px-8 py-3 rounded-full text-xs shadow-md transition-all outline-none focus:ring-4 focus:ring-[#F9CC6B]/20 active:scale-95 cursor-pointer',
+          }
+        });
+      }
     }
   }
 });
@@ -162,10 +195,15 @@ watch(
   { immediate: true }
 );
 
+// Anti double-popup #3: a single logout_message can travel through TWO
+// HMR / SW server cycles. Without this guard the same flash prop is
+// observed twice (once with immediate:true, once on the prop change),
+// and a stale SW serving a pre-fix build shows the popup TWICE.
 watch(
   () => usePage().props.flash?.logout_message,
   (msg) => {
-    if (msg) {
+    if (msg && !hasShownPopupForThisVersion(`logout_message:${msg}`)) {
+      markPopupShown(`logout_message:${msg}`);
       Swal.fire({
         title: 'Sudah Keluar',
         text: msg,
@@ -180,8 +218,7 @@ watch(
         }
       });
     }
-  },
-  { immediate: true }
+  }
 );
 
 

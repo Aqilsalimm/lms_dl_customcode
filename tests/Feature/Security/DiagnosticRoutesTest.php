@@ -19,7 +19,7 @@ class DiagnosticRoutesTest extends TestCase
         $this->assertStringNotContainsString('test-users', $output);
         $this->assertStringNotContainsString('seed-db', $output);
         $this->assertStringNotContainsString('test-login-debug', $output);
-        $this->assertStringNotContainsString('clear-cache', $output);
+        $this->assertStringNotContainsString('clear-app-cache', $output);
         $this->assertStringNotContainsString('test-recaptcha', $output);
         $this->assertStringNotContainsString('test-session-put', $output);
         $this->assertStringNotContainsString('test/reset-db', $output);

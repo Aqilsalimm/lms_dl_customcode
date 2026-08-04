@@ -21,6 +21,13 @@ Route::get('/loaderio-0229882d7a9cb322b9c89ff53e4c2bb2.txt', function () {
     return 'loaderio-0229882d7a9cb322b9c89ff53e4c2bb2';
 });
 
+// Public self-help cache cleanup page (Opsi C — service worker / browser cache reset)
+Route::get('/help/clear-cache', function () {
+    return Inertia::render('Help/ClearCache', [
+        'siteName' => config('app.name', 'Drastha Learning'),
+    ]);
+})->name('help.clear-cache');
+
 // NOTE: Utility routes /clear-app-cache and /publish-all-courses were removed.
 // They were unauthenticated GET endpoints that allowed anyone to flush the
 // application cache (which also destroys the database-backed session store)
