@@ -16,7 +16,7 @@ class DestroyManagedUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'custom_message' => ['nullable', 'string', 'max:500'],
+            'custom_message' => ['nullable', 'string', 'max:650'],
         ];
     }
 }

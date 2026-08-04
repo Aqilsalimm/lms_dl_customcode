@@ -61,12 +61,12 @@
         </div>
         <div class="content">
             <h1>Pemberitahuan Penonaktifan Akun</h1>
-            <p>Halo <strong>{{ $userName }}</strong>,</p>
-            <p>Kami memberitahukan bahwa akun Anda di Drastha Learning telah dinonaktifkan oleh administrator.</p>
+            <p>Halo <strong>{{ $userName }}</strong>, Semoga Anda Masih Dalam Kondisi Yang Baik-baik saja ya</p>
+            <p>Mohon Maaf sekali, Kami memberitahukan bahwa akun Anda di Drastha Learning telah dinonaktifkan oleh administrator.</p>
 
             @if(isset($customMessage) && !empty($customMessage))
                 <div style="background-color: #fef2f2; border: 1px solid #f87171; border-radius: 8px; padding: 16px; margin: 20px 0;">
-                    <p style="color: #991b1b; font-weight: 600; margin-top: 0; margin-bottom: 8px; font-size: 14px;">Pesan dari Admin Drastha Learning:</p>
+                    <p style="color: #991b1b; font-weight: 600; margin-top: 0; margin-bottom: 8px; font-size: 14px;">Berikut pesan dari Admin Drastha Learning:</p>
                     <p style="color: #b91c1c; margin: 0; font-style: italic;">"{{ $customMessage }}"</p>
                 </div>
             @endif
