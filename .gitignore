@@ -55,6 +55,7 @@ test-results/
 # Internal audit & AI workflow artifacts (contain sensitive findings — do NOT publish)
 /.agents/
 /.clinerules/
+/tests/Feature/Migrations/
 /PROJECT_AUDIT_REPORT.md
 /REMEDIATION_PLAN_FOR_AI.md
 opencode.json
