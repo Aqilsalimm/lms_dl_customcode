@@ -410,17 +410,32 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        // Enrolled courses with modules and lessons count
-        $enrollments = Enrollment::where('user_id', $user->id)
-            ->with(['course' => function($query) {
-                $query->withCount(['modules', 'lessons'])->with('instructor');
-            }])
+        // Fetch course IDs from user's actual enrollments
+        $enrolledCourseIds = \App\Models\Enrollment::where('user_id', $user->id)
             ->whereNotNull('course_id')
-            ->get();
+            ->pluck('course_id')
+            ->toArray();
 
-        $coursesList = $enrollments->map(function($enrollment) {
-            $course = $enrollment->course;
-            if (!$course) return null;
+        $query = \App\Models\Course::query()
+            ->withCount(['modules', 'lessons'])
+            ->with('instructor');
+
+        if ($user->isAdmin()) {
+            // Superadmin has full access to all courses in the enrolled view
+        } elseif ($user->isInstructor()) {
+            // Instructor sees their authored courses + enrolled courses
+            $query->where(function($q) use ($user, $enrolledCourseIds) {
+                $q->where('instructor_id', $user->id)
+                  ->orWhereIn('id', $enrolledCourseIds);
+            });
+        } else {
+            // Normal student sees only enrolled courses
+            $query->whereIn('id', $enrolledCourseIds);
+        }
+
+        $courses = $query->get();
+
+        $coursesList = $courses->map(function($course) {
             return [
                 'id' => $course->id,
                 'title' => $course->title,
@@ -438,7 +453,7 @@ class DashboardController extends Controller
                 'end_date' => $course->end_date ? $course->end_date->toISOString() : null,
                 'meeting_url' => $course->meeting_url,
             ];
-        })->filter()->values();
+        })->values();
 
         return Inertia::render('Dashboard/Student/EnrolledCourses', [
             'enrolledCourses' => $coursesList

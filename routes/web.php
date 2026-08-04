@@ -131,6 +131,10 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::post('/dashboard/users-manage/{user}/reject', [\App\Http\Controllers\Admin\UserManageController::class, 'rejectInstructor'])->name('dashboard.users.reject');
     Route::post('/dashboard/users-manage/{user}/role', [\App\Http\Controllers\Admin\UserManageController::class, 'updateRole'])->name('dashboard.users.role');
     Route::get('/dashboard/users-manage/export', [\App\Http\Controllers\Admin\UserManageController::class, 'export'])->name('dashboard.users.export');
+    Route::post('/dashboard/users-manage', [\App\Http\Controllers\Admin\UserManageController::class, 'store'])->name('dashboard.users.store');
+    Route::post('/dashboard/users-manage/send-delete-otp', [\App\Http\Controllers\Admin\UserManageController::class, 'sendDeleteOtp'])->name('dashboard.users.send-delete-otp');
+    Route::delete('/dashboard/users-manage/{user}', [\App\Http\Controllers\Admin\UserManageController::class, 'destroy'])->name('dashboard.users.destroy');
+    Route::post('/dashboard/users-manage/{id}/restore', [\App\Http\Controllers\Admin\UserManageController::class, 'restore'])->name('dashboard.users.restore');
     
     // Exam & Assessment Analytics Report (Admin & Instructor)
     Route::get('/dashboard/reports/exam', [\App\Http\Controllers\ExamReportController::class, 'index'])->name('dashboard.reports.exam');

@@ -9,6 +9,10 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\UsersExport;
+use App\Jobs\SendUserInvitationEmail;
+use App\Models\Otp;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Queue;
 
 class UserManageTest extends TestCase
 {
@@ -128,5 +132,79 @@ class UserManageTest extends TestCase
         Excel::assertDownloaded('users_drastha_lms.xlsx', function(UsersExport $export) {
             return true;
         });
+    }
+
+    public function test_admin_can_create_student_and_invitation_is_queued(): void
+    {
+        Queue::fake();
+
+        $response = $this->actingAs($this->superadmin)->post(route('dashboard.users.store'), [
+            'name' => 'New Student',
+            'email' => 'NEW.STUDENT@example.com ',
+            'role' => 'student',
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('users', [
+            'email' => 'new.student@example.com',
+            'role' => 'student',
+        ]);
+        Queue::assertPushed(SendUserInvitationEmail::class);
+    }
+
+    public function test_non_admin_cannot_create_managed_user(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+
+        $this->actingAs($student)->post(route('dashboard.users.store'), [
+            'name' => 'Blocked',
+            'email' => 'blocked@example.com',
+            'role' => 'student',
+        ])->assertForbidden();
+    }
+
+    public function test_admin_can_soft_delete_non_admin_with_valid_purpose_bound_otp(): void
+    {
+        $target = User::factory()->create(['role' => 'student']);
+        Otp::create([
+            'user_id' => $this->superadmin->id,
+            'email' => $this->superadmin->email,
+            'otp_code' => Hash::make('123456'),
+            'purpose' => Otp::PURPOSE_USER_DELETE,
+            'expires_at' => now()->addMinutes(10),
+            'used' => false,
+        ]);
+
+        $this->actingAs($this->superadmin)
+            ->delete(route('dashboard.users.destroy', $target), ['otp_code' => '123456'])
+            ->assertSessionHas('success');
+
+        $this->assertSoftDeleted('users', ['id' => $target->id]);
+        $this->assertDatabaseHas('otps', ['user_id' => $this->superadmin->id, 'used' => true]);
+    }
+
+    public function test_admin_cannot_delete_self_or_another_admin(): void
+    {
+        $otherAdmin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($this->superadmin)
+            ->delete(route('dashboard.users.destroy', $this->superadmin), ['otp_code' => '123456'])
+            ->assertForbidden();
+
+        $this->actingAs($this->superadmin)
+            ->delete(route('dashboard.users.destroy', $otherAdmin), ['otp_code' => '123456'])
+            ->assertForbidden();
+    }
+
+    public function test_admin_can_restore_deleted_non_admin(): void
+    {
+        $target = User::factory()->create(['role' => 'student']);
+        $target->delete();
+
+        $this->actingAs($this->superadmin)
+            ->post(route('dashboard.users.restore', $target->id))
+            ->assertSessionHas('success');
+
+        $this->assertNotSoftDeleted('users', ['id' => $target->id]);
     }
 }

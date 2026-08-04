@@ -9,7 +9,11 @@ class Otp extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'email', 'otp_code', 'expires_at', 'used'];
+    public const PURPOSE_USER_DELETE = 'user_delete';
+
+    protected $fillable = ['user_id', 'email', 'otp_code', 'purpose', 'expires_at', 'used'];
+
+    protected $hidden = ['otp_code'];
 
     protected $casts = [
         'expires_at' => 'datetime',

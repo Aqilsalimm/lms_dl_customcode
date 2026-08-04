@@ -1,17 +1,89 @@
 <script setup>
 import { ref } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import DashboardWrapper from '@/Components/DashboardWrapper.vue';
-import { CheckCircle, XCircle, Download, UserCheck, Shield, BookOpen, AlertCircle } from 'lucide-vue-next';
+import { CheckCircle, XCircle, Download, UserCheck, Shield, BookOpen, AlertCircle, Plus, Trash2, RotateCcw } from 'lucide-vue-next';
 import Swal from 'sweetalert2';
 
 const props = defineProps({
     users: Array,
     pendingInstructors: Array,
+    trashedUsers: Array,
     globalRevenueShare: [String, Number]
 });
 
 const activeTab = ref('pending'); // 'pending' or 'all'
+
+const showAddUserModal = ref(false);
+const addUserForm = useForm({
+    name: '',
+    email: '',
+    role: 'student'
+});
+
+const submitAddUser = () => {
+    addUserForm.post(route('dashboard.users.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showAddUserModal.value = false;
+            addUserForm.reset();
+            Swal.fire('Berhasil!', 'Pengguna telah ditambahkan. Tautan aktivasi dijadwalkan untuk dikirim via email.', 'success');
+        }
+    });
+};
+
+const showDeleteModal = ref(false);
+const userToDelete = ref(null);
+const deleteForm = useForm({
+    otp_code: ''
+});
+
+const openDeleteModal = (user) => {
+    userToDelete.value = user;
+    showDeleteModal.value = true;
+    deleteForm.reset();
+};
+
+const sendDeleteOtp = () => {
+    router.post(route('dashboard.users.send-delete-otp'), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'OTP Terkirim', showConfirmButton: false, timer: 3000 });
+        }
+    });
+};
+
+const submitDeleteUser = () => {
+    deleteForm.delete(route('dashboard.users.destroy', userToDelete.value.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showDeleteModal.value = false;
+            userToDelete.value = null;
+            Swal.fire('Berhasil!', 'Pengguna telah dihapus.', 'success');
+        }
+    });
+};
+
+const restoreUser = (user) => {
+    Swal.fire({
+        title: 'Pulihkan Pengguna?',
+        text: `Apakah Anda yakin ingin memulihkan akun ${user.name}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Pulihkan',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#10b981',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.post(route('dashboard.users.restore', user.id), {}, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    Swal.fire('Berhasil!', 'Akun pengguna berhasil dipulihkan.', 'success');
+                }
+            });
+        }
+    });
+};
 
 const approveInstructor = (user) => {
     Swal.fire({
@@ -102,19 +174,27 @@ const formatDate = (dateString) => {
                         Kelola data siswa, setujui pendaftaran instruktur baru, dan atur role pengguna.
                     </p>
                 </div>
-                
-                <button 
-                    @click="exportToExcel"
-                    class="bg-[#10b981] hover:bg-[#059669] text-white px-5 py-3 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2"
-                >
-                    <Download :size="18" />
-                    Export ke Excel
-                </button>
+                <div class="flex flex-wrap items-center gap-3">
+                    <button
+                        @click="showAddUserModal = true"
+                        class="bg-[#264790] hover:bg-blue-800 text-white px-5 py-3 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2"
+                    >
+                        <Plus :size="18" />
+                        Tambah Pengguna
+                    </button>
+                    <button
+                        @click="exportToExcel"
+                        class="bg-[#10b981] hover:bg-[#059669] text-white px-5 py-3 rounded-xl font-bold text-sm transition-colors shadow-sm flex items-center justify-center gap-2"
+                    >
+                        <Download :size="18" />
+                        Export ke Excel
+                    </button>
+                </div>
             </div>
 
             <!-- Tabs -->
             <div class="flex border-b border-slate-100 px-6 sm:px-8 bg-slate-50/50">
-                <button 
+                <button
                     @click="activeTab = 'pending'"
                     :class="['px-6 py-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2', activeTab === 'pending' ? 'border-[#264790] text-[#264790]' : 'border-transparent text-slate-500 hover:text-slate-700']"
                 >
@@ -124,17 +204,23 @@ const formatDate = (dateString) => {
                         {{ pendingInstructors.length }}
                     </span>
                 </button>
-                <button 
+                <button
                     @click="activeTab = 'all'"
                     :class="['px-6 py-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2', activeTab === 'all' ? 'border-[#264790] text-[#264790]' : 'border-transparent text-slate-500 hover:text-slate-700']"
                 >
                     <BookOpen :size="18" />
                     Semua Pengguna
                 </button>
+                <button
+                    @click="activeTab = 'trashed'"
+                    :class="['px-6 py-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2', activeTab === 'trashed' ? 'border-[#264790] text-[#264790]' : 'border-transparent text-slate-500 hover:text-slate-700']"
+                >
+                    <Trash2 :size="18" />
+                    Riwayat Terhapus
+                </button>
             </div>
 
             <div class="p-6 sm:p-8">
-                
                 <!-- Tab: Pending Instructors -->
                 <div v-if="activeTab === 'pending'">
                     <div v-if="pendingInstructors.length === 0" class="text-center py-12">
@@ -203,6 +289,7 @@ const formatDate = (dateString) => {
                                     <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Tgl Daftar</th>
                                     <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                                     <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Role (Akses)</th>
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
@@ -230,7 +317,7 @@ const formatDate = (dateString) => {
                                         <span v-else-if="user.status === 'suspended'" class="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">Suspended</span>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <select 
+                                        <select
                                             v-model="user.role"
                                             @change="updateRole(user, $event.target.value)"
                                             :disabled="user.id === 1"
@@ -241,6 +328,66 @@ const formatDate = (dateString) => {
                                             <option value="admin">Admin</option>
                                         </select>
                                     </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <button
+                                            v-if="user.id !== 1 && user.role !== 'admin'"
+                                            @click="openDeleteModal(user)"
+                                            class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                            title="Hapus Pengguna"
+                                        >
+                                            <Trash2 :size="18" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab: Trashed Users -->
+                <div v-if="activeTab === 'trashed'">
+                    <div v-if="trashedUsers.length === 0" class="text-center py-12">
+                        <AlertCircle :size="48" class="text-slate-300 mx-auto mb-4" />
+                        <h3 class="text-lg font-bold text-slate-600">Tidak Ada Data</h3>
+                        <p class="text-slate-400 text-sm mt-1">Belum ada pengguna yang dihapus.</p>
+                    </div>
+
+                    <div v-else class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200">
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Pengguna</th>
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Tgl Dihapus</th>
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <tr v-for="user in trashedUsers" :key="user.id" class="hover:bg-slate-50/50 transition-colors opacity-75">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-slate-300 text-slate-600 flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                                                {{ user.name.charAt(0).toUpperCase() }}
+                                            </div>
+                                            <div>
+                                                <div class="font-extrabold text-slate-700 text-sm flex items-center gap-1 line-through">
+                                                    {{ user.name }}
+                                                </div>
+                                                <div class="text-xs text-slate-500">{{ user.email }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-sm font-medium text-slate-600">
+                                        {{ formatDate(user.deleted_at) }}
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <button
+                                            @click="restoreUser(user)"
+                                            class="text-blue-500 hover:text-blue-700 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors inline-flex items-center gap-2 font-bold text-sm"
+                                            title="Pulihkan Pengguna"
+                                        >
+                                            <RotateCcw :size="16" /> Restore
+                                        </button>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -250,4 +397,82 @@ const formatDate = (dateString) => {
             </div>
         </div>
     </DashboardWrapper>
+
+    <!-- Add User Modal -->
+    <div v-if="showAddUserModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-800 text-lg">Tambah Pengguna Baru</h3>
+                <button @click="showAddUserModal = false" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <XCircle :size="24" />
+                </button>
+            </div>
+            <form @submit.prevent="submitAddUser" class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Nama Lengkap</label>
+                        <input v-model="addUserForm.name" type="text" class="w-full border-slate-200 rounded-xl px-4 py-2.5 focus:ring focus:ring-[#264790] focus:border-[#264790]" required>
+                        <div v-if="addUserForm.errors.name" class="text-red-500 text-xs mt-1">{{ addUserForm.errors.name }}</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Email</label>
+                        <input v-model="addUserForm.email" type="email" class="w-full border-slate-200 rounded-xl px-4 py-2.5 focus:ring focus:ring-[#264790] focus:border-[#264790]" required>
+                        <div v-if="addUserForm.errors.email" class="text-red-500 text-xs mt-1">{{ addUserForm.errors.email }}</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Role</label>
+                        <select v-model="addUserForm.role" class="w-full border-slate-200 rounded-xl px-4 py-2.5 focus:ring focus:ring-[#264790] focus:border-[#264790]" required>
+                            <option value="student">Student</option>
+                            <option value="instructor">Instructor</option>
+                        </select>
+                        <div v-if="addUserForm.errors.role" class="text-red-500 text-xs mt-1">{{ addUserForm.errors.role }}</div>
+                    </div>
+                </div>
+                <div class="mt-8 flex justify-end gap-3">
+                    <button type="button" @click="showAddUserModal = false" class="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>
+                    <button type="submit" :disabled="addUserForm.processing" class="px-5 py-2.5 text-sm font-bold text-white bg-[#264790] hover:bg-blue-800 rounded-xl transition-colors disabled:opacity-50">
+                        {{ addUserForm.processing ? 'Menyimpan...' : 'Simpan & Kirim' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirm Modal with OTP -->
+    <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl">
+            <div class="px-6 py-4 border-b border-red-100 flex justify-between items-center bg-red-50">
+                <h3 class="font-bold text-red-800 text-lg flex items-center gap-2"><AlertCircle :size="20"/> Konfirmasi Hapus</h3>
+                <button @click="showDeleteModal = false" class="text-red-400 hover:text-red-600 transition-colors">
+                    <XCircle :size="24" />
+                </button>
+            </div>
+            <form @submit.prevent="submitDeleteUser" class="p-6">
+                <p class="text-slate-600 text-sm mb-4">
+                    Anda akan menonaktifkan pengguna <strong>{{ userToDelete?.name }}</strong>. Akun dapat dipulihkan dari tab Riwayat Terhapus.
+                </p>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800">
+                    Untuk melanjutkan penghapusan, silakan minta kode OTP yang akan dikirimkan ke email Anda.
+                </div>
+
+                <div class="mb-4 flex items-end gap-3">
+                    <div class="flex-1">
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Kode OTP</label>
+                        <input v-model="deleteForm.otp_code" type="text" maxlength="6" placeholder="Buka email..." class="w-full border-slate-200 rounded-xl px-4 py-2.5 focus:ring focus:ring-red-100 focus:border-red-400 text-center tracking-[0.2em] font-mono text-lg" required>
+                    </div>
+                    <button type="button" @click="sendDeleteOtp" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm transition-colors border border-slate-200">
+                        Kirim OTP
+                    </button>
+                </div>
+                <div v-if="deleteForm.errors.otp_code" class="text-red-500 text-xs mb-4 text-center">{{ deleteForm.errors.otp_code }}</div>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" @click="showDeleteModal = false" class="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">Batal</button>
+                    <button type="submit" :disabled="deleteForm.processing" class="px-5 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors disabled:opacity-50">
+                        {{ deleteForm.processing ? 'Menghapus...' : 'Konfirmasi Hapus' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </template>

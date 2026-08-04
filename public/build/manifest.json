@@ -541,7 +541,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Admin/UserManage.vue": {
-    "file": "assets/UserManage-DXsJbmhJ.js",
+    "file": "assets/UserManage-CASY4FxL.js",
     "name": "UserManage",
     "src": "resources/js/Pages/Dashboard/Admin/UserManage.vue",
     "isDynamicEntry": true,
@@ -872,7 +872,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-BjulFPaY.js",
+    "file": "assets/app-BLPLPsWh.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -939,7 +939,7 @@
       "resources/js/Pages/Welcome.vue"
     ],
     "css": [
-      "assets/app-DDvmU8x3.css"
+      "assets/app-1vk9h8JH.css"
     ]
   }
 }

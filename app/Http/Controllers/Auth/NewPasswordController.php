@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
@@ -23,6 +24,22 @@ class NewPasswordController extends Controller
     public function create(Request $request): Response|RedirectResponse
     {
         $token = $request->route('token');
+
+        if ($request->filled('email')) {
+            $credentials = ['email' => $request->string('email')->toString(), 'token' => $token];
+            $isValidInvitation = Password::broker()->getRepository()->exists(
+                User::where('email', $credentials['email'])->first() ?? new User,
+                $token,
+            );
+
+            if ($isValidInvitation) {
+                session([
+                    'reset_password_token' => $token,
+                    'reset_password_email' => $credentials['email'],
+                    'reset_password_verified_at' => time(),
+                ]);
+            }
+        }
         $sessionToken = session('reset_password_token');
         $sessionEmail = session('reset_password_email');
         $verifiedAt = session('reset_password_verified_at');
@@ -65,6 +82,10 @@ class NewPasswordController extends Controller
         ]);
 
         $user = User::where('email', $request->email)->firstOrFail();
+
+        if (Password::broker()->getRepository()->exists($user, $request->token)) {
+            Password::broker()->deleteToken($user);
+        }
         
         $user->forceFill([
             'password' => Hash::make($request->password),
