@@ -64,3 +64,4 @@ dockerfile.opencode
 drastha-test.js
 .opencodeignore
 /.auth/*
+/graphify-out/
