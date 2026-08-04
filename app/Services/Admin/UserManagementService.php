@@ -61,7 +61,7 @@ class UserManagementService
             );
 
             if (! $silentDelete && $targetEmail) {
-                DB::afterCommit(fn () => Mail::to($targetEmail)->queue(
+                DB::afterCommit(fn () => Mail::to($targetEmail)->send(
                     new AccountDeactivatedMail($targetName, $customMessage)
                 ));
             }

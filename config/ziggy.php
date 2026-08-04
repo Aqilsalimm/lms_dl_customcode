@@ -92,7 +92,7 @@ return [
             'dashboard.students.search', 'dashboard.courses.gift', 'dashboard.reports.exam', 'assessments.analytics',
             // Admin specific
             'dashboard.users.manage', 'dashboard.users.approve', 'dashboard.users.reject', 'dashboard.users.role', 'dashboard.users.export',
-            'dashboard.users.store', 'dashboard.users.send-delete-otp', 'dashboard.users.destroy', 'dashboard.users.restore',
+            'dashboard.users.store', 'dashboard.users.settings.update', 'dashboard.users.destroy', 'dashboard.users.restore',
             'dashboard.settings', 'dashboard.settings.update',
             'dashboard.admin.withdrawals', 'dashboard.admin.withdrawals.complete', 'dashboard.admin.withdrawals.reject',
             'dashboard.settings.withdrawal-methods', 'dashboard.settings.withdrawal-methods.store', 'dashboard.settings.withdrawal-methods.update', 'dashboard.settings.withdrawal-methods.destroy',
