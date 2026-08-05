@@ -47,6 +47,24 @@ class CoursePolicy
         return false;
     }
 
+    public function restore(User $user, Course $model)
+    {
+        if ($user->isAdmin()) return true;
+        if ($user->isInstructor() && isset($model->instructor_id)) {
+            return $model->instructor_id === $user->id;
+        }
+        return false;
+    }
+
+    public function forceDelete(User $user, Course $model)
+    {
+        if ($user->isAdmin()) return true;
+        if ($user->isInstructor() && isset($model->instructor_id)) {
+            return $model->instructor_id === $user->id;
+        }
+        return false;
+    }
+
     public function report(User $user, Course $model)
     {
         if ($user->isAdmin()) return true;

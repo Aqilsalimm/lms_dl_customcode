@@ -617,7 +617,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Instructor/CourseIndex.vue": {
-    "file": "assets/CourseIndex-BhssDEsm.js",
+    "file": "assets/CourseIndex-lyIG2u3u.js",
     "name": "CourseIndex",
     "src": "resources/js/Pages/Dashboard/Instructor/CourseIndex.vue",
     "isDynamicEntry": true,
@@ -640,8 +640,21 @@
       "_AuthenticatedLayout-CI3lG3uc.js"
     ]
   },
+  "resources/js/Pages/Dashboard/Instructor/CourseTrashed.vue": {
+    "file": "assets/CourseTrashed-D5R1eZ1v.js",
+    "name": "CourseTrashed",
+    "src": "resources/js/Pages/Dashboard/Instructor/CourseTrashed.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js",
+      "_vendor-core-DpIFdsji.js",
+      "_vendor-Bia7WiVP.js",
+      "_vendor-lucide-DRTdwk-c.js",
+      "_AuthenticatedLayout-CI3lG3uc.js"
+    ]
+  },
   "resources/js/Pages/Dashboard/Instructor/Index.vue": {
-    "file": "assets/Index-a9PgyJ4_2.js",
+    "file": "assets/Index-D_ZC5buG.js",
     "name": "Index",
     "src": "resources/js/Pages/Dashboard/Instructor/Index.vue",
     "isDynamicEntry": true,
@@ -653,7 +666,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Instructor/LiveClass.vue": {
-    "file": "assets/LiveClass-B0dZ_09t.js",
+    "file": "assets/LiveClass-DZxPFema.js",
     "name": "LiveClass",
     "src": "resources/js/Pages/Dashboard/Instructor/LiveClass.vue",
     "isDynamicEntry": true,
@@ -667,7 +680,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Instructor/PendingApproval.vue": {
-    "file": "assets/PendingApproval-DfeudUbq.js",
+    "file": "assets/PendingApproval-CDixEwNu.js",
     "name": "PendingApproval",
     "src": "resources/js/Pages/Dashboard/Instructor/PendingApproval.vue",
     "isDynamicEntry": true,
@@ -678,7 +691,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Instructor/Withdrawals.vue": {
-    "file": "assets/Withdrawals-ZoKwa_c8.js",
+    "file": "assets/Withdrawals-COzcYera.js",
     "name": "Withdrawals",
     "src": "resources/js/Pages/Dashboard/Instructor/Withdrawals.vue",
     "isDynamicEntry": true,
@@ -692,7 +705,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Reports/ExamReport.vue": {
-    "file": "assets/ExamReport-yYkHkoXf.js",
+    "file": "assets/ExamReport-BsAVNxlj.js",
     "name": "ExamReport",
     "src": "resources/js/Pages/Dashboard/Reports/ExamReport.vue",
     "isDynamicEntry": true,
@@ -705,7 +718,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Student/EnrolledCourses.vue": {
-    "file": "assets/EnrolledCourses-GOROWRu1.js",
+    "file": "assets/EnrolledCourses-C0fF-2LV.js",
     "name": "EnrolledCourses",
     "src": "resources/js/Pages/Dashboard/Student/EnrolledCourses.vue",
     "isDynamicEntry": true,
@@ -721,7 +734,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Student/Index.vue": {
-    "file": "assets/Index-D8Yqrabg.js",
+    "file": "assets/Index-JUgQv7n1.js",
     "name": "Index",
     "src": "resources/js/Pages/Dashboard/Student/Index.vue",
     "isDynamicEntry": true,
@@ -733,7 +746,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Student/LearningProgress.vue": {
-    "file": "assets/LearningProgress-DuJ8e4xv.js",
+    "file": "assets/LearningProgress-DlcG5UUs.js",
     "name": "LearningProgress",
     "src": "resources/js/Pages/Dashboard/Student/LearningProgress.vue",
     "isDynamicEntry": true,
@@ -745,7 +758,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Student/OrderHistory.vue": {
-    "file": "assets/OrderHistory-DXqNLrGx.js",
+    "file": "assets/OrderHistory-BIXrzHNx.js",
     "name": "OrderHistory",
     "src": "resources/js/Pages/Dashboard/Student/OrderHistory.vue",
     "isDynamicEntry": true,
@@ -757,7 +770,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Student/Qa.vue": {
-    "file": "assets/Qa-D6aj18yj.js",
+    "file": "assets/Qa-BZkLptjG.js",
     "name": "Qa",
     "src": "resources/js/Pages/Dashboard/Student/Qa.vue",
     "isDynamicEntry": true,
@@ -769,7 +782,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Student/Reviews.vue": {
-    "file": "assets/Reviews-Cg5PMoym.js",
+    "file": "assets/Reviews-lrhLdcSZ.js",
     "name": "Reviews",
     "src": "resources/js/Pages/Dashboard/Student/Reviews.vue",
     "isDynamicEntry": true,
@@ -783,7 +796,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Student/Wishlist.vue": {
-    "file": "assets/Wishlist-CM273D_9.js",
+    "file": "assets/Wishlist-cEvl-_FH.js",
     "name": "Wishlist",
     "src": "resources/js/Pages/Dashboard/Student/Wishlist.vue",
     "isDynamicEntry": true,
@@ -797,7 +810,7 @@
     ]
   },
   "resources/js/Pages/Help/ClearCache.vue": {
-    "file": "assets/ClearCache-B7W8Ge8H.js",
+    "file": "assets/ClearCache-BTJxoexm.js",
     "name": "ClearCache",
     "src": "resources/js/Pages/Help/ClearCache.vue",
     "isDynamicEntry": true,
@@ -808,7 +821,7 @@
     ]
   },
   "resources/js/Pages/LiveClass/Room.vue": {
-    "file": "assets/Room-BjIQ414I.js",
+    "file": "assets/Room-CeGsi3jY.js",
     "name": "Room",
     "src": "resources/js/Pages/LiveClass/Room.vue",
     "isDynamicEntry": true,
@@ -820,7 +833,7 @@
     ]
   },
   "resources/js/Pages/Profile/Edit.vue": {
-    "file": "assets/Edit-CGUtUHPW.js",
+    "file": "assets/Edit-BpVi-xWe.js",
     "name": "Edit",
     "src": "resources/js/Pages/Profile/Edit.vue",
     "isDynamicEntry": true,
@@ -833,7 +846,7 @@
     ]
   },
   "resources/js/Pages/Profile/Partials/DeleteUserForm.vue": {
-    "file": "assets/DeleteUserForm-DtDOrfsf.js",
+    "file": "assets/DeleteUserForm-DCRh4M4F.js",
     "name": "DeleteUserForm",
     "src": "resources/js/Pages/Profile/Partials/DeleteUserForm.vue",
     "isDynamicEntry": true,
@@ -845,7 +858,7 @@
     ]
   },
   "resources/js/Pages/Profile/Partials/UpdatePasswordForm.vue": {
-    "file": "assets/UpdatePasswordForm-B5D9-mhY.js",
+    "file": "assets/UpdatePasswordForm-1FqWPrd8.js",
     "name": "UpdatePasswordForm",
     "src": "resources/js/Pages/Profile/Partials/UpdatePasswordForm.vue",
     "isDynamicEntry": true,
@@ -856,7 +869,7 @@
     ]
   },
   "resources/js/Pages/Profile/Partials/UpdateProfileInformationForm.vue": {
-    "file": "assets/UpdateProfileInformationForm-Ck-9xe68.js",
+    "file": "assets/UpdateProfileInformationForm-DUQH_gPy.js",
     "name": "UpdateProfileInformationForm",
     "src": "resources/js/Pages/Profile/Partials/UpdateProfileInformationForm.vue",
     "isDynamicEntry": true,
@@ -867,7 +880,7 @@
     ]
   },
   "resources/js/Pages/Welcome.vue": {
-    "file": "assets/Welcome-_tR9f_N-.js",
+    "file": "assets/Welcome-JDF-sjLV.js",
     "name": "Welcome",
     "src": "resources/js/Pages/Welcome.vue",
     "isDynamicEntry": true,
@@ -883,7 +896,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-DgseC0Us.js",
+    "file": "assets/app-KsxC9NK3.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -929,6 +942,7 @@
       "resources/js/Pages/Dashboard/Instructor/CourseBuilder.vue",
       "resources/js/Pages/Dashboard/Instructor/CourseIndex.vue",
       "resources/js/Pages/Dashboard/Instructor/CourseStudents.vue",
+      "resources/js/Pages/Dashboard/Instructor/CourseTrashed.vue",
       "resources/js/Pages/Dashboard/Instructor/Index.vue",
       "resources/js/Pages/Dashboard/Instructor/LiveClass.vue",
       "resources/js/Pages/Dashboard/Instructor/PendingApproval.vue",
@@ -951,7 +965,7 @@
       "resources/js/Pages/Welcome.vue"
     ],
     "css": [
-      "assets/app-5DmdFLx1.css"
+      "assets/app-dzGWShEs.css"
     ]
   }
 }

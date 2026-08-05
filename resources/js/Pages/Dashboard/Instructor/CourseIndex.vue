@@ -226,9 +226,15 @@ const submitGift = () => {
           >
             <Upload :size="16" /> {{ isUploading ? 'Uploading...' : 'Import Excel/CSV' }}
           </button>
+          <Link
+            :href="route('course-builder.trashed')"
+            class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2.5 rounded-full font-bold text-sm shadow-md transition-colors flex items-center gap-2"
+          >
+            <Trash2 :size="16" /> Tempat Sampah
+          </Link>
           <button 
             @click="openCreateModal"
-            class="bg-[#264790] hover:bg-[#44A6D9] text-white px-5 py-2.5 rounded-full font-bold text-sm shadow-md transition-colors flex items-center gap-2"
+            class="bg-[#264790] hover:bg-[#1A2B49] text-white px-5 py-2.5 rounded-full font-bold text-sm shadow-md transition-colors flex items-center gap-2"
           >
             <Plus :size="16" /> Tambah Kelas Baru
           </button>

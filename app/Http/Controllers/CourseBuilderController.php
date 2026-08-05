@@ -118,7 +118,8 @@ class CourseBuilderController extends Controller
 
         $course = Course::create($courseData);
 
-        \Illuminate\Support\Facades\Cache::flush();
+        \Illuminate\Support\Facades\Cache::forget('courses_catalog');
+        \Illuminate\Support\Facades\Cache::forget('homepage_courses');
 
         if ($request->course_type === 'live_class') {
             \App\Models\LiveClass::create([
@@ -317,7 +318,68 @@ class CourseBuilderController extends Controller
 
         $course->delete();
 
-        return redirect()->back()->with('success', 'Course deleted successfully');
+        return redirect()->back()->with('message', 'Course moved to trash successfully.');
+    }
+
+    /**
+     * View trashed courses (Recycle Bin)
+     */
+    public function trashed(Request $request)
+    {
+        $user = auth()->user();
+        
+        $query = Course::onlyTrashed()->with(['category']);
+        
+        if (!$user->isAdmin()) {
+            $query->where('instructor_id', $user->id);
+        }
+
+        if ($request->filled('search')) {
+            $query->where('title', 'like', '%' . $request->search . '%');
+        }
+
+        $courses = $query->latest('deleted_at')->paginate(12);
+
+        return Inertia::render('Dashboard/Instructor/CourseTrashed', [
+            'courses' => $courses,
+            'filters' => $request->only('search')
+        ]);
+    }
+
+    /**
+     * Restore a trashed course
+     */
+    public function restore(Course $course)
+    {
+        if (\Illuminate\Support\Facades\Gate::denies('restore', $course)) {
+            abort(403);
+        }
+
+        $course->restore();
+
+        return redirect()->back()->with('message', 'Kelas berhasil dipulihkan.');
+    }
+
+    /**
+     * Permanently delete a course
+     */
+    public function forceDelete(Course $course)
+    {
+        if (\Illuminate\Support\Facades\Gate::denies('forceDelete', $course)) {
+            abort(403);
+        }
+
+        if ($course->enrollments()->exists()) {
+            return redirect()->back()->with('error', 'Kelas tidak dapat dihapus permanen karena masih memiliki data peserta terdaftar.');
+        }
+
+        if ($course->thumbnail && file_exists(public_path($course->thumbnail))) {
+            @unlink(public_path($course->thumbnail));
+        }
+
+        $course->forceDelete();
+
+        return redirect()->back()->with('message', 'Kelas berhasil dihapus permanen.');
     }
 
     /**
@@ -826,6 +888,7 @@ class CourseBuilderController extends Controller
         $status = $request->input('status');
 
         $enrollments = $course->enrollments()
+            ->has('user')
             ->with(['user' => function($q) {
                 $q->select('id', 'name', 'email', 'avatar', 'created_at');
             }])

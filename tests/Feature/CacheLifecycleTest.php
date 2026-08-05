@@ -35,14 +35,24 @@ class CacheLifecycleTest extends TestCase
     /**
      * Test Course duration/session cache invalidation when model touches.
      */
+    private function createCourseForTest()
+    {
+        $instructor = \App\Models\User::factory()->create(['role' => 'instructor']);
+        return \App\Models\Course::create([
+            'instructor_id' => $instructor->id,
+            'title' => 'Test Course ' . uniqid(),
+            'slug' => 'test-course-' . uniqid(),
+            'level' => 'Umum',
+            'price' => 0,
+            'status' => 'published',
+        ]);
+    }
+
     public function test_course_cache_invalidates_on_model_update(): void
     {
         Cache::flush();
 
-        $course = Course::where('status', 'published')->first();
-        if (!$course) {
-            $this->markTestSkipped('No published course found.');
-        }
+        $course = $this->createCourseForTest();
 
         // Access duration and sessions to warm up cache
         $initialDuration = $course->duration;
@@ -56,5 +66,33 @@ class CacheLifecycleTest extends TestCase
 
         $this->assertFalse(Cache::has("course_{$course->id}_duration"));
         $this->assertFalse(Cache::has("course_{$course->id}_sessions"));
+    }
+
+    public function test_course_duration_cache_invalidated_when_lesson_added(): void
+    {
+        Cache::flush();
+
+        $course = $this->createCourseForTest();
+        $module = \App\Models\Module::create([
+            'course_id' => $course->id,
+            'title' => 'Test Module ' . uniqid(),
+            'order' => 1
+        ]);
+
+        // Access duration and sessions to warm up cache
+        $initialDuration = $course->duration;
+        $initialSessions = $course->sessions;
+
+        $this->assertTrue(Cache::has("course_{$course->id}_duration"));
+        
+        \App\Models\Lesson::create([
+            'module_id' => $module->id,
+            'title' => 'New Test Lesson',
+            'order' => 99,
+            'duration' => 15,
+            'is_free' => false,
+        ]);
+
+        $this->assertFalse(Cache::has("course_{$course->id}_duration"));
     }
 }

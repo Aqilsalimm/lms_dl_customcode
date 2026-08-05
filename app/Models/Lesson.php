@@ -31,7 +31,7 @@ class Lesson extends Model
 
     private function invalidateCourseCache()
     {
-        \Illuminate\Support\Facades\Cache::flush();
+        $this->module?->course?->invalidateCourseCache();
     }
 
     public function module(): BelongsTo

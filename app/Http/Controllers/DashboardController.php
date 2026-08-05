@@ -162,6 +162,7 @@ class DashboardController extends Controller
 
         // Enrolled courses with modules and lessons count
         $enrollments = Enrollment::where('user_id', $user->id)
+            ->whereHas('course')
             ->with(['course' => function($query) {
                 $query->withCount(['modules', 'lessons'])->with('instructor');
             }])
@@ -301,6 +302,7 @@ class DashboardController extends Controller
 
         // Enrolled courses
         $enrollments = Enrollment::where('user_id', $user->id)
+            ->whereHas('course')
             ->with('course.category')
             ->whereNotNull('course_id')
             ->get();

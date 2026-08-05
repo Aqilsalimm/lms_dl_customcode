@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,6 +13,7 @@ use Illuminate\Support\Str;
 
 class Course extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'instructor_id',
         'category_id',
@@ -69,13 +71,17 @@ class Course extends Model
             }
         });
 
-        static::saved(function ($course) {
-            \Illuminate\Support\Facades\Cache::flush();
-        });
+        static::saved(fn ($course) => $course->invalidateCourseCache());
+        static::deleted(fn ($course) => $course->invalidateCourseCache());
+        static::restored(fn ($course) => $course->invalidateCourseCache());
+        static::forceDeleted(fn ($course) => $course->invalidateCourseCache());
+    }
 
-        static::deleted(function ($course) {
-            \Illuminate\Support\Facades\Cache::flush();
-        });
+    public function invalidateCourseCache(): void
+    {
+        \Illuminate\Support\Facades\Cache::forget("course_{$this->id}_duration");
+        \Illuminate\Support\Facades\Cache::forget("course_{$this->id}_sessions");
+        \Illuminate\Support\Facades\Cache::tags(['catalog'])->flush();
     }
 
     public function instructor(): BelongsTo

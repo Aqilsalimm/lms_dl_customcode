@@ -42,7 +42,7 @@ return [
             'assessments.show-student', 'assessments.start', 'attempts.submit',
             'payment.validate-coupon', 'billing.suspended', 'verification.send',
             // Instructor specific
-            'course-builder.index', 'course-builder.metadata', 'course-builder.store', 'course-builder.build', 'course-builder.update', 'course-builder.destroy', 'course-builder.import', 'course-builder.students',
+            'course-builder.index', 'course-builder.metadata', 'course-builder.store', 'course-builder.build', 'course-builder.update', 'course-builder.destroy', 'course-builder.import', 'course-builder.students', 'course-builder.trashed', 'course-builder.restore', 'course-builder.force-delete',
             'course-builder.modules.store', 'course-builder.modules.update', 'course-builder.modules.destroy',
             'course-builder.lessons.store', 'course-builder.lessons.update', 'course-builder.lessons.destroy',
             'course-builder.quizzes.store', 'course-builder.quizzes.update', 'course-builder.quizzes.destroy',
@@ -75,7 +75,7 @@ return [
             'courses.certificates.index', 'courses.certificates.claim', 'certificates.show', 'modules.certificate.download',
             'assessments.show-student', 'assessments.start', 'attempts.submit',
             'payment.validate-coupon', 'billing.suspended', 'verification.send',
-            'course-builder.index', 'course-builder.metadata', 'course-builder.store', 'course-builder.build', 'course-builder.update', 'course-builder.destroy', 'course-builder.import', 'course-builder.students',
+            'course-builder.index', 'course-builder.metadata', 'course-builder.store', 'course-builder.build', 'course-builder.update', 'course-builder.destroy', 'course-builder.import', 'course-builder.students', 'course-builder.trashed', 'course-builder.restore', 'course-builder.force-delete',
             'course-builder.modules.store', 'course-builder.modules.update', 'course-builder.modules.destroy',
             'course-builder.lessons.store', 'course-builder.lessons.update', 'course-builder.lessons.destroy',
             'course-builder.quizzes.store', 'course-builder.quizzes.update', 'course-builder.quizzes.destroy',

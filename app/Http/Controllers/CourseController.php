@@ -150,11 +150,11 @@ class CourseController extends Controller
             'per_page' => $perPage,
         ]));
 
-        $courses = \Illuminate\Support\Facades\Cache::remember($cacheKey, 3600, function () use ($query, $perPage) {
+        $courses = \Illuminate\Support\Facades\Cache::tags(['catalog'])->remember($cacheKey, 3600, function () use ($query, $perPage) {
             return $query->latest()->paginate($perPage)->withQueryString();
         });
 
-        $categories = \Illuminate\Support\Facades\Cache::remember('catalog_categories', 3600, function () {
+        $categories = \Illuminate\Support\Facades\Cache::tags(['catalog'])->remember('catalog_categories', 3600, function () {
             return Category::all();
         });
 

@@ -196,6 +196,9 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
         Route::get('/courses/{course}', [CourseBuilderController::class, 'builder'])->name('build');
         Route::put('/courses/{course}', [CourseBuilderController::class, 'update'])->name('update');
         Route::delete('/courses/{course}', [CourseBuilderController::class, 'destroy'])->name('destroy');
+        Route::get('/courses-trashed', [CourseBuilderController::class, 'trashed'])->name('trashed');
+        Route::post('/courses/{course}/restore', [CourseBuilderController::class, 'restore'])->name('restore')->withTrashed();
+        Route::delete('/courses/{course}/force-delete', [CourseBuilderController::class, 'forceDelete'])->name('force-delete')->withTrashed();
         Route::post('/courses/import', [CourseBuilderController::class, 'import'])->name('import');
         Route::get('/courses/{course}/students', [CourseBuilderController::class, 'students'])->name('students');
         

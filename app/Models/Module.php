@@ -44,7 +44,7 @@ class Module extends Model
 
     private function invalidateCourseCache()
     {
-        \Illuminate\Support\Facades\Cache::flush();
+        $this->course?->invalidateCourseCache();
     }
 
     public function course(): BelongsTo
@@ -75,7 +75,7 @@ class Module extends Model
         if (!$user) return false;
 
         // Admins and instructors always pass
-        if ($user->isAdmin() || $user->id === $this->course->instructor_id) {
+        if ($user->isAdmin() || $user->id === $this->course?->instructor_id) {
             return true;
         }
 
