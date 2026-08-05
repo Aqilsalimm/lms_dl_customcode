@@ -45,13 +45,14 @@
         <!-- PWA Meta Tags -->
         <link rel="manifest" href="/manifest.json">
         <meta name="theme-color" content="#264790">
-        <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="default">
         <meta name="apple-mobile-web-app-title" content="Drastha LMS">
 
-        <!-- Preload Hero Image for LCP performance -->
-        <link rel="preload" as="image" href="/images/pages/welcome/welcome_beranda.gif" type="image/gif" />
+        <!-- Preload Hero Image for LCP performance (Only on Home Page) -->
+        @if(request()->is('/'))
+            <link rel="preload" as="image" href="/images/pages/welcome/welcome_beranda.gif" type="image/gif" />
+        @endif
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
