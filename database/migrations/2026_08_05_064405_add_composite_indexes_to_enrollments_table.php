@@ -12,8 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('enrollments', function (Blueprint $table) {
-            $table->index(['course_id', 'status'], 'idx_course_status');
-            $table->index(['course_id', 'user_id'], 'idx_course_user');
+            if (!Schema::hasIndex('enrollments', 'idx_course_status')) {
+                $table->index(['course_id', 'status'], 'idx_course_status');
+            }
         });
     }
 
@@ -23,8 +24,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('enrollments', function (Blueprint $table) {
-            $table->dropIndex('idx_course_status');
-            $table->dropIndex('idx_course_user');
+            if (Schema::hasIndex('enrollments', 'idx_course_status')) {
+                $table->dropIndex('idx_course_status');
+            }
         });
     }
 };

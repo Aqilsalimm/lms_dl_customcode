@@ -816,12 +816,11 @@ class CourseBuilderController extends Controller
      */
     public function students(Course $course, Request $request)
     {
-        $user = auth()->user();
+        \Illuminate\Support\Facades\Gate::authorize('report', $course);
 
-        // Anti-IDOR: Only admin or the course instructor can view students
-        if (!$user->isAdmin() && $course->instructor_id !== $user->id) {
-            abort(403, 'Unauthorized access to course students.');
-        }
+        $request->validate([
+            'status' => 'nullable|in:active,completed,expired',
+        ]);
 
         $search = $request->input('search');
         $status = $request->input('status');

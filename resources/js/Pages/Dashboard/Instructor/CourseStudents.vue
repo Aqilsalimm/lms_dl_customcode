@@ -1,11 +1,10 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onUnmounted } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { 
   ArrowLeft, Search, Users, User, Clock, CheckCircle, SearchX
 } from 'lucide-vue-next';
-import debounce from 'lodash/debounce';
 
 const props = defineProps({
   course: Object,
@@ -17,13 +16,21 @@ const props = defineProps({
 const search = ref(props.filters.search || '');
 const status = ref(props.filters.status || '');
 
-const handleSearch = debounce(() => {
-  router.get(
-    route('course-builder.students', props.course.id),
-    { search: search.value, status: status.value },
-    { preserveState: true, replace: true }
-  );
-}, 300);
+let debounceTimeout = null;
+const handleSearch = () => {
+  if (debounceTimeout) clearTimeout(debounceTimeout);
+  debounceTimeout = setTimeout(() => {
+    router.get(
+      route('course-builder.students', props.course.id),
+      { search: search.value, status: status.value },
+      { preserveState: true, replace: true }
+    );
+  }, 300);
+};
+
+onUnmounted(() => {
+  if (debounceTimeout) clearTimeout(debounceTimeout);
+});
 
 watch([search, status], () => {
   handleSearch();
@@ -111,16 +118,16 @@ watch([search, status], () => {
                 <tr v-for="enrollment in enrollments.data" :key="enrollment.id" class="hover:bg-slate-50/50 transition-colors">
                   <td class="py-5 flex items-center gap-4">
                     <img 
-                      :src="enrollment.user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(enrollment.user.name)}&background=random`" 
+                      :src="enrollment.user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(enrollment.user?.name || 'Unknown User')}&background=random`"
                       alt="Avatar" 
                       class="w-12 h-12 rounded-full object-cover shadow-sm border-2 border-white"
                     />
                     <div>
                       <div class="font-bold text-[#1A2B49] text-base leading-tight mb-1">
-                        {{ enrollment.user.name }}
+                        {{ enrollment.user?.name || 'User Terhapus' }}
                       </div>
                       <div class="text-slate-500 text-xs">
-                        {{ enrollment.user.email }}
+                        {{ enrollment.user?.email || '-' }}
                       </div>
                     </div>
                   </td>
