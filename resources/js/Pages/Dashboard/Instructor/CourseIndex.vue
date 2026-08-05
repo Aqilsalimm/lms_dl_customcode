@@ -242,40 +242,40 @@ const submitGift = () => {
         <!-- Table Card -->
         <div class="bg-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100">
           <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+            <table class="w-full min-w-[1100px] text-left border-collapse">
               <thead>
                 <tr class="border-b border-slate-100 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                  <th class="pb-4">Kelas</th>
-                  <th class="pb-4">Level</th>
-                  <th class="pb-4">Harga</th>
-                  <th class="pb-4">Status</th>
-                  <th class="pb-4">Mode</th>
-                  <th class="pb-4">Peserta</th>
-                  <th class="pb-4 text-right">Aksi</th>
+                  <th class="pb-4 whitespace-nowrap">Kelas</th>
+                  <th class="pb-4 whitespace-nowrap">Level</th>
+                  <th class="pb-4 whitespace-nowrap">Harga</th>
+                  <th class="pb-4 whitespace-nowrap">Status</th>
+                  <th class="pb-4 whitespace-nowrap">Mode</th>
+                  <th class="pb-4 whitespace-nowrap">Peserta</th>
+                  <th class="pb-4 text-right whitespace-nowrap">Aksi</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-50 text-sm">
                 <tr v-for="course in courses" :key="course.id" class="hover:bg-slate-50/50 transition-colors">
-                  <td class="py-5 flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold" :style="{ backgroundColor: course.bg_color || '#44A6D9' }">
+                  <td class="py-5 flex items-center gap-4 min-w-[300px]">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold shrink-0" :style="{ backgroundColor: course.bg_color || '#44A6D9' }">
                       <BookOpen :size="20" />
                     </div>
                     <div>
                       <div class="font-extrabold text-[#1A2B49] text-base leading-tight mb-1">
                         {{ course.title }}
                       </div>
-                      <div class="text-slate-400 text-xs font-medium">
+                      <div class="text-slate-400 text-xs font-medium whitespace-nowrap">
                         Dibuat pada: {{ new Date(course.created_at).toLocaleDateString('id-ID') }}
                       </div>
                     </div>
                   </td>
-                  <td class="py-5 font-bold text-[#1A2B49]">
+                  <td class="py-5 font-bold text-[#1A2B49] whitespace-nowrap">
                     Kelas {{ course.level }}
                   </td>
-                  <td class="py-5 font-bold text-[#1A2B49]">
+                  <td class="py-5 font-bold text-[#1A2B49] whitespace-nowrap">
                     Rp {{ parseFloat(course.price).toLocaleString('id-ID') }}
                   </td>
-                  <td class="py-5">
+                  <td class="py-5 whitespace-nowrap">
                     <span 
                       :class="{
                         'bg-emerald-50 text-emerald-700 border-emerald-100': course.status === 'published',
@@ -287,13 +287,13 @@ const submitGift = () => {
                       {{ course.status }}
                     </span>
                   </td>
-                  <td class="py-5 font-bold text-[#1A2B49] capitalize">
+                  <td class="py-5 font-bold text-[#1A2B49] capitalize whitespace-nowrap">
                     {{ course.delivery_mode || 'Online' }}
                   </td>
-                  <td class="py-5 font-bold text-[#1A2B49]">
+                  <td class="py-5 font-bold text-[#1A2B49] whitespace-nowrap">
                     {{ course.enrollments_count || 0 }} Peserta
                   </td>
-                  <td class="py-5 text-right">
+                  <td class="py-5 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-3">
                       <button 
                         @click="openGiftModal(course)"

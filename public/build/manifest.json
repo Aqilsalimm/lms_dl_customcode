@@ -617,7 +617,7 @@
     ]
   },
   "resources/js/Pages/Dashboard/Instructor/CourseIndex.vue": {
-    "file": "assets/CourseIndex-CbVXiTyG.js",
+    "file": "assets/CourseIndex-Djupkm3D.js",
     "name": "CourseIndex",
     "src": "resources/js/Pages/Dashboard/Instructor/CourseIndex.vue",
     "isDynamicEntry": true,
@@ -883,7 +883,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-C7OileDE.js",
+    "file": "assets/app-BY9Ugvwr.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -951,7 +951,7 @@
       "resources/js/Pages/Welcome.vue"
     ],
     "css": [
-      "assets/app-chwAZJxD.css"
+      "assets/app-5DmdFLx1.css"
     ]
   }
 }
