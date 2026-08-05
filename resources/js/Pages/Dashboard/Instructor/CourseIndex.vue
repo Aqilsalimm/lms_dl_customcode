@@ -4,7 +4,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { 
   BookOpen, Plus, Trash2, ArrowRight, Settings, 
-  X, Check, AlertCircle, Upload, Gift, BarChart3
+  X, Check, AlertCircle, Upload, Gift, BarChart3, Users
 } from 'lucide-vue-next';
 import axios from 'axios';
 import Swal from 'sweetalert2';
@@ -249,6 +249,8 @@ const submitGift = () => {
                   <th class="pb-4">Level</th>
                   <th class="pb-4">Harga</th>
                   <th class="pb-4">Status</th>
+                  <th class="pb-4">Mode</th>
+                  <th class="pb-4">Peserta</th>
                   <th class="pb-4 text-right">Aksi</th>
                 </tr>
               </thead>
@@ -285,6 +287,12 @@ const submitGift = () => {
                       {{ course.status }}
                     </span>
                   </td>
+                  <td class="py-5 font-bold text-[#1A2B49] capitalize">
+                    {{ course.delivery_mode || 'Online' }}
+                  </td>
+                  <td class="py-5 font-bold text-[#1A2B49]">
+                    {{ course.enrollments_count || 0 }} Peserta
+                  </td>
                   <td class="py-5 text-right">
                     <div class="flex items-center justify-end gap-3">
                       <button 
@@ -299,6 +307,12 @@ const submitGift = () => {
                         title="Dasbor Rekap & Analitik Real-Time Pre-Test / Post-Test Ujian"
                       >
                         <BarChart3 :size="14" /> Analitik Test
+                      </Link>
+                      <Link 
+                        :href="route('course-builder.students', course.id)"
+                        class="bg-fuchsia-50 hover:bg-fuchsia-600 text-fuchsia-600 hover:text-white px-3.5 py-2 rounded-2xl font-bold text-xs shadow-sm transition-all duration-200 flex items-center gap-1.5"
+                      >
+                        <Users :size="14" /> Peserta
                       </Link>
                       <Link 
                         :href="route('course-builder.build', course.id)"
@@ -316,7 +330,7 @@ const submitGift = () => {
                   </td>
                 </tr>
                 <tr v-if="courses.length === 0">
-                  <td colspan="5" class="py-10 text-center text-slate-400 font-medium">
+                  <td colspan="7" class="py-10 text-center text-slate-400 font-medium">
                     Belum ada kelas yang dibuat. Silakan tambah kelas baru untuk mulai mendesain silabus Anda!
                   </td>
                 </tr>

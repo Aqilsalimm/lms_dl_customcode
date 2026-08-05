@@ -43,6 +43,7 @@ class CourseBuilderController extends Controller
         $user = auth()->user();
         
         $courses = Course::with(['category', 'lessons'])
+            ->withCount('enrollments')
             ->when(!$user->isAdmin(), function($query) use ($user) {
                 return $query->where('instructor_id', $user->id);
             })
@@ -808,5 +809,45 @@ class CourseBuilderController extends Controller
         $pow = min($pow, count($units) - 1);
         $bytes /= pow(1024, $pow);
         return round($bytes, $precision) . ' ' . $units[$pow];
+    }
+
+    /**
+     * View enrolled students for a specific course (Anti-IDOR protected)
+     */
+    public function students(Course $course, Request $request)
+    {
+        $user = auth()->user();
+
+        // Anti-IDOR: Only admin or the course instructor can view students
+        if (!$user->isAdmin() && $course->instructor_id !== $user->id) {
+            abort(403, 'Unauthorized access to course students.');
+        }
+
+        $search = $request->input('search');
+        $status = $request->input('status');
+
+        $enrollments = $course->enrollments()
+            ->with(['user' => function($q) {
+                $q->select('id', 'name', 'email', 'avatar', 'created_at');
+            }])
+            ->when($search, function ($query, $search) {
+                $query->whereHas('user', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when($status, function ($query, $status) {
+                $query->where('status', $status);
+            })
+            ->orderByDesc('enrolled_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return Inertia::render('Dashboard/Instructor/CourseStudents', [
+            'course' => $course->only(['id', 'title', 'slug', 'level']),
+            'enrollments' => $enrollments,
+            'filters' => $request->only(['search', 'status']),
+            'totalLessons' => $course->lessons()->count(),
+        ]);
     }
 }

@@ -42,7 +42,7 @@ return [
             'assessments.show-student', 'assessments.start', 'attempts.submit',
             'payment.validate-coupon', 'billing.suspended', 'verification.send',
             // Instructor specific
-            'course-builder.index', 'course-builder.metadata', 'course-builder.store', 'course-builder.build', 'course-builder.update', 'course-builder.destroy', 'course-builder.import',
+            'course-builder.index', 'course-builder.metadata', 'course-builder.store', 'course-builder.build', 'course-builder.update', 'course-builder.destroy', 'course-builder.import', 'course-builder.students',
             'course-builder.modules.store', 'course-builder.modules.update', 'course-builder.modules.destroy',
             'course-builder.lessons.store', 'course-builder.lessons.update', 'course-builder.lessons.destroy',
             'course-builder.quizzes.store', 'course-builder.quizzes.update', 'course-builder.quizzes.destroy',

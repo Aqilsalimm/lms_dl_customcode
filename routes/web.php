@@ -197,6 +197,7 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
         Route::put('/courses/{course}', [CourseBuilderController::class, 'update'])->name('update');
         Route::delete('/courses/{course}', [CourseBuilderController::class, 'destroy'])->name('destroy');
         Route::post('/courses/import', [CourseBuilderController::class, 'import'])->name('import');
+        Route::get('/courses/{course}/students', [CourseBuilderController::class, 'students'])->name('students');
         
         // Modules
         Route::post('/courses/{course}/modules', [CourseBuilderController::class, 'addModule'])->name('modules.store');
