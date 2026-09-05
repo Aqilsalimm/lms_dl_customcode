@@ -26,6 +26,8 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            'gender' => ['nullable', 'string', 'in:Laki-laki,Perempuan'],
+            'occupation' => ['nullable', 'string', 'max:50', 'in:Pelajar,Mahasiswa,Karyawan Swasta,PNS,Karyawan BUMN,Freelance,Lainnya'],
         ];
     }
 }

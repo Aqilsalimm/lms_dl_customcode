@@ -27,6 +27,35 @@ class UserManagementService
                 'email_verified_at' => null,
             ]);
 
+            $occupation = match ($attributes['affiliation_type'] ?? 'Lainnya') {
+                'Pemerintah' => 'PNS',
+                'Pendidikan' => 'Mahasiswa',
+                'Swasta' => 'Karyawan Swasta',
+                default => 'Freelance',
+            };
+
+            \App\Models\UserProfile::create([
+                'user_id' => $user->id,
+                'occupation' => $occupation,
+            ]);
+
+            if (!empty($attributes['organization_name']) && ($attributes['affiliation_type'] ?? '') !== 'Lainnya') {
+                $orgName = ucwords(strtolower(trim($attributes['organization_name'])));
+                $orgCode = strtoupper(\Illuminate\Support\Str::slug($orgName)) . '-' . rand(1000, 9999);
+
+                $organization = \App\Models\Organization::firstOrCreate(
+                    ['name' => $orgName],
+                    ['code' => $orgCode, 'is_active' => true]
+                );
+
+                \App\Models\OrganizationMembership::create([
+                    'user_id' => $user->id,
+                    'organization_id' => $organization->id,
+                    'member_type' => 'other',
+                    'is_active' => true,
+                ]);
+            }
+
             $setupUrl = url(route('password.reset', [
                 'token' => Password::broker()->createToken($user),
                 'email' => $user->email,
@@ -43,9 +72,28 @@ class UserManagementService
         });
     }
 
-    public function deleteUser(User $actor, User $target, ?string $customMessage = null): void
+    public function deleteUser(User $actor, User $target, ?string $customMessage = null, ?string $otpCode = null): void
     {
-        DB::transaction(function () use ($actor, $target, $customMessage): void {
+        $otpCode = $otpCode ?? request('otp_code');
+
+        DB::transaction(function () use ($actor, $target, $customMessage, $otpCode): void {
+            if ($otpCode) {
+                $otps = \App\Models\Otp::where('user_id', $actor->id)
+                    ->where('purpose', \App\Models\Otp::PURPOSE_USER_DELETE)
+                    ->where('used', false)
+                    ->where(function ($q) {
+                        $q->whereNull('expires_at')
+                          ->orWhere('expires_at', '>', now());
+                    })
+                    ->get();
+
+                foreach ($otps as $otp) {
+                    if (\Illuminate\Support\Facades\Hash::check($otpCode, $otp->otp_code) || $otp->otp_code === $otpCode) {
+                        $otp->update(['used' => true]);
+                        break;
+                    }
+                }
+            }
 
             $targetName = $target->name;
             $targetEmail = $target->email;

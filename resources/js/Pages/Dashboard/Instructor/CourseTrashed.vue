@@ -173,22 +173,22 @@ const forceDeleteCourse = (course) => {
           </div>
           
           <!-- Pagination -->
-          <div v-if="courses.links && courses.links.length > 3" class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-            <span class="text-sm text-slate-500 font-medium">Menampilkan {{ courses.from }} - {{ courses.to }} dari {{ courses.total }} kelas</span>
-            <div class="flex space-x-1">
-              <Link 
-                v-for="(link, i) in courses.links" 
-                :key="i"
-                :href="link.url"
-                v-html="link.label"
-                class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors"
-                :class="[
-                  link.active 
-                    ? 'bg-blue-600 text-white shadow-sm' 
-                    : 'text-slate-500 hover:bg-slate-200 bg-white border border-slate-200',
-                  !link.url ? 'opacity-50 cursor-not-allowed' : ''
-                ]"
-              />
+          <div v-if="courses.next_page_url || courses.prev_page_url" class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end">
+            <div class="flex space-x-2">
+              <Link
+                v-if="courses.prev_page_url"
+                :href="courses.prev_page_url"
+                class="px-4 py-2 text-sm font-bold rounded-lg transition-colors text-slate-500 hover:bg-slate-200 bg-white border border-slate-200"
+              >
+                &laquo; Sebelumnya
+              </Link>
+              <Link
+                v-if="courses.next_page_url"
+                :href="courses.next_page_url"
+                class="px-4 py-2 text-sm font-bold rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+              >
+                Selanjutnya &raquo;
+              </Link>
             </div>
           </div>
         </div>

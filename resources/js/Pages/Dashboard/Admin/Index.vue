@@ -1,7 +1,7 @@
 <script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import DashboardWrapper from '@/Components/DashboardWrapper.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, Link } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { 
   Users, BookOpen, TrendingUp, Shield, ArrowRight,
@@ -15,18 +15,7 @@ const props = defineProps({
   recentUsers: Array
 });
 
-const isUpdatingRole = ref(false);
 
-const changeUserRole = (userId, newRole) => {
-  isUpdatingRole.value = true;
-  router.post(`/dashboard/change-role/${userId}`, {
-    role: newRole
-  }, {
-    onFinish: () => {
-      isUpdatingRole.value = false;
-    }
-  });
-};
 </script>
 
 <template>
@@ -144,8 +133,10 @@ const changeUserRole = (userId, newRole) => {
 
         <!-- User Management & Role Toggles -->
         <div class="bg-white rounded-[2rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-100">
-          <h3 class="text-lg font-extrabold text-[#1A2B49] mb-6 flex items-center gap-2">
-            <Users :size="20" class="text-sky-600" /> Kontrol Role User
+          <h3 class="text-lg font-extrabold text-[#1A2B49] mb-6 flex items-center justify-between">
+            <span class="flex items-center gap-2">
+              <Users :size="20" class="text-sky-600" /> Daftar User
+            </span>
           </h3>
           
           <div class="flex flex-col gap-4">
@@ -158,16 +149,12 @@ const changeUserRole = (userId, newRole) => {
                 </span>
               </div>
               <div class="shrink-0">
-                <select 
-                  @change="changeUserRole(user.id, $event.target.value)"
-                  :disabled="isUpdatingRole"
-                  class="bg-white border border-slate-200 hover:border-[#264790] focus:border-[#264790] rounded-xl px-3 py-1.5 text-xs font-bold text-[#1A2B49] outline-none shadow-sm cursor-pointer transition-colors"
+                <Link
+                  :href="route('dashboard.users.manage')"
+                  class="bg-white border border-slate-200 hover:border-[#264790] hover:text-[#264790] rounded-xl px-3 py-1.5 text-xs font-bold text-[#1A2B49] outline-none shadow-sm cursor-pointer transition-colors inline-block"
                 >
-                  <option value="" disabled selected>Ubah Role</option>
-                  <option value="student">Student</option>
-                  <option value="instructor">Instructor</option>
-                  <option value="admin">Admin</option>
-                </select>
+                  Edit Role
+                </Link>
               </div>
             </div>
           </div>

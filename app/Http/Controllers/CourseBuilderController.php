@@ -335,10 +335,16 @@ class CourseBuilderController extends Controller
         }
 
         if ($request->filled('search')) {
-            $query->where('title', 'like', '%' . $request->search . '%');
+            $search = trim($request->search);
+            if (strlen($search) < 3) {
+                // If search is less than 3 chars, return empty result to prevent performance issues
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereFullText(['title', 'description'], $search);
+            }
         }
 
-        $courses = $query->latest('deleted_at')->paginate(12);
+        $courses = $query->latest('deleted_at')->cursorPaginate(12);
 
         return Inertia::render('Dashboard/Instructor/CourseTrashed', [
             'courses' => $courses,
@@ -893,16 +899,20 @@ class CourseBuilderController extends Controller
                 $q->select('id', 'name', 'email', 'avatar', 'created_at');
             }])
             ->when($search, function ($query, $search) {
-                $query->whereHas('user', function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%");
-                });
+                $searchStr = trim($search);
+                if (strlen($searchStr) < 3) {
+                    $query->whereRaw('1 = 0');
+                } else {
+                    $query->whereHas('user', function ($q) use ($searchStr) {
+                        $q->whereFullText(['name', 'email'], $searchStr);
+                    });
+                }
             })
             ->when($status, function ($query, $status) {
                 $query->where('status', $status);
             })
             ->orderByDesc('enrolled_at')
-            ->paginate(15)
+            ->cursorPaginate(15)
             ->withQueryString();
 
         return Inertia::render('Dashboard/Instructor/CourseStudents', [

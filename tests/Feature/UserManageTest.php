@@ -142,6 +142,7 @@ class UserManageTest extends TestCase
             'name' => 'New Student',
             'email' => 'NEW.STUDENT@example.com ',
             'role' => 'student',
+            'affiliation_type' => 'Lainnya',
         ]);
 
         $response->assertSessionHas('success');

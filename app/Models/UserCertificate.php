@@ -11,12 +11,17 @@ class UserCertificate extends Model
         'user_id',
         'course_id',
         'certificate_id',
+        'source_enrollment_id',
         'certificate_code',
         'claimed_at',
+        'identity_snapshot',
+        'snapshot_version',
     ];
 
     protected $casts = [
         'claimed_at' => 'datetime',
+        'identity_snapshot' => 'array',
+        'snapshot_version' => 'integer',
     ];
 
     public function user(): BelongsTo
@@ -32,5 +37,10 @@ class UserCertificate extends Model
     public function certificate(): BelongsTo
     {
         return $this->belongsTo(Certificate::class);
+    }
+
+    public function sourceEnrollment(): BelongsTo
+    {
+        return $this->belongsTo(Enrollment::class, 'source_enrollment_id');
     }
 }

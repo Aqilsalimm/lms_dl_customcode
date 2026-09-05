@@ -6,7 +6,7 @@ import {
   Wallet, MonitorPlay, Video, Settings, LogOut, FileBarChart,
   Bell, Plus, ShieldCheck, Check, Trash2, Activity, ChevronDown, ChevronUp, Menu, X
 } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 import Swal from 'sweetalert2';
 
 const page = usePage();
@@ -18,6 +18,19 @@ const isSidebarOpen = ref(false);
 
 watch(() => page.url, () => {
   isSidebarOpen.value = false;
+});
+
+// BF Cache restore detection
+const handlePageShow = (e) => {
+  if (e.persisted) {
+    router.reload({ only: ['auth', 'flash', 'ziggy'] });
+  }
+};
+onMounted(() => {
+  window.addEventListener('pageshow', handlePageShow);
+});
+onUnmounted(() => {
+  window.removeEventListener('pageshow', handlePageShow);
 });
 
 // Global success/error flash message SweetAlert2 notifications
@@ -55,7 +68,7 @@ watch(
       });
     }
   },
-  { deep: true, immediate: true }
+  { deep: true, immediate: false }
 );
 
 const handleLogout = () => {

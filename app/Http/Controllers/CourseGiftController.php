@@ -20,14 +20,14 @@ class CourseGiftController extends Controller
     {
         $q = $request->input('q');
 
-        if (empty($q)) {
+        $searchStr = trim($q);
+        if (empty($searchStr) || strlen($searchStr) < 3) {
             return response()->json([]);
         }
 
         $students = User::where('role', 'student')
             ->where(function ($query) use ($q) {
-                $query->where('name', 'like', '%' . $q . '%')
-                    ->orWhere('email', 'like', '%' . $q . '%');
+                $query->whereFullText(['name', 'email'], $q);
             })
             ->limit(10)
             ->get(['id', 'name', 'email']);

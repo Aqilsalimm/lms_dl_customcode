@@ -25,6 +25,8 @@ class LiveClassController extends Controller
                 ->with('error', 'Anda harus lulus Pre-test terlebih dahulu untuk mengakses sesi Live.');
         }
 
+        $course->loadMissing(['instructor', 'lessons']);
+
         // Fetch live classes and their attendance preferences for the user
         $liveClasses = LiveClass::where('course_id', $course->id)
             ->where('is_published', true)
@@ -140,9 +142,7 @@ class LiveClassController extends Controller
 
     public function store(Request $request)
     {
-        if (\Illuminate\Support\Facades\Gate::denies('create', LiveClass::class)) {
-            abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk membuat sesi kelas.');
-        }
+        $this->authorize('create', LiveClass::class);
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -226,11 +226,7 @@ class LiveClassController extends Controller
 
     public function update(Request $request, LiveClass $liveClass)
     {
-        $user = $request->user();
-        $course = $liveClass->course;
-        if (\Illuminate\Support\Facades\Gate::denies('update', $liveClass)) {
-            abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk mengubah sesi kelas ini.');
-        }
+        $this->authorize('update', $liveClass);
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -297,11 +293,7 @@ class LiveClassController extends Controller
 
     public function destroy(Request $request, LiveClass $liveClass)
     {
-        $user = $request->user();
-        $course = $liveClass->course;
-        if (\Illuminate\Support\Facades\Gate::denies('delete', $liveClass)) {
-            abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk menghapus sesi kelas ini.');
-        }
+        $this->authorize('delete', $liveClass);
 
         $liveClass->delete();
         return redirect()->back()->with('success', 'Kelas berhasil dihapus.');

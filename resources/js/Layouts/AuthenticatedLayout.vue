@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
@@ -10,6 +10,20 @@ import FloatingChat from '@/Components/FloatingChat.vue';
 import Swal from 'sweetalert2';
 
 const showingNavigationDropdown = ref(false);
+
+const handlePageShow = (event) => {
+  if (event.persisted) {
+    router.reload({ only: ['auth', 'ziggy'] });
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('pageshow', handlePageShow);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('pageshow', handlePageShow);
+});
 
 const handleLogout = () => {
   Swal.fire({

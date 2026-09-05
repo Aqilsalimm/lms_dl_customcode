@@ -11,6 +11,10 @@ const props = defineProps({
   certificateTitle: String,
   certificateCode: String,
   certificateType: String,
+  identity: {
+    type: Object,
+    default: () => ({}),
+  },
 });
 
 // Format Date nicely
@@ -97,6 +101,10 @@ const handlePrint = () => {
             <h3 class="text-2xl sm:text-4xl font-extrabold text-[#264790] border-b-2 border-slate-200 pb-2 px-12 tracking-wide font-serif italic">
               {{ studentName }}
             </h3>
+            <div v-if="identity.organization_name" class="mt-2 text-xs font-semibold text-slate-600 space-y-0.5">
+              <p><span class="font-bold text-slate-700">{{ identity.organization_name }}</span> <span v-if="identity.division"> - {{ identity.division }}</span></p>
+              <p v-if="identity.member_number" class="text-[11px] text-slate-500 font-mono">ID / NIP: {{ identity.member_number }}</p>
+            </div>
           </div>
 
           <p class="text-slate-500 text-xs sm:text-sm font-semibold max-w-lg">

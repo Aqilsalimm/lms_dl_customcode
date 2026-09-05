@@ -106,7 +106,7 @@ class DiscussionController extends Controller
             $query->where('is_resolved', false);
         }
 
-        $discussions = $query->latest()->paginate(10)->withQueryString();
+        $discussions = $query->latest()->cursorPaginate(10)->withQueryString();
 
         return Inertia::render('Dashboard/Admin/QnaInbox', [
             'discussions' => $discussions,

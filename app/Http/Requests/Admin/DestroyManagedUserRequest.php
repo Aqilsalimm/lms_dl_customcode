@@ -17,6 +17,7 @@ class DestroyManagedUserRequest extends FormRequest
     {
         return [
             'custom_message' => ['nullable', 'string', 'max:650'],
+            'otp_code' => ['nullable', 'string'],
         ];
     }
 }

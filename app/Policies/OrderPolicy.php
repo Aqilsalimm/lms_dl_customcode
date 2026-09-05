@@ -18,10 +18,16 @@ class OrderPolicy
     public function view(User $user, Order $model)
     {
         if ($user->isAdmin()) return true;
+        if ($model->user_id === $user->id) return true;
         if ($user->isInstructor() && isset($model->instructor_id)) {
             return $model->instructor_id === $user->id;
         }
         return false;
+    }
+
+    public function cancel(User $user, Order $model)
+    {
+        return $model->user_id === $user->id;
     }
 
     public function create(User $user)

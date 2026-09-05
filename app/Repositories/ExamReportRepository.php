@@ -63,12 +63,22 @@ class ExamReportRepository
         }
 
         if (!empty($search)) {
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('user', function ($uq) use ($search) {
-                    $uq->where('name', 'like', "%{$search}%")
-                       ->orWhere('email', 'like', "%{$search}%");
-                })
-                ->orWhere('id', 'like', "%{$search}%");
+            $searchStr = trim($search);
+            $query->where(function ($q) use ($searchStr) {
+                // For name/email fulltext search, require at least 3 characters
+                if (strlen($searchStr) >= 3) {
+                    $q->whereHas('user', function ($uq) use ($searchStr) {
+                        $uq->whereFullText(['name', 'email'], $searchStr);
+                    });
+                }
+
+                // If search is numeric, also match by attempt ID (exact match, not LIKE)
+                if (is_numeric($searchStr)) {
+                    $q->orWhere('id', (int) $searchStr);
+                } elseif (strlen($searchStr) < 3) {
+                    // If not numeric and less than 3 chars, force empty result to prevent full scan / error
+                    $q->whereRaw('1 = 0');
+                }
             });
         }
 

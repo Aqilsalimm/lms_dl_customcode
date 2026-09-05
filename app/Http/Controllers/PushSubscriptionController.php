@@ -13,7 +13,7 @@ class PushSubscriptionController extends Controller
     public function key(): JsonResponse
     {
         return response()->json([
-            'publicKey' => config('webpush.vapid.public_key', env('VAPID_PUBLIC_KEY'))
+            'publicKey' => config('webpush.vapid.public_key'),
         ]);
     }
 

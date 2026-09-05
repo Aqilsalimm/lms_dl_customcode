@@ -39,8 +39,8 @@ class ConditionalCertificateTest extends TestCase
             'status' => 'published',
         ]);
 
-        $module1 = Module::create(['course_id' => $course->id, 'title' => 'Sesi 1: Dasar', 'sort_order' => 0]);
-        $module2 = Module::create(['course_id' => $course->id, 'title' => 'Sesi 2: Lanjutan', 'sort_order' => 1]);
+        $module1 = Module::create(['course_id' => $course->id, 'title' => 'Sesi 1: Dasar', 'sort_order' => 0, 'has_session_certificate' => true]);
+        $module2 = Module::create(['course_id' => $course->id, 'title' => 'Sesi 2: Lanjutan', 'sort_order' => 1, 'has_session_certificate' => true]);
 
         $lesson1 = Lesson::create(['module_id' => $module1->id, 'title' => 'Lesson 1', 'duration_minutes' => 10, 'sort_order' => 0]);
         $lesson2 = Lesson::create(['module_id' => $module2->id, 'title' => 'Lesson 2', 'duration_minutes' => 10, 'sort_order' => 0]);

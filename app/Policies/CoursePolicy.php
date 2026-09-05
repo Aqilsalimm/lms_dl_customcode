@@ -112,4 +112,26 @@ class CoursePolicy
 
         return true;
     }
+
+    public function learn(User $user, Course $model): bool
+    {
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        if ($user->isInstructor() && isset($model->instructor_id) && $model->instructor_id === $user->id) {
+            return true;
+        }
+
+        $allowAccessWithoutEnroll = filter_var(
+            \App\Models\Setting::getValue('course_content_access'),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
+        if ($allowAccessWithoutEnroll && ($user->isAdmin() || $user->isInstructor())) {
+            return true;
+        }
+
+        return $user->hasEnrolled($model->id);
+    }
 }

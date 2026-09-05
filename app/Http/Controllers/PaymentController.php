@@ -47,7 +47,7 @@ class PaymentController extends Controller
                 }
             }
         } else {
-            $item = Bundle::findOrFail($request->buyable_id);
+            $item = Bundle::with('courses')->findOrFail($request->buyable_id);
             $buyableClass = Bundle::class;
 
             foreach($item->courses as $c) {
@@ -299,10 +299,7 @@ class PaymentController extends Controller
      */
     public function downloadInvoice(Order $order)
     {
-        $user = auth()->user();
-        if ($order->user_id !== $user->id && $user->role !== 'admin') {
-            abort(403, 'Anda tidak memiliki akses ke invoice ini.');
-        }
+        $this->authorize('view', $order);
 
         if ($order->status !== 'completed') {
             abort(400, 'Invoice belum tersedia karena transaksi belum selesai.');
@@ -323,10 +320,7 @@ class PaymentController extends Controller
      */
     public function cancel(Order $order)
     {
-        $user = auth()->user();
-        if ($order->user_id !== $user->id) {
-            abort(403, 'Unauthorized access to this order.');
-        }
+        $this->authorize('cancel', $order);
 
         if ($order->status !== 'pending') {
             return back()->with('error', 'Hanya pesanan pending yang dapat dibatalkan.');

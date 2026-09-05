@@ -173,18 +173,21 @@ const formatDate = (dateString) => {
             </div>
 
             <!-- Pagination -->
-            <div v-if="discussions.links.length > 3" class="mt-10 flex justify-center gap-2">
-                <Link 
-                    v-for="(link, k) in discussions.links" 
-                    :key="k"
-                    :href="link.url || '#'"
-                    v-html="link.label"
-                    :class="[
-                        'px-5 py-2.5 rounded-xl text-sm font-black transition-all',
-                        link.active ? 'bg-[#1A2B49] text-white shadow-lg' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-100',
-                        !link.url ? 'opacity-50 cursor-not-allowed' : ''
-                    ]"
-                />
+            <div v-if="discussions.next_page_url || discussions.prev_page_url" class="mt-10 flex justify-center gap-2">
+                <Link
+                    v-if="discussions.prev_page_url"
+                    :href="discussions.prev_page_url"
+                    class="px-5 py-2.5 rounded-xl text-sm font-black transition-all bg-white text-slate-500 hover:bg-slate-50 border border-slate-100"
+                >
+                    &laquo; Sebelumnya
+                </Link>
+                <Link
+                    v-if="discussions.next_page_url"
+                    :href="discussions.next_page_url"
+                    class="px-5 py-2.5 rounded-xl text-sm font-black transition-all bg-[#1A2B49] text-white shadow-lg"
+                >
+                    Selanjutnya &raquo;
+                </Link>
             </div>
         </DashboardWrapper>
     </GuestLayout>

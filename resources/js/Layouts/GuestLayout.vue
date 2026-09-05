@@ -46,17 +46,31 @@ const isScrolled = ref(false);
 const isLangOpen = ref(false);
 const isMobileProfileMenuOpen = ref(false);
 const page = usePage();
+const pageProps = computed(() => page.props);
+const isLoggedIn = computed(() => !!page.props.auth?.user);
 const currentLocale = computed(() => page.props.locale || 'id');
 
 const handleScroll = () => {
   isScrolled.value = window.scrollY > 20;
 };
 
-let loginPromptInterval = null;
+let loginPromptTimeout = null;
+
+const handlePageShow = (event) => {
+  if (event.persisted) {
+    if (loginPromptTimeout) {
+      clearTimeout(loginPromptTimeout);
+      loginPromptTimeout = null;
+    }
+    // Re-validate and reload page props on BF Cache restoration
+    router.reload({ only: ['auth', 'flash', 'ziggy'] });
+  }
+};
 
 onMounted(() => {
   if (typeof window !== 'undefined') {
     window.addEventListener('scroll', handleScroll);
+    window.addEventListener('pageshow', handlePageShow);
     handleScroll(); // Trigger initial check
 
     window.addEventListener('open-login-modal', () => {
@@ -66,11 +80,19 @@ onMounted(() => {
     // Anti double-popup #1: the periodic prompt only ever fires ONCE per page
     // lifetime. Previously it would reopen the modal every 20s and combine
     // with the auth_timeout Swal to produce two overlapping popups.
-    if (!sessionStorage.getItem(`swal_seen:${SWAL_POPUP_VERSION}:periodic_prompt`)) {
+    // FIX: Do not trigger random popups if user is already on Auth pages
+    const isAuthPage = window.location.pathname.startsWith('/login') ||
+                       window.location.pathname.startsWith('/register') ||
+                       window.location.pathname.startsWith('/forgot-password') ||
+                       window.location.pathname.startsWith('/reset-password');
+
+    if (!isAuthPage && !sessionStorage.getItem(`swal_seen:${SWAL_POPUP_VERSION}:periodic_prompt`)) {
       sessionStorage.setItem(`swal_seen:${SWAL_POPUP_VERSION}:periodic_prompt`, '1');
       if (!isLoggedIn.value && !isLoginModalOpen.value) {
-        setTimeout(() => {
-          if (!isLoggedIn.value && !isLoginModalOpen.value) {
+        loginPromptTimeout = setTimeout(() => {
+          // Double check the path just in case they navigated via Inertia
+          const currentIsAuth = window.location.pathname.startsWith('/login') || window.location.pathname.startsWith('/register');
+          if (!isLoggedIn.value && !isLoginModalOpen.value && !currentIsAuth) {
             isLoginModalOpen.value = true;
           }
         }, 20000);
@@ -147,7 +169,8 @@ onMounted(() => {
 onUnmounted(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('scroll', handleScroll);
-    if (loginPromptInterval) clearInterval(loginPromptInterval);
+    window.removeEventListener('pageshow', handlePageShow);
+    if (loginPromptTimeout) clearTimeout(loginPromptTimeout);
   }
 });
 
@@ -223,9 +246,7 @@ watch(
 
 
 
-// Get auth details from Inertia page props
-const pageProps = usePage().props;
-const isLoggedIn = computed(() => !!pageProps.auth?.user);
+// (pageProps and isLoggedIn are defined at the top of script setup)
 
 // --- DATA MEGA MENU LAYANAN ---
 const layananMenu = computed(() => [
@@ -759,7 +780,7 @@ const Logo = () => {
             <button 
               type="submit"
               :disabled="loginForm.processing"
-              class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all text-center mt-3"
+              class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all text-center mt-3 select-none touch-manipulation"
             >
               {{ $t('login') || 'Sign In' }}
             </button>
@@ -781,7 +802,7 @@ const Logo = () => {
           <!-- BLACK GOOGLE SIGN IN BUTTON: Masuk / Daftar -->
           <button 
             @click="triggerGoogleOAuth"
-            class="w-full bg-[#000000] hover:bg-[#1A2B49] text-white py-3.5 rounded-full font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 shadow-md"
+            class="w-full bg-[#000000] hover:bg-[#1A2B49] text-white py-3.5 rounded-full font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 shadow-md select-none touch-manipulation"
           >
             <!-- Google Color Icon inside button -->
             <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -333,6 +333,7 @@ const toggleComplete = () => {
 
   const lId = activeLesson.value.id;
   let list = [...completedLessons.value];
+  const wasCompleted = isCourseCompleted.value;
 
   if (list.includes(lId)) {
     list = list.filter(id => id !== lId);
@@ -358,6 +359,22 @@ const toggleComplete = () => {
       }
       if (response.data.completedAt) {
         showCompletedOverlay.value = true;
+
+        // If it just became completed in this click
+        if (!wasCompleted) {
+          const hasAnyPostTest = props.course.assessments && props.course.assessments.some(a => a.type === 'post_test');
+          if (!hasAnyPostTest) {
+            import('sweetalert2').then(({ default: Swal }) => {
+              Swal.fire({
+                icon: 'info',
+                title: 'Post Test Tidak Diperlukan',
+                text: 'Selamat! Seluruh materi telah diselesaikan. Anda tidak perlu mengikuti Post-Test untuk kelas ini. Sertifikat Anda sudah siap.',
+                confirmButtonColor: '#264790',
+                confirmButtonText: 'Tutup'
+              });
+            });
+          }
+        }
       } else {
         showCompletedOverlay.value = false;
       }
@@ -378,10 +395,24 @@ const totalQuizzes = computed(() => {
 });
 
 const isCourseCompleted = computed(() => {
+  // If backend explicitly says it's completed, it's completed.
+  if (showCompletedOverlay.value) return true;
+
   const hasLessons = totalLessons.value > 0;
   const lessonsDone = completedLessons.value.length >= totalLessons.value;
   const quizzesDone = completedQuizzes.value.length >= totalQuizzes.value;
-  return lessonsDone && quizzesDone && (hasLessons || totalQuizzes.value > 0);
+
+  let allPostTestsDone = true;
+  if (props.course.modules) {
+    props.course.modules.forEach(mod => {
+      const hasPostTest = props.course.assessments && props.course.assessments.some(a => a.type === 'post_test');
+      if (hasPostTest && !mod.is_post_completed) {
+        allPostTestsDone = false;
+      }
+    });
+  }
+
+  return lessonsDone && quizzesDone && allPostTestsDone && (hasLessons || totalQuizzes.value > 0);
 });
 
 // Tool tag mapper based on course name or dynamic tools array
@@ -665,6 +696,7 @@ const submitQuiz = () => {
   if (!activeQuiz.value || !activeQuiz.value.questions) return;
   
   const qId = activeQuiz.value.id;
+  const wasCompleted = isCourseCompleted.value;
   
   axios.post(`/courses/${props.course.slug}/quizzes/${qId}/toggle-complete`, {
     answers: quizAnswers.value
@@ -691,6 +723,21 @@ const submitQuiz = () => {
 
         if (response.data.completedAt) {
           showCompletedOverlay.value = true;
+
+          if (!wasCompleted) {
+            const hasAnyPostTest = props.course.assessments && props.course.assessments.some(a => a.type === 'post_test');
+            if (!hasAnyPostTest) {
+              import('sweetalert2').then(({ default: Swal }) => {
+                Swal.fire({
+                  icon: 'info',
+                  title: 'Post Test Tidak Diperlukan',
+                  text: 'Selamat! Seluruh materi telah diselesaikan. Anda tidak perlu mengikuti Post-Test untuk kelas ini. Sertifikat Anda sudah siap.',
+                  confirmButtonColor: '#264790',
+                  confirmButtonText: 'Tutup'
+                });
+              });
+            }
+          }
         } else {
           showCompletedOverlay.value = false;
         }

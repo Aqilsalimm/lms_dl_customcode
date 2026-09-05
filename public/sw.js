@@ -36,8 +36,13 @@ self.addEventListener('fetch', e => {
         return;
     }
 
+    const isInertia = e.request.headers.get('x-inertia') ||
+                      e.request.headers.get('X-Inertia') ||
+                      (e.request.headers.get('accept') && e.request.headers.get('accept').includes('json'));
+
     // Bypass Service Worker caching/interception completely for dynamic, auth, dashboard, courses, and Inertia routes
     if (
+        url.pathname === '/' ||
         url.pathname.startsWith('/courses') ||
         url.pathname.startsWith('/dashboard') ||
         url.pathname.startsWith('/live-classes') ||
@@ -50,12 +55,19 @@ self.addEventListener('fetch', e => {
         url.pathname.startsWith('/forgot-password') ||
         url.pathname.startsWith('/reset-password') ||
         url.pathname.startsWith('/api') ||
-        e.request.headers.has('x-inertia') ||
-        e.request.headers.get('x-inertia') ||
-        e.request.headers.get('X-Inertia') ||
-        (e.request.headers.get('accept') && e.request.headers.get('accept').includes('json'))
+        isInertia
     ) {
         return; // Let the browser handle it directly via normal network requests
+    }
+
+    // Navigation requests: always fetch from network, NEVER serve cached HTML (fallback only to /offline.html on network failure)
+    if (e.request.mode === 'navigate') {
+        e.respondWith(
+            fetch(e.request).catch(() => {
+                return caches.match('/offline.html');
+            })
+        );
+        return;
     }
 
     // Static assets: Stale-While-Revalidate (Cache First, fetch & update in background)
@@ -94,12 +106,10 @@ self.addEventListener('fetch', e => {
         return;
     }
 
-    // Dynamic HTML/Navigation requests: always fetch from network, DO NOT cache HTML in Service Worker
+    // Fallback: fetch from network, fallback to offline.html on network error
     e.respondWith(
         fetch(e.request).catch(() => {
-            return caches.match(e.request).then(response => {
-                return response || caches.match('/offline.html');
-            });
+            return caches.match('/offline.html');
         })
     );
 });

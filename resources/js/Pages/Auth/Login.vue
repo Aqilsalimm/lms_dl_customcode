@@ -105,7 +105,7 @@ const triggerGoogleOAuth = () => {
                     <button 
                       type="submit"
                       :disabled="form.processing"
-                      class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all text-center mt-3"
+                      class="w-full bg-[#264790] hover:bg-[#44A6D9] text-white py-4 rounded-2xl font-extrabold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all text-center mt-3 select-none touch-manipulation"
                     >
                       Sign In
                     </button>
@@ -126,7 +126,7 @@ const triggerGoogleOAuth = () => {
                   <!-- Google Sign In Button -->
                   <button 
                     @click="triggerGoogleOAuth"
-                    class="w-full bg-[#000000] hover:bg-[#1A2B49] text-white py-3.5 rounded-full font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 shadow-md"
+                    class="w-full bg-[#000000] hover:bg-[#1A2B49] text-white py-3.5 rounded-full font-extrabold text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 shadow-md select-none touch-manipulation"
                   >
                     <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>

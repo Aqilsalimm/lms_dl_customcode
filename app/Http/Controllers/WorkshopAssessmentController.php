@@ -369,6 +369,10 @@ class WorkshopAssessmentController extends Controller
             abort(403, 'Anda tidak memiliki akses ke percobaan tes ini.');
         }
 
+        $attempt->loadMissing(['user', 'assessment.course']);
+
+        $assessment = $attempt->assessment;
+
         if ($attempt->status === 'completed') {
             return response()->json(['message' => 'Anda sudah menyelesaikan tes ini.'], 403);
         }
@@ -435,14 +439,12 @@ class WorkshopAssessmentController extends Controller
                 'title' => 'Certificate of Completion',
             ]);
 
-            \App\Models\UserCertificate::firstOrCreate([
-                'user_id' => $attempt->user_id,
-                'course_id' => $assessment->course_id,
-                'certificate_id' => $certificate->id,
-            ], [
-                'certificate_code' => 'CERT-' . strtoupper(uniqid()) . '-' . $attempt->user_id,
-                'claimed_at' => Carbon::now(),
-            ]);
+            $user = $attempt->user ?: \App\Models\User::find($attempt->user_id);
+            $course = $assessment->course ?: \App\Models\Course::find($assessment->course_id);
+
+            if ($user && $course) {
+                app(\App\Services\Certificates\CertificateIssuanceService::class)->issue($user, $course, $certificate, $enrollment);
+            }
         }
 
         // Dispatch Broadcast Event for Real-Time Exam Report Analytics
@@ -711,17 +713,40 @@ class WorkshopAssessmentController extends Controller
         }
 
         // 4. Student Progress Table (All enrolled students and scores)
-        $enrolledStudents = $course->enrollments()->with('user')->get()->map(function ($enrollment) use ($preTest, $postTest) {
+        $enrollments = $course->enrollments()->with('user')->get();
+        $userIds = $enrollments->pluck('user_id')->toArray();
+
+        $preAttempts = [];
+        if ($preTest) {
+            $preAttempts = \App\Models\WorkshopAssessmentAttempt::where('assessment_id', $preTest->id)
+                ->whereIn('user_id', $userIds)
+                ->where('status', 'completed')
+                ->get()
+                ->groupBy('user_id')
+                ->map(function ($attempts) {
+                    return $attempts->sortByDesc('total_score')->first();
+                });
+        }
+
+        $postAttempts = [];
+        if ($postTest) {
+            $postAttempts = \App\Models\WorkshopAssessmentAttempt::where('assessment_id', $postTest->id)
+                ->whereIn('user_id', $userIds)
+                ->where('status', 'completed')
+                ->get()
+                ->groupBy('user_id')
+                ->map(function ($attempts) {
+                    return $attempts->sortByDesc('total_score')->first();
+                });
+        }
+
+        $enrolledStudents = $enrollments->map(function ($enrollment) use ($preTest, $postTest, $preAttempts, $postAttempts) {
             $user = $enrollment->user;
 
             $preScore = null;
             $preStatus = 'Belum Mengambil';
             if ($preTest) {
-                $bestPre = $preTest->attempts()
-                    ->where('user_id', $user->id)
-                    ->where('status', 'completed')
-                    ->orderByDesc('total_score')
-                    ->first();
+                $bestPre = $preAttempts[$user->id] ?? null;
                 if ($bestPre) {
                     $preScore = $bestPre->total_score;
                     $preStatus = $bestPre->is_passed ? 'Lulus' : 'Gagal';
@@ -731,11 +756,7 @@ class WorkshopAssessmentController extends Controller
             $postScore = null;
             $postStatus = 'Belum Mengambil';
             if ($postTest) {
-                $bestPost = $postTest->attempts()
-                    ->where('user_id', $user->id)
-                    ->where('status', 'completed')
-                    ->orderByDesc('total_score')
-                    ->first();
+                $bestPost = $postAttempts[$user->id] ?? null;
                 if ($bestPost) {
                     $postScore = $bestPost->total_score;
                     $postStatus = $bestPost->is_passed ? 'Lulus' : 'Gagal';

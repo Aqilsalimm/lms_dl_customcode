@@ -4,14 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\Certificate;
 use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\Module;
 use App\Models\UserCertificate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
+use App\Services\Certificates\CertificateIssuanceService;
+use App\Services\Certificates\CertificateIdentityPresenter;
+
 class CertificateController extends Controller
 {
+    public function __construct(
+        private readonly CertificateIssuanceService $issuanceService,
+        private readonly CertificateIdentityPresenter $presenter
+    ) {}
     /**
      * Download Session Certificate PDF using DomPDF
      */
@@ -23,12 +31,42 @@ class CertificateController extends Controller
         }
 
         // 1. Validation: Ensure user has completed this module
+        if (!$module->has_session_certificate) {
+            abort(404, 'Sertifikat sesi tidak diaktifkan untuk bab ini.');
+        }
+
         if (!$module->isCompletedBy($user)) {
             abort(403, 'Selesaikan seluruh materi dan kuis pada bab ini terlebih dahulu untuk mengunduh sertifikat.');
         }
 
-        $filename = 'Sertifikat_' . \Illuminate\Support\Str::slug($module->title) . '_' . \Illuminate\Support\Str::slug($user->name) . '.pdf';
-        $storagePath = 'certificates/sessions/' . $user->id . '_' . $module->id . '.pdf';
+        $module->loadMissing('course');
+        $course = $module->course;
+
+        $cert = Certificate::where('course_id', $module->course_id)
+            ->where('type', 'session')
+            ->whereJsonContains('module_ids', $module->id)
+            ->first();
+
+        if (!$cert) {
+            $cert = Certificate::create([
+                'course_id' => $module->course_id,
+                'type' => 'session',
+                'title' => 'Sertifikat Sesi: ' . $module->title,
+                'module_ids' => [$module->id],
+                'is_active' => true,
+            ]);
+        }
+
+        $enrollment = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $module->course_id)
+            ->first();
+
+        $userCert = $this->issuanceService->issue($user, $course, $cert, $enrollment);
+        $identity = $this->presenter->present($userCert);
+        $studentName = $identity['recipient_name'];
+
+        $filename = 'Sertifikat_' . \Illuminate\Support\Str::slug($module->title) . '_' . \Illuminate\Support\Str::slug($studentName) . '.pdf';
+        $storagePath = 'certificates/sessions/' . $userCert->certificate_code . '.pdf';
 
         if (\Illuminate\Support\Facades\Storage::disk('public')->exists($storagePath)) {
             return response()->download(storage_path('app/public/' . $storagePath), $filename);
@@ -41,13 +79,14 @@ class CertificateController extends Controller
         }
 
         $data = [
-            'studentName' => strtoupper($user->name),
+            'studentName' => strtoupper($studentName),
             'sessionTitle' => $module->title,
             'background' => $bgPath,
             'nameYPosition' => $module->text_name_y_position ?: 44,
             'titleYPosition' => $module->text_title_y_position ?: 56,
-            'certCode' => 'S-CERT-' . strtoupper(\Illuminate\Support\Str::random(4)) . '-' . $module->id . '-' . $user->id,
-            'date' => now()->translatedFormat('d F Y'),
+            'certCode' => $userCert->certificate_code,
+            'date' => $userCert->claimed_at ? $userCert->claimed_at->translatedFormat('d F Y') : now()->translatedFormat('d F Y'),
+            'identity' => $identity,
         ];
 
         // 3. Render PDF via DomPDF
@@ -67,21 +106,24 @@ class CertificateController extends Controller
         $user = auth()->user();
 
         // Fetch course certificates with modules
-        $certificates = Certificate::where('course_id', $course->id)
+        $certificates = Certificate::with('course')
+            ->where('course_id', $course->id)
             ->where('is_active', true)
             ->get();
 
         // If no custom session certificates exist yet, auto-create default Session Certificates for each module
         if ($certificates->isEmpty() && $course->modules()->count() > 0) {
             foreach ($course->modules as $index => $module) {
-                Certificate::create([
-                    'course_id' => $course->id,
-                    'title' => "Sertifikat Sesi " . ($index + 1) . ": " . $module->title,
-                    'type' => 'session',
-                    'module_ids' => [$module->id],
-                    'description' => "Diberikan atas penyelesaian penuh materi dan kuis Sesi " . ($index + 1) . " (" . $module->title . ").",
-                    'is_active' => true,
-                ]);
+                if ($module->has_session_certificate) {
+                    Certificate::create([
+                        'course_id' => $course->id,
+                        'title' => "Sertifikat Sesi " . ($index + 1) . ": " . $module->title,
+                        'type' => 'session',
+                        'module_ids' => [$module->id],
+                        'description' => "Diberikan atas penyelesaian penuh materi dan kuis Sesi " . ($index + 1) . " (" . $module->title . ").",
+                        'is_active' => true,
+                    ]);
+                }
             }
 
             // Also create Course Completion Certificate if none exists
@@ -94,10 +136,25 @@ class CertificateController extends Controller
                 'is_active' => true,
             ]);
 
-            $certificates = Certificate::where('course_id', $course->id)
+            $certificates = Certificate::with('course')
+                ->where('course_id', $course->id)
                 ->where('is_active', true)
                 ->get();
         }
+
+        // Filter out session certificates if the module's has_session_certificate flag is false
+        // This handles cases where the toggle was turned off after the certificate was already created in DB
+        $courseModules = $course->modules->keyBy('id');
+        $certificates = $certificates->filter(function ($cert) use ($courseModules) {
+            if ($cert->type === 'session') {
+                $moduleId = $cert->module_ids[0] ?? null;
+                if ($moduleId && isset($courseModules[$moduleId])) {
+                    return (bool) $courseModules[$moduleId]->has_session_certificate;
+                }
+                return false;
+            }
+            return true;
+        })->values();
 
         $userClaimed = $user ? UserCertificate::where('user_id', $user->id)
             ->where('course_id', $course->id)
@@ -153,18 +210,8 @@ class CertificateController extends Controller
             ], 403);
         }
 
-        // Generate or fetch claimed certificate
-        $userCert = UserCertificate::firstOrCreate(
-            [
-                'user_id' => $user->id,
-                'certificate_id' => $certificate->id,
-            ],
-            [
-                'course_id' => $course->id,
-                'certificate_code' => 'CERT-' . strtoupper(Str::random(4)) . '-' . rand(1000, 9999),
-                'claimed_at' => now(),
-            ]
-        );
+        // Generate or fetch claimed certificate using unified issuance service
+        $userCert = $this->issuanceService->issue($user, $course, $certificate);
 
         return response()->json([
             'message' => 'Sertifikat berhasil diklaim dan dibuka!',
@@ -228,10 +275,13 @@ class CertificateController extends Controller
         // Search by user_certificate code or by cert id preview
         $userCert = UserCertificate::with(['user', 'course.instructor', 'certificate'])->where('certificate_code', $code)->first();
 
+        $identityData = [];
+
         if ($userCert) {
             $course = $userCert->course;
             $certTitle = $userCert->certificate ? $userCert->certificate->title : ("Sertifikat Kelulusan " . $course->title);
-            $studentName = $userCert->user->name;
+            $identityData = $this->presenter->present($userCert);
+            $studentName = $identityData['recipient_name'];
             $claimedAt = $userCert->claimed_at ? $userCert->claimed_at->translatedFormat('d F Y') : now()->translatedFormat('d F Y');
             $certCode = $userCert->certificate_code;
             $certType = $userCert->certificate ? $userCert->certificate->type : 'course_completion';
@@ -256,6 +306,14 @@ class CertificateController extends Controller
             $studentName = $user->name;
             $claimedAt = now()->translatedFormat('d F Y');
             $certCode = 'PREVIEW-CERT-' . rand(1000, 9999);
+            $identityData = [
+                'recipient_name' => $studentName,
+                'organization_name' => null,
+                'member_number' => null,
+                'division' => null,
+                'position' => null,
+                'is_legacy_identity_fallback' => true,
+            ];
         }
 
         $settings = [
@@ -274,6 +332,7 @@ class CertificateController extends Controller
             'settings' => $settings,
             'completedAt' => $claimedAt,
             'studentName' => $studentName,
+            'identity' => $identityData,
         ]);
     }
 }

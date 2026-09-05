@@ -87,11 +87,11 @@ const hierarchicalCategories = computed(() => {
   return list;
 });
 // Centralized AJAX Fetcher Function
-const fetchCoursesAjax = async (page = 1) => {
+const fetchCoursesAjax = async (cursor = null) => {
   isLoading.value = true;
   try {
     const params = {
-      page: page,
+      cursor: cursor,
       search: searchQuery.value || undefined,
       category: selectedCategorySlug.value || undefined,
       type: courseTypeFilter.value !== 'Semua Mode' ? courseTypeFilter.value : undefined,
@@ -101,9 +101,7 @@ const fetchCoursesAjax = async (page = 1) => {
     const res = await axios.get('/api/courses/search', { params });
     if (res.data && res.data.success) {
       coursesList.value = res.data.data;
-      if (res.data.pagination) {
-        paginationData.value = res.data.pagination;
-      }
+      paginationData.value = res.data.meta || res.data.pagination;
 
       // Update URL query string silently without reloading page or crashing Inertia
       const urlParams = new URLSearchParams();
@@ -111,7 +109,7 @@ const fetchCoursesAjax = async (page = 1) => {
       if (params.category) urlParams.set('category', params.category);
       if (params.type) urlParams.set('type', params.type);
       if (params.level) urlParams.set('level', params.level);
-      if (page > 1) urlParams.set('page', page);
+      if (params.cursor) urlParams.set('cursor', params.cursor);
 
       const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
       window.history.pushState({ path: newUrl }, '', newUrl);
@@ -376,21 +374,21 @@ const gridColsClass = computed(() => {
           </template>
 
           <!-- Pagination Buttons -->
-          <div v-if="paginationData?.links && paginationData.last_page > 1" class="col-span-full flex justify-center gap-2 mt-8 w-full">
+          <div v-if="paginationData?.next_page_url || paginationData?.prev_page_url" class="col-span-full flex justify-center gap-4 mt-8 w-full">
             <button
-              v-for="(link, lIdx) in paginationData.links"
-              :key="lIdx"
-              @click="link.url ? fetchCoursesAjax(link.url.includes('page=') ? link.url.split('page=')[1].split('&')[0] : 1) : null"
-              v-html="link.label"
-              :class="[
-                'px-4 py-2 text-xs font-bold rounded-xl border transition-all',
-                link.active 
-                  ? 'bg-[#264790] text-white border-[#264790]' 
-                  : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200',
-                !link.url ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-              ]"
-              :disabled="!link.url"
-            />
+              v-if="paginationData.prev_page_url"
+              @click="fetchCoursesAjax(paginationData.prev_page_url.split('cursor=')[1]?.split('&')[0])"
+              class="px-6 py-3 text-sm font-bold rounded-xl border transition-all bg-white hover:bg-slate-50 text-slate-700 border-slate-200 cursor-pointer"
+            >
+              &laquo; Sebelumnya
+            </button>
+            <button
+              v-if="paginationData.next_page_url"
+              @click="fetchCoursesAjax(paginationData.next_page_url.split('cursor=')[1]?.split('&')[0])"
+              class="px-6 py-3 text-sm font-bold rounded-xl border transition-all bg-[#264790] hover:bg-[#1f3a75] text-white border-[#264790] cursor-pointer"
+            >
+              Selanjutnya &raquo;
+            </button>
           </div>
 
         </div>

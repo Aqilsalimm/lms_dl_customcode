@@ -34,6 +34,8 @@ class RegisteredUserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
+            'gender' => ['nullable', 'string', 'in:Laki-laki,Perempuan'],
+            'occupation' => ['nullable', 'string', 'max:50', 'in:Pelajar,Mahasiswa,Karyawan Swasta,PNS,Karyawan BUMN,Freelance,Lainnya'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => 'required|string|in:student,instructor',
             'photo' => 'nullable|image|max:1024',
@@ -66,6 +68,12 @@ class RegisteredUserController extends Controller
             'role' => $request->role,
             'status' => $request->role === 'instructor' ? 'pending' : 'active',
             'photo' => $photoPath ? $photoPath : null,
+        ]);
+
+        $user->profile()->create([
+            'legal_name' => $request->name,
+            'gender' => $request->gender,
+            'occupation' => $request->occupation,
         ]);
 
         event(new Registered($user));

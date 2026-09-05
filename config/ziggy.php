@@ -23,6 +23,7 @@ return [
             'courses.certificates.index', 'courses.certificates.claim', 'certificates.show', 'modules.certificate.download',
             'assessments.show-student', 'assessments.start', 'attempts.submit',
             'payment.validate-coupon', 'billing.suspended', 'verification.send',
+            'onboarding.institutional.show', 'onboarding.institutional.profile.update', 'onboarding.institutional.membership.update',
         ],
         'instructor' => [
             // Student base
@@ -41,6 +42,7 @@ return [
             'courses.certificates.index', 'courses.certificates.claim', 'certificates.show', 'modules.certificate.download',
             'assessments.show-student', 'assessments.start', 'attempts.submit',
             'payment.validate-coupon', 'billing.suspended', 'verification.send',
+            'onboarding.institutional.show', 'onboarding.institutional.profile.update', 'onboarding.institutional.membership.update',
             // Instructor specific
             'course-builder.index', 'course-builder.metadata', 'course-builder.store', 'course-builder.build', 'course-builder.update', 'course-builder.destroy', 'course-builder.import', 'course-builder.students', 'course-builder.trashed', 'course-builder.restore', 'course-builder.force-delete',
             'course-builder.modules.store', 'course-builder.modules.update', 'course-builder.modules.destroy',
@@ -75,6 +77,7 @@ return [
             'courses.certificates.index', 'courses.certificates.claim', 'certificates.show', 'modules.certificate.download',
             'assessments.show-student', 'assessments.start', 'attempts.submit',
             'payment.validate-coupon', 'billing.suspended', 'verification.send',
+            'onboarding.institutional.show', 'onboarding.institutional.profile.update', 'onboarding.institutional.membership.update',
             'course-builder.index', 'course-builder.metadata', 'course-builder.store', 'course-builder.build', 'course-builder.update', 'course-builder.destroy', 'course-builder.import', 'course-builder.students', 'course-builder.trashed', 'course-builder.restore', 'course-builder.force-delete',
             'course-builder.modules.store', 'course-builder.modules.update', 'course-builder.modules.destroy',
             'course-builder.lessons.store', 'course-builder.lessons.update', 'course-builder.lessons.destroy',
@@ -93,6 +96,7 @@ return [
             // Admin specific
             'dashboard.users.manage', 'dashboard.users.approve', 'dashboard.users.reject', 'dashboard.users.role', 'dashboard.users.export',
             'dashboard.users.store', 'dashboard.users.settings.update', 'dashboard.users.destroy', 'dashboard.users.restore',
+            'dashboard.organizations.index', 'dashboard.organizations.store', 'dashboard.organizations.update', 'dashboard.organizations.toggle-active',
             'dashboard.settings', 'dashboard.settings.update',
             'dashboard.admin.withdrawals', 'dashboard.admin.withdrawals.complete', 'dashboard.admin.withdrawals.reject',
             'dashboard.settings.withdrawal-methods', 'dashboard.settings.withdrawal-methods.store', 'dashboard.settings.withdrawal-methods.update', 'dashboard.settings.withdrawal-methods.destroy',

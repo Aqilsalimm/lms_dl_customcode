@@ -18,9 +18,14 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user()->loadMissing('profile');
+        $hasActiveMembership = $user->organizationMemberships()->where('is_active', true)->exists();
+
         return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => session('status'),
+            'hasActiveMembership' => $hasActiveMembership,
+            'profile' => $user->profile,
         ]);
     }
 
@@ -29,13 +34,29 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $validated = $request->validated();
+        $user = $request->user();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $user->fill([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+        ]);
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $user->save();
+
+        if (isset($validated['gender']) || isset($validated['occupation'])) {
+            $user->profile()->updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'gender' => $validated['gender'] ?? null,
+                    'occupation' => $validated['occupation'] ?? null,
+                ]
+            );
+        }
 
         return Redirect::route('profile.edit');
     }

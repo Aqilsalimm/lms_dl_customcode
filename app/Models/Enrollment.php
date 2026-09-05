@@ -11,6 +11,7 @@ class Enrollment extends Model
         'user_id', 
         'course_id', 
         'bundle_id', 
+        'organization_membership_id',
         'status',
         'enrolled_at',
         'expires_at',
@@ -40,6 +41,16 @@ class Enrollment extends Model
     public function bundle(): BelongsTo
     {
         return $this->belongsTo(Bundle::class);
+    }
+
+    public function organizationMembership(): BelongsTo
+    {
+        return $this->belongsTo(OrganizationMembership::class, 'organization_membership_id');
+    }
+
+    public function isInstitutional(): bool
+    {
+        return $this->organization_membership_id !== null;
     }
 
     protected static function booted()

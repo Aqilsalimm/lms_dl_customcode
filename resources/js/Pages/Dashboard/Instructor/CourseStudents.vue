@@ -194,24 +194,22 @@ watch([search, status], () => {
           </div>
 
           <!-- Pagination -->
-          <div v-if="enrollments.links && enrollments.links.length > 3" class="mt-8 flex justify-center">
-            <div class="flex items-center gap-1 bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
-              <template v-for="(link, i) in enrollments.links" :key="i">
-                <Link
-                  v-if="link.url"
-                  :href="link.url"
-                  class="px-4 py-2 text-sm font-bold rounded-xl transition-colors duration-200"
-                  :class="link.active 
-                    ? 'bg-indigo-600 text-white shadow-md' 
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-600'"
-                  v-html="link.label"
-                />
-                <span
-                  v-else
-                  class="px-4 py-2 text-sm font-medium text-slate-400 cursor-not-allowed"
-                  v-html="link.label"
-                />
-              </template>
+          <div v-if="enrollments.next_page_url || enrollments.prev_page_url" class="mt-8 flex justify-center">
+            <div class="flex items-center gap-2 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+              <Link
+                v-if="enrollments.prev_page_url"
+                :href="enrollments.prev_page_url"
+                class="px-5 py-2.5 text-sm font-bold rounded-xl transition-colors duration-200 text-slate-600 hover:bg-slate-50 hover:text-indigo-600"
+              >
+                &laquo; Sebelumnya
+              </Link>
+              <Link
+                v-if="enrollments.next_page_url"
+                :href="enrollments.next_page_url"
+                class="px-5 py-2.5 text-sm font-bold rounded-xl transition-colors duration-200 bg-indigo-600 text-white shadow-md hover:bg-indigo-700"
+              >
+                Selanjutnya &raquo;
+              </Link>
             </div>
           </div>
 

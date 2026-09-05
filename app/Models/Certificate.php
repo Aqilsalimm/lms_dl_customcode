@@ -47,8 +47,10 @@ class Certificate extends Model
             ];
         }
 
+        $this->loadMissing('course');
+
         // Admins and course instructor can always unlock/preview
-        if ($user->isAdmin() || $user->id === $this->course->instructor_id) {
+        if ($user->isAdmin() || ($this->course && $user->id === $this->course->instructor_id)) {
             return [
                 'unlocked' => true,
                 'progress_count' => count($this->module_ids ?? []),

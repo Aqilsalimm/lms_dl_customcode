@@ -10,7 +10,8 @@ const props = defineProps({
     pendingInstructors: Array,
     trashedUsers: Array,
     globalRevenueShare: [String, Number],
-    userManagementSettings: Object
+    userManagementSettings: Object,
+    organizations: Array
 });
 
 const activeTab = ref('pending'); // 'pending', 'all', 'trashed', 'settings'
@@ -19,7 +20,9 @@ const showAddUserModal = ref(false);
 const addUserForm = useForm({
     name: '',
     email: '',
-    role: 'student'
+    role: 'student',
+    affiliation_type: '',
+    organization_name: ''
 });
 
 const submitAddUser = () => {
@@ -497,6 +500,22 @@ const formatDate = (dateString) => {
                             <option value="instructor">Instructor</option>
                         </select>
                         <div v-if="addUserForm.errors.role" class="text-red-500 text-xs mt-1">{{ addUserForm.errors.role }}</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Jenis Afiliasi</label>
+                        <select v-model="addUserForm.affiliation_type" class="w-full border-slate-200 rounded-xl px-4 py-2.5 focus:ring focus:ring-[#264790] focus:border-[#264790]" required>
+                            <option value="" disabled>Pilih Jenis Afiliasi</option>
+                            <option value="Pemerintah">Pemerintah</option>
+                            <option value="Pendidikan">Pendidikan</option>
+                            <option value="Swasta">Swasta</option>
+                            <option value="Lainnya">Lainnya (Umum / Freelance)</option>
+                        </select>
+                        <div v-if="addUserForm.errors.affiliation_type" class="text-red-500 text-xs mt-1">{{ addUserForm.errors.affiliation_type }}</div>
+                    </div>
+                    <div v-if="addUserForm.affiliation_type && addUserForm.affiliation_type !== 'Lainnya'">
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Nama Instansi</label>
+                        <input v-model="addUserForm.organization_name" type="text" placeholder="Contoh: Universitas Indonesia" class="w-full border-slate-200 rounded-xl px-4 py-2.5 focus:ring focus:ring-[#264790] focus:border-[#264790]" required>
+                        <div v-if="addUserForm.errors.organization_name" class="text-red-500 text-xs mt-1">{{ addUserForm.errors.organization_name }}</div>
                     </div>
                 </div>
                 <div class="mt-8 flex justify-end gap-3">

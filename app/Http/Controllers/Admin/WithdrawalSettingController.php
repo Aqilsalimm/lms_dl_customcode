@@ -23,13 +23,13 @@ class WithdrawalSettingController extends Controller
     {
         abort_unless(auth()->user()->isAdmin(), 403, 'Unauthorized access.');
 
-        $request->validate([
+        $validated = $request->validate([
             'type' => 'required|in:bank,ewallet',
             'name' => 'required|string|max:255',
             'is_active' => 'boolean',
         ]);
 
-        WithdrawalMethod::create($request->all());
+        WithdrawalMethod::create($validated);
 
         return back()->with('success', 'Withdrawal method added.');
     }
@@ -38,13 +38,13 @@ class WithdrawalSettingController extends Controller
     {
         abort_unless(auth()->user()->isAdmin(), 403, 'Unauthorized access.');
 
-        $request->validate([
+        $validated = $request->validate([
             'type' => 'required|in:bank,ewallet',
             'name' => 'required|string|max:255',
             'is_active' => 'boolean',
         ]);
 
-        $method->update($request->all());
+        $method->update($validated);
 
         return back()->with('success', 'Withdrawal method updated.');
     }

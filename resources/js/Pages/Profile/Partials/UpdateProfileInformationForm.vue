@@ -12,13 +12,21 @@ defineProps({
     status: {
         type: String,
     },
+    profile: {
+        type: Object,
+        default: () => ({}),
+    }
 });
 
 const user = usePage().props.auth.user;
+const pageProps = usePage().props;
+const profileData = pageProps.profile || {};
 
 const form = useForm({
     name: user.name,
     email: user.email,
+    gender: profileData.gender || '',
+    occupation: profileData.occupation || '',
 });
 
 const photoForm = useForm({
@@ -107,7 +115,7 @@ const deletePhoto = () => {
             class="mt-6 space-y-6"
         >
             <div>
-                <InputLabel for="name" value="Name" />
+                <InputLabel for="name" value="Username / Nama Panggilan" />
 
                 <TextInput
                     id="name"
@@ -135,6 +143,43 @@ const deletePhoto = () => {
                 />
 
                 <InputError class="mt-2" :message="form.errors.email" />
+            </div>
+
+            <div>
+                <InputLabel for="gender" value="Jenis Kelamin" />
+
+                <select
+                    id="gender"
+                    v-model="form.gender"
+                    class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                >
+                    <option value="" disabled>Pilih Jenis Kelamin</option>
+                    <option value="Laki-laki">Laki-laki</option>
+                    <option value="Perempuan">Perempuan</option>
+                </select>
+
+                <InputError class="mt-2" :message="form.errors.gender" />
+            </div>
+
+            <div>
+                <InputLabel for="occupation" value="Status / Pekerjaan" />
+
+                <select
+                    id="occupation"
+                    v-model="form.occupation"
+                    class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                >
+                    <option value="" disabled>Pilih Status / Pekerjaan</option>
+                    <option value="Pelajar">Pelajar</option>
+                    <option value="Mahasiswa">Mahasiswa</option>
+                    <option value="Karyawan Swasta">Karyawan Swasta</option>
+                    <option value="PNS">PNS</option>
+                    <option value="Karyawan BUMN">Karyawan BUMN</option>
+                    <option value="Freelance">Freelance</option>
+                    <option value="Lainnya">Lainnya</option>
+                </select>
+
+                <InputError class="mt-2" :message="form.errors.occupation" />
             </div>
 
             <div v-if="mustVerifyEmail && user.email_verified_at === null">

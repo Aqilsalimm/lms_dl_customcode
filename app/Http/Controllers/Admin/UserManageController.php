@@ -54,12 +54,15 @@ class UserManageController extends Controller
             'silent_delete' => filter_var(Setting::getValue('user_silent_delete') ?: 'false', FILTER_VALIDATE_BOOLEAN),
         ];
 
+        $organizations = \App\Models\Organization::where('is_active', true)->get(['id', 'name', 'code']);
+
         return Inertia::render('Dashboard/Admin/UserManage', [
             'users' => $users,
             'pendingInstructors' => $pendingInstructors,
             'trashedUsers' => $trashedUsers,
             'globalRevenueShare' => $revenueShare,
             'userManagementSettings' => $userManagementSettings,
+            'organizations' => $organizations,
         ]);
     }
 

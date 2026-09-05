@@ -17,16 +17,17 @@ class BlogController extends Controller
     {
         $query = Blog::where('status', 'published')->with('user');
 
-        if ($request->has('search') && !empty($request->search)) {
-            $query->where(function($q) use ($request) {
-                $q->where('title', 'like', '%' . $request->search . '%')
-                  ->orWhere('content', 'like', '%' . $request->search . '%')
-                  ->orWhere('category', 'like', '%' . $request->search . '%')
-                  ->orWhere('tags', 'like', '%' . $request->search . '%');
-            });
+        if ($request->has('search') && !empty(trim($request->search))) {
+            $search = trim($request->search);
+            if (strlen($search) < 3) {
+                // If search is less than 3 chars, return empty result to prevent full table scan
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereFullText(['title', 'content', 'category', 'tags'], $search);
+            }
         }
 
-        $blogs = $query->latest()->paginate(12);
+        $blogs = $query->latest()->cursorPaginate(12);
 
         return Inertia::render('Blogs/Index', [
             'blogs' => $blogs,

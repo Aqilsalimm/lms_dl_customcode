@@ -61,6 +61,14 @@ Route::get('/', function () {
     ]);
 });
 
+use App\Http\Controllers\Onboarding\InstitutionalOnboardingController;
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/onboarding/institutional', [InstitutionalOnboardingController::class, 'show'])->name('onboarding.institutional.show');
+    Route::patch('/onboarding/institutional/profile', [InstitutionalOnboardingController::class, 'updateProfile'])->name('onboarding.institutional.profile.update');
+    Route::patch('/onboarding/institutional/memberships/{membership}', [InstitutionalOnboardingController::class, 'updateMembership'])->name('onboarding.institutional.membership.update');
+});
+
 // Dashboard Route pointing to DashboardController
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth'])
@@ -248,7 +256,7 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::get('/checkout', [CartController::class, 'checkoutPage'])->name('cart.checkout-page');
     Route::get('/checkout/resume/{order}', [CartController::class, 'resumeCheckout'])->name('checkout.resume');
     Route::get('/orders/{order}/invoice', [PaymentController::class, 'downloadInvoice'])->name('orders.invoice');
-    Route::get('/courses/{course:slug}/learn', [CourseController::class, 'learn'])->middleware('active.subscription')->name('courses.learn');
+    Route::get('/courses/{course:slug}/learn', [CourseController::class, 'learn'])->middleware(['active.subscription', 'institutional.profile'])->name('courses.learn');
     Route::get('/courses/{course:slug}/lessons/{lesson}/content', [CourseController::class, 'getLessonContent'])->middleware('active.subscription')->name('courses.lessons.content');
     Route::post('/courses/{course:slug}/lessons/{lesson}/toggle-complete', [CourseController::class, 'toggleLessonComplete'])->name('courses.lessons.complete');
     Route::post('/courses/{course:slug}/quizzes/{quiz}/toggle-complete', [CourseController::class, 'toggleQuizComplete'])->name('courses.quizzes.complete');
@@ -281,12 +289,6 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::post('/discussions', [DiscussionController::class, 'store'])->name('discussions.store');
     Route::post('/discussions/{discussion}/resolve', [DiscussionController::class, 'toggleResolved'])->name('discussions.resolve');
     Route::get('/dashboard/qna', [DiscussionController::class, 'instructorInbox'])->name('dashboard.qna');
-    
-    // E-Commerce & Engagement: Wishlist
-    Route::post('/wishlist/toggle', [\App\Http\Controllers\WishlistController::class, 'toggle'])->name('wishlist.toggle');
-    
-    // E-Commerce & Engagement: Review
-    Route::post('/courses/{slug}/reviews', [\App\Http\Controllers\ReviewController::class, 'store'])->name('reviews.store');
 
     // Admin/Instructor Course Gifting Routes
     Route::get('/dashboard/students/search', [\App\Http\Controllers\CourseGiftController::class, 'searchStudents'])->name('dashboard.students.search');
@@ -307,6 +309,12 @@ Route::get('/billing/suspended', [BillingController::class, 'suspended'])->middl
     Route::put('/live-classes/{liveClass}', [\App\Http\Controllers\LiveClassController::class, 'update'])->name('live-classes.update');
     Route::delete('/live-classes/{liveClass}', [\App\Http\Controllers\LiveClassController::class, 'destroy'])->name('live-classes.destroy');
     Route::post('/live-classes/{liveClass}/attendance', [\App\Http\Controllers\LiveClassController::class, 'selectAttendance'])->middleware(['throttle:10,1'])->name('live-classes.select-attendance');
+
+    // Admin Organizations Management
+    Route::get('/dashboard/organizations', [\App\Http\Controllers\Admin\OrganizationController::class, 'index'])->name('dashboard.organizations.index');
+    Route::post('/dashboard/organizations', [\App\Http\Controllers\Admin\OrganizationController::class, 'store'])->name('dashboard.organizations.store');
+    Route::put('/dashboard/organizations/{organization}', [\App\Http\Controllers\Admin\OrganizationController::class, 'update'])->name('dashboard.organizations.update');
+    Route::post('/dashboard/organizations/{organization}/toggle-active', [\App\Http\Controllers\Admin\OrganizationController::class, 'toggleActive'])->name('dashboard.organizations.toggle-active');
 
     // Web Push Subscriptions
     Route::get('/push-subscriptions/key', [\App\Http\Controllers\PushSubscriptionController::class, 'key'])->name('push.key');

@@ -135,8 +135,14 @@ class CourseController extends Controller
         }
 
         // Filter by Search Query
-        if ($request->has('search') && !empty($request->search)) {
-            $query->where('title', 'like', '%' . $request->search . '%');
+        if ($request->has('search') && !empty(trim($request->search))) {
+            $search = trim($request->search);
+            if (strlen($search) < 3) {
+                // If search is less than 3 chars, return empty query to prevent crash
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereFullText(['title', 'description'], $search);
+            }
         }
 
         $perPage = (int) (\App\Models\Setting::getValue('courses_per_page') ?: 12);
@@ -146,12 +152,12 @@ class CourseController extends Controller
             'search' => $request->get('search'),
             'category' => $request->get('category'),
             'type' => $request->get('type'),
-            'page' => $request->get('page', 1),
+            'cursor' => $request->get('cursor'),
             'per_page' => $perPage,
         ]));
 
         $courses = \Illuminate\Support\Facades\Cache::tags(['catalog'])->remember($cacheKey, 3600, function () use ($query, $perPage) {
-            return $query->latest()->paginate($perPage)->withQueryString();
+            return $query->latest()->cursorPaginate($perPage)->withQueryString();
         });
 
         $categories = \Illuminate\Support\Facades\Cache::tags(['catalog'])->remember('catalog_categories', 3600, function () {
@@ -283,22 +289,29 @@ class CourseController extends Controller
         }
 
         // Filter by Search Query
-        if ($request->has('search') && !empty($request->search)) {
-            $query->where('title', 'like', '%' . $request->search . '%');
+        if ($request->has('search') && !empty(trim($request->search))) {
+            $search = trim($request->search);
+            if (strlen($search) < 3) {
+                // If search is less than 3 chars, return empty query to prevent crash
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereFullText(['title', 'description'], $search);
+            }
         }
 
         $perPage = (int) (\App\Models\Setting::getValue('courses_per_page') ?: 12);
-        $courses = $query->latest()->paginate($perPage)->withQueryString();
+        $courses = $query->latest()->cursorPaginate($perPage)->withQueryString();
 
         return response()->json([
             'success' => true,
             'data' => $courses->items(),
             'pagination' => [
-                'current_page' => $courses->currentPage(),
-                'last_page' => $courses->lastPage(),
-                'total' => $courses->total(),
+                'next_cursor' => $courses->nextCursor()?->encode(),
+                'prev_cursor' => $courses->previousCursor()?->encode(),
+                'next_page_url' => $courses->nextPageUrl(),
+                'prev_page_url' => $courses->previousPageUrl(),
+                'has_more_pages' => $courses->hasMorePages(),
                 'per_page' => $courses->perPage(),
-                'links' => $courses->linkCollection()->toArray()
             ]
         ]);
     }
@@ -413,7 +426,7 @@ class CourseController extends Controller
         $completedMap = $user->getCompletedModuleAssessmentMap($course->id);
         $passedMap = $user->getPassedModuleAssessmentMap($course->id);
 
-        $course->modules->each(function ($module) use ($user, &$previousModulePassed, $enforcePrerequisites, $completedMap, $passedMap) {
+        $course->modules->each(function ($module) use ($user, &$previousModulePassed, $enforcePrerequisites, $completedMap, $passedMap, $course) {
             $module->lessons->each(function ($lesson) {
                 $lesson->makeHidden(['content', 'video_url', 'slide_url', 'slide_content']);
             });
@@ -438,26 +451,14 @@ class CourseController extends Controller
 
             $module->is_pre_completed = $isPreCompleted;
             $module->is_post_completed = $isPostCompleted;
-            $module->is_prerequisite_met = !$enforcePrerequisites || $previousModulePassed || $user->isAdmin() || $user->id === $module->course->instructor_id;
+            $module->is_prerequisite_met = !$enforcePrerequisites || $previousModulePassed || $user->isAdmin() || $user->id === $course->instructor_id;
 
             // Next module prerequisite requires this module's post-test passed (if post-test exists and enabled)
             $previousModulePassed = $isPostCompleted;
         });
 
-        // 3. Authorization check (is Enrolled or is Instructor of course or is Admin)
-        $isAuthor = $course->instructor_id === $user->id;
-        
-        $allowAccessWithoutEnroll = filter_var(
-            \App\Models\Setting::getValue('course_content_access'),
-            FILTER_VALIDATE_BOOLEAN
-        );
-
-        $isAuthorized = $user->hasEnrolled($course->id) || 
-            $isAuthor || 
-            ($allowAccessWithoutEnroll && ($user->isAdmin() || $user->isInstructor())) ||
-            (!$allowAccessWithoutEnroll && $user->isAdmin());
-
-        if (!$isAuthorized) {
+        // 3. Authorization check via CoursePolicy
+        if ($user->cannot('learn', $course)) {
             return redirect()->route('courses.show', $course->slug)
                 ->with('warning', 'Silakan daftar di kelas ini terlebih dahulu untuk memulai belajar.');
         }
@@ -502,7 +503,7 @@ class CourseController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $course = Course::where('slug', $slug)->firstOrFail();
+        $course = Course::where('slug', $slug)->with(['modules.assessments', 'modules.quizzes', 'category'])->withCount(['lessons'])->firstOrFail();
         $user = auth()->user();
 
         // Get the user's enrollment
@@ -536,12 +537,27 @@ class CourseController extends Controller
         $enrollment->completed_lessons = $completedLessons;
 
         // Check if all lessons AND quizzes of the course are completed
-        $totalLessonsCount = $course->lessons()->count();
-        $totalQuizzesCount = \App\Models\Quiz::whereIn('module_id', $course->modules()->pluck('id'))->count();
+        $totalLessonsCount = $course->lessons_count;
+        $totalQuizzesCount = $course->modules->sum(function($m) { return $m->quizzes->count(); });
         $completedQuizzes = $enrollment->completed_quizzes ?? [];
 
         if (count($completedLessons) >= $totalLessonsCount && count($completedQuizzes) >= $totalQuizzesCount) {
-            $enrollment->completed_at = now();
+            // Check if there are any post-tests that need to be passed
+            $passedMap = $user->getPassedModuleAssessmentMap($course->id);
+            $allPostTestsPassed = true;
+            foreach ($course->modules as $module) {
+                $hasPostTest = $module->assessments->contains('type', 'post_test');
+                if ($hasPostTest && !isset($passedMap["{$module->id}_post_test"])) {
+                    $allPostTestsPassed = false;
+                    break;
+                }
+            }
+
+            if ($allPostTestsPassed) {
+                $enrollment->completed_at = now();
+            } else {
+                $enrollment->completed_at = null;
+            }
         } else {
             $enrollment->completed_at = null;
         }
@@ -563,7 +579,7 @@ class CourseController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $course = Course::where('slug', $slug)->firstOrFail();
+        $course = Course::where('slug', $slug)->with(['modules.assessments', 'modules.quizzes'])->withCount(['lessons'])->firstOrFail();
         $user = auth()->user();
 
         // Get the user's enrollment
@@ -636,12 +652,27 @@ class CourseController extends Controller
             $enrollment->completed_quizzes = $completedQuizzes;
 
             // Check if all lessons AND quizzes are completed
-            $totalLessonsCount = $course->lessons()->count();
-            $totalQuizzesCount = \App\Models\Quiz::whereIn('module_id', $course->modules()->pluck('id'))->count();
+            $totalLessonsCount = $course->lessons_count;
+            $totalQuizzesCount = $course->modules->sum(function($m) { return $m->quizzes->count(); });
             $completedLessons = $enrollment->completed_lessons ?? [];
 
             if (count($completedLessons) >= $totalLessonsCount && count($completedQuizzes) >= $totalQuizzesCount) {
-                $enrollment->completed_at = now();
+                // Check if there are any post-tests that need to be passed
+                $passedMap = $user->getPassedModuleAssessmentMap($course->id);
+                $allPostTestsPassed = true;
+                foreach ($course->modules as $module) {
+                    $hasPostTest = $module->assessments->contains('type', 'post_test');
+                    if ($hasPostTest && !isset($passedMap["{$module->id}_post_test"])) {
+                        $allPostTestsPassed = false;
+                        break;
+                    }
+                }
+
+                if ($allPostTestsPassed) {
+                    $enrollment->completed_at = now();
+                } else {
+                    $enrollment->completed_at = null;
+                }
             } else {
                 $enrollment->completed_at = null;
             }
@@ -666,7 +697,7 @@ class CourseController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        $course = Course::where('slug', $slug)->firstOrFail();
+        $course = Course::where('slug', $slug)->with('category')->firstOrFail();
         $user = auth()->user();
         
         $request->validate([
@@ -714,7 +745,7 @@ class CourseController extends Controller
             $query->where('status', 'published');
         }
 
-        $course = $query->with(['instructor'])->firstOrFail();
+        $course = $query->with(['instructor', 'modules.quizzes'])->withCount(['lessons'])->firstOrFail();
         $isAuthor = $course->instructor_id === $user->id;
 
         // Check if enrolled and completed
@@ -722,8 +753,8 @@ class CourseController extends Controller
             ->where('course_id', $course->id)
             ->first();
 
-        $totalLessonsCount = $course->lessons()->count();
-        $totalQuizzesCount = \App\Models\Quiz::whereIn('module_id', $course->modules()->pluck('id'))->count();
+        $totalLessonsCount = $course->lessons_count;
+        $totalQuizzesCount = $course->modules->sum(function($m) { return $m->quizzes->count(); });
 
         // Safe fallback: completed if explicitly marked or completed lessons + quizzes are fully completed
         $isCompleted = ($enrollment && $enrollment->completed_at !== null) || 

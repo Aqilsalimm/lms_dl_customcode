@@ -16,6 +16,7 @@ class Course extends Model
     use SoftDeletes;
     protected $fillable = [
         'instructor_id',
+        'instructor_organization_membership_id',
         'category_id',
         'title',
         'slug',
@@ -87,6 +88,11 @@ class Course extends Model
     public function instructor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'instructor_id');
+    }
+
+    public function instructorOrganizationMembership(): BelongsTo
+    {
+        return $this->belongsTo(OrganizationMembership::class, 'instructor_organization_membership_id');
     }
 
     public function category(): BelongsTo

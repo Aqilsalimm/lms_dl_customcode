@@ -48,6 +48,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'active.subscription' => \App\Http\Middleware\EnsureActiveSubscription::class,
+            'institutional.profile' => \App\Http\Middleware\EnsureInstitutionalProfileComplete::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

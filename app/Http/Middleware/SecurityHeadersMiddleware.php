@@ -59,13 +59,16 @@ class SecurityHeadersMiddleware
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
         }
 
-        // Prevent browser caching for auth, login, cart, and dashboard pages to avoid stale state
-        if ($request->is('dashboard*') || $request->is('profile*') || $request->is('admin*') || $request->is('instructor*') || $request->is('login*') || $request->is('register*') || $request->is('forgot-password*') || $request->is('reset-password*') || $request->is('cart*') || $request->is('checkout*') || $request->is('payment*') || $request->user()) {
+        $isInertia = (bool) ($request->header('X-Inertia') || $response->headers->has('X-Inertia'));
+        $hasNoStore = str_contains((string) $response->headers->get('Cache-Control', ''), 'no-store');
+
+        // Prevent browser caching for auth, login, cart, dashboard, and Inertia/dynamic responses to avoid stale state
+        if ($request->is('dashboard*') || $request->is('profile*') || $request->is('admin*') || $request->is('instructor*') || $request->is('login*') || $request->is('register*') || $request->is('forgot-password*') || $request->is('reset-password*') || $request->is('cart*') || $request->is('checkout*') || $request->is('payment*') || $request->user() || $isInertia || $hasNoStore) {
             $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0');
             $response->headers->set('Pragma', 'no-cache');
             $response->headers->set('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
         } elseif ($request->isMethod('GET') || $request->isMethod('HEAD')) {
-            // Enable CDN Edge & Public Caching for public GET responses (Homepage, Catalog, Loaderio, etc.)
+            // Enable CDN Edge & Public Caching for purely public non-Inertia GET responses
             $response->headers->set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=60');
             $response->headers->remove('Pragma');
             $response->headers->remove('Expires');

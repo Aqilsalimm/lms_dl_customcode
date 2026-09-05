@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { Head, Link, usePage, router } from '@inertiajs/vue3';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { 
@@ -23,6 +23,20 @@ import {
   Facebook,
   Linkedin
 } from 'lucide-vue-next';
+
+const handlePageShow = (e) => {
+  if (e.persisted) {
+    router.reload({ only: ['auth', 'flash', 'settings', 'categories', 'ziggy'] });
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('pageshow', handlePageShow);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('pageshow', handlePageShow);
+});
 
 const formatPrice = (price) => {
   if (!price) return 'Rp 500.000';

@@ -13,8 +13,10 @@ const prefilledName = urlEmail ? urlEmail.split('@')[0].split('.').map(w => w.ch
 const form = useForm({
     name: prefilledName,
     email: urlEmail,
+    gender: '',
+    occupation: '',
     password: '',
-    password_confirmation: '', // Handled under-the-hood in Step 1 transition
+    password_confirmation: '',
     otp_code: '',
     role: 'student',
     photo: null,
@@ -60,13 +62,22 @@ const handleStep1Continue = () => {
     alert('Email Address wajib diisi dengan alamat email yang valid.');
     return;
   }
+  if (!form.gender) {
+    alert('Pilih Jenis Kelamin Anda.');
+    return;
+  }
+  if (!form.occupation) {
+    alert('Pilih Status Pekerjaan / Pendidikan Anda.');
+    return;
+  }
   if (!form.password || form.password.length < 8 || form.password.length > 25) {
     alert('Password wajib diisi antara 8 sampai 25 karakter.');
     return;
   }
-
-  // Ensure password confirmation for Breeze
-  form.password_confirmation = form.password;
+  if (form.password !== form.password_confirmation) {
+    alert('Konfirmasi password tidak cocok dengan password yang Anda masukkan.');
+    return;
+  }
 
   // Send OTP to backend
   router.post(route('otp.send'), { email: form.email }, {
@@ -225,6 +236,39 @@ const Logo = () => {
               />
             </div>
 
+            <!-- Gender Dropdown Field -->
+            <div class="flex flex-col gap-2">
+              <label class="text-xs sm:text-sm font-extrabold text-[#264790]">Jenis Kelamin</label>
+              <select
+                v-model="form.gender"
+                required
+                class="w-full bg-[#F4F7F9] border border-slate-100 rounded-2xl px-5 py-4 text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:border-[#44A6D9]/50 focus:bg-white transition-all placeholder-slate-400"
+              >
+                <option value="" disabled selected>Pilih Jenis Kelamin</option>
+                <option value="Laki-laki">Laki-laki</option>
+                <option value="Perempuan">Perempuan</option>
+              </select>
+            </div>
+
+            <!-- Status / Occupation Dropdown Field -->
+            <div class="flex flex-col gap-2">
+              <label class="text-xs sm:text-sm font-extrabold text-[#264790]">Status / Pekerjaan</label>
+              <select
+                v-model="form.occupation"
+                required
+                class="w-full bg-[#F4F7F9] border border-slate-100 rounded-2xl px-5 py-4 text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:border-[#44A6D9]/50 focus:bg-white transition-all placeholder-slate-400"
+              >
+                <option value="" disabled selected>Pilih Status / Pekerjaan</option>
+                <option value="Pelajar">Pelajar</option>
+                <option value="Mahasiswa">Mahasiswa</option>
+                <option value="Karyawan Swasta">Karyawan Swasta</option>
+                <option value="PNS">PNS</option>
+                <option value="Karyawan BUMN">Karyawan BUMN</option>
+                <option value="Freelance">Freelance</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+
             <!-- Role Toggle Field -->
             <div class="flex flex-col gap-2">
               <label class="text-xs sm:text-sm font-extrabold text-[#264790]">Mendaftar Sebagai</label>
@@ -247,6 +291,19 @@ const Logo = () => {
                 type="password" 
                 v-model="form.password"
                 placeholder="password" 
+                maxlength="25"
+                required
+                class="w-full bg-[#F4F7F9] border border-slate-100 rounded-2xl px-5 py-4 text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:border-[#44A6D9]/50 focus:bg-white transition-all placeholder-slate-400"
+              />
+            </div>
+
+            <!-- Confirm Password Field -->
+            <div class="flex flex-col gap-2">
+              <label class="text-xs sm:text-sm font-extrabold text-[#264790]">Confirm Password</label>
+              <input
+                type="password"
+                v-model="form.password_confirmation"
+                placeholder="konfirmasi password"
                 maxlength="25"
                 required
                 class="w-full bg-[#F4F7F9] border border-slate-100 rounded-2xl px-5 py-4 text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none focus:border-[#44A6D9]/50 focus:bg-white transition-all placeholder-slate-400"

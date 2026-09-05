@@ -71,23 +71,16 @@ class LoginRequest extends FormRequest
             ]);
         }
 
-        // 2. Limit Concurrent Login Sessions
+        // 2. Limit Concurrent Login Sessions (Invalidate previous sessions on new login)
         $limitSessions = \App\Models\Setting::getValue('limit_login_sessions');
         if (filter_var($limitSessions, FILTER_VALIDATE_BOOLEAN)) {
             $user = Auth::user();
             if (config('session.driver') === 'database' && \Illuminate\Support\Facades\Schema::hasTable('sessions')) {
-                $hasActiveSession = \Illuminate\Support\Facades\DB::table('sessions')
+                // Invalidate any existing old sessions for this user so re-logging in works seamlessly
+                \Illuminate\Support\Facades\DB::table('sessions')
                     ->where('user_id', $user->id)
                     ->where('id', '!=', session()->getId())
-                    ->where('last_activity', '>=', now()->subMinutes((int) config('session.lifetime', 120))->getTimestamp())
-                    ->exists();
-
-                if ($hasActiveSession) {
-                    Auth::logout();
-                    throw ValidationException::withMessages([
-                        'email' => 'Akun Anda sedang aktif di perangkat lain. Silakan log out terlebih dahulu dari perangkat tersebut.',
-                    ]);
-                }
+                    ->delete();
             }
         }
 

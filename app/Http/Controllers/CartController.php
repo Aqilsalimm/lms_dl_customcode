@@ -247,9 +247,7 @@ class CartController extends Controller
             return redirect()->route('login', ['redirect' => route('checkout.resume', $order->id)]);
         }
 
-        if ($order->user_id !== $user->id) {
-            abort(403, 'Unauthorized access to this order.');
-        }
+        $this->authorize('view', $order);
 
         if ($order->status === 'completed') {
             return redirect()->route('dashboard')->with('success', 'Transaksi ini telah selesai dibayar.');

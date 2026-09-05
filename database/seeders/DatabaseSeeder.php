@@ -27,37 +27,44 @@ class DatabaseSeeder extends Seeder
             ['value' => 'DRSTHA-DEVELOPER-BYPASS-9999']
         );
         // 1. Seed Users (Admin, Instructor, Student)
-        $admin = User::firstOrCreate([
+        $admin = User::updateOrCreate([
             'email' => 'admin@drastha.com'
         ], [
             'name' => 'Admin Drastha',
             'role' => 'admin',
-            'password' => bcrypt('password'),
+            'password' => 'password',
+            'status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
-        $devAdmin = User::firstOrCreate([
+        $devAdmin = User::updateOrCreate([
             'email' => 'dev-admin@drasthabest.com'
         ], [
             'name' => 'Dev Admin',
             'role' => 'admin',
-            'password' => bcrypt('password'),
-            'status' => 'active'
+            'password' => 'password',
+            'status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
-        $instructor = User::firstOrCreate([
+        $instructor = User::updateOrCreate([
             'email' => 'instructor@drastha.com'
         ], [
             'name' => 'Instructor Drastha',
             'role' => 'instructor',
-            'password' => bcrypt('password'),
+            'password' => 'password',
+            'status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
-        $student = User::firstOrCreate([
+        $student = User::updateOrCreate([
             'email' => 'student@drastha.com'
         ], [
             'name' => 'Student Drastha',
             'role' => 'student',
-            'password' => bcrypt('password'),
+            'password' => 'password',
+            'status' => 'active',
+            'email_verified_at' => now(),
         ]);
 
         // 2. Seed Categories
@@ -93,7 +100,8 @@ class DatabaseSeeder extends Seeder
                 'capacity' => 25,
                 'category_id' => $categoryModels[0]->id,
                 'status' => 'published',
-                'description' => 'Kelas dasar Python untuk pemula yang ingin memahami konsep pemrograman dan data science.'
+                'description' => 'Kelas dasar Python untuk pemula yang ingin memahami konsep pemrograman dan data science.',
+                'course_type' => 'async',
             ],
             [
                 'title' => 'Website Class : Pemrograman Website dengan HTML dan CSS',
@@ -104,7 +112,8 @@ class DatabaseSeeder extends Seeder
                 'capacity' => 20,
                 'category_id' => $categoryModels[0]->id,
                 'status' => 'published',
-                'description' => 'Belajar cara membuat website interaktif dari nol menggunakan HTML5 dan CSS3.'
+                'description' => 'Belajar cara membuat website interaktif dari nol menggunakan HTML5 dan CSS3.',
+                'course_type' => 'async',
             ],
             [
                 'title' => 'Audit Class : Pengenalan Audit Forensik Dasar untuk Pemula',
@@ -115,7 +124,13 @@ class DatabaseSeeder extends Seeder
                 'capacity' => 15,
                 'category_id' => $categoryModels[1]->id,
                 'status' => 'published',
-                'description' => 'Kursus singkat mengenalkan metodologi investigasi keuangan dan deteksi kecurangan.'
+                'description' => 'Kursus singkat mengenalkan metodologi investigasi keuangan dan deteksi kecurangan.',
+                'course_type' => 'live_class',
+                'delivery_mode' => 'offline',
+                'start_date' => now()->addDays(2),
+                'end_date' => now()->addDays(3),
+                'location_venue' => 'Gedung Utama Drastha Learning, Jakarta',
+                'meeting_url' => 'https://zoom.us/j/1234567890'
             ]
         ];
 
@@ -127,6 +142,23 @@ class DatabaseSeeder extends Seeder
                 'slug' => \Illuminate\Support\Str::slug($c['title']),
                 'about' => 'Di kelas ini Anda akan dipandu oleh instruktur berpengalaman secara tatap muka (offline) maupun online, dengan kurikulum terstruktur dan tugas evaluasi berkala.'
             ]));
+
+            if (isset($c['course_type']) && $c['course_type'] === 'live_class') {
+                \App\Models\LiveClass::firstOrCreate([
+                    'course_id' => $course->id,
+                    'title' => 'Sesi Utama Live Class: ' . $course->title
+                ], [
+                    'mode' => 'hybrid',
+                    'meeting_link' => 'https://zoom.us/j/1234567890',
+                    'venue_name' => 'Gedung Utama Drastha Learning',
+                    'venue_address' => 'Jl. Sudirman No. 1, Jakarta',
+                    'gmaps_url' => 'https://goo.gl/maps/1234567890',
+                    'offline_capacity' => 10,
+                    'start_time' => now()->addDays(2),
+                    'end_time' => now()->addDays(2)->addHours(2),
+                    'is_published' => true,
+                ]);
+            }
 
             // Sync Tags
             $course->tags()->sync([$tagModels[0]->id, $tagModels[3]->id]);
